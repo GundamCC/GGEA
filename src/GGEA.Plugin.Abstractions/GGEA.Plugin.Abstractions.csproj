@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- 协议程序集独立于产品版本；不兼容变更必须升级协议主版本。 -->
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+</Project>

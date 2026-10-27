@@ -1,0 +1,21 @@
+{
+  "screenWidth": 1920,
+  "screenHeight": 1080,
+  "anchors": [
+    { "name": "upgradeCapital", "x": 270, "y": 580, "width": 250, "height": 300 },
+    { "name": "upgradeUnit", "x": 647, "y": 580, "width": 250, "height": 300 },
+    { "name": "upgradeCharacter", "x": 1024, "y": 580, "width": 250, "height": 300 },
+    { "name": "upgradeSupport", "x": 1400, "y": 580, "width": 250, "height": 300 },
+    { "name": "upgradeSkip", "x": 1594, "y": 678, "width": 160, "height": 64 },
+    { "name": "stageSkip", "x": 1594, "y": 678, "width": 160, "height": 64 },
+    { "name": "skipDialogCancel", "x": 710, "y": 820, "width": 120, "height": 60 },
+    { "name": "skipDialogExecute", "x": 1090, "y": 820, "width": 120, "height": 60 },
+    { "name": "skipCountLeft", "x": 607, "y": 455, "width": 45, "height": 46 },
+    { "name": "skipCountRight", "x": 744, "y": 455, "width": 28, "height": 45 },
+    { "name": "skipResultOk", "x": 1640, "y": 960, "width": 72, "height": 56 },
+    { "name": "skipResultTitle", "x": 820, "y": 30, "width": 330, "height": 80 },
+    { "name": "skipCountLimit", "x": 1590, "y": 680, "width": 160, "height": 60 },
+    { "name": "upgradeBack", "x": 0, "y": 0, "width": 240, "height": 130 },
+    { "name": "apRecoveryClose", "x": 910, "y": 960, "width": 110, "height": 70 }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "screenWidth": 1920,
+  "screenHeight": 1080,
+  "anchors": [
+    { "name": "playerLevel", "x": 68, "y": 41, "width": 86, "height": 33 },
+    { "name": "resourcesStamina", "x": 1426, "y": 38, "width": 140, "height": 40 },
+    { "name": "resourcesDiamond", "x": 1554, "y": 38, "width": 170, "height": 40 },
+    { "name": "resourcesGold", "x": 1725, "y": 38, "width": 170, "height": 40 },
+    { "name": "missionEvent", "x": 146, "y": 243, "width": 112, "height": 63 },
+    { "name": "navAnnouncement", "x": 60, "y": 440, "width": 160, "height": 120 },
+    { "name": "navGift", "x": 34, "y": 505, "width": 160, "height": 120 },
+    { "name": "navMission", "x": 34, "y": 640, "width": 160, "height": 120 },
+    { "name": "navShop", "x": 34, "y": 772, "width": 160, "height": 120 },
+    { "name": "navHome", "x": 74, "y": 900, "width": 220, "height": 155 },
+    { "name": "navEnhance", "x": 346, "y": 900, "width": 220, "height": 155 },
+    { "name": "navDevelop", "x": 604, "y": 900, "width": 220, "height": 155 },
+    { "name": "navStage", "x": 892, "y": 900, "width": 220, "height": 155 },
+    { "name": "navBase", "x": 1150, "y": 990, "width": 220, "height": 90 },
+    { "name": "navSupply", "x": 1439, "y": 900, "width": 220, "height": 155 },
+    { "name": "navMenu", "x": 1697, "y": 900, "width": 220, "height": 155 },
+    { "name": "redDotGift", "x": 24, "y": 634, "width": 96, "height": 54, "template": "resources/templates/home/red_dot_gift.png" },
+    { "name": "redDotShop", "x": 148, "y": 767, "width": 52, "height": 52, "template": "resources/templates/home/red_dot_shop.png" },
+    { "name": "redDotBase", "x": 1331, "y": 967, "width": 44, "height": 44, "template": "resources/templates/home/red_dot_base.png" }
+  ]
+}

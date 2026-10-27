@@ -1,0 +1,32 @@
+GGEA 第三方软件声明（核查日期：2026-10-27）
+
+本目录只保存上游许可及来源证据，不重新授权第三方内容。
+manifest.json 记录每份文件的组件、版本、来源及 SHA-256。
+
+直接运行依赖：
+- OpenCvSharp4 / OpenCvSharp4.runtime.win 4.13.0.20260627：Apache-2.0。
+- OpenCV / opencv_contrib 4.13.0：Apache-2.0，内含另行授权的第三方代码。
+- Microsoft.ML.OnnxRuntime / Managed 1.23.2：MIT，完整许可及第三方声明在 ../ocr/。
+- System.Memory 4.6.3、System.Numerics.Tensors 9.0.0：.NET 项目 MIT 许可；见本目录 Microsoft .NET 许可。
+- 当前自包含构建解析到 .NET / WindowsDesktop Runtime 8.0.31：MIT 及其第三方声明。
+  SDK 或运行时升级后应重新核对，不能把该版本视为永久固定。
+
+原生库核查依据：已安装 OpenCvSharpExtern 的 OpenCV build information、
+对应 OpenCvSharp 提交 b161e7e012f5101f6d5dc68a835c59db6cc88b18 的构建配置。
+附带 zlib、libpng、libjpeg-turbo、libwebp、libtiff、OpenJPEG、OpenEXR、
+protobuf、FlatBuffers、Intel IPP/ITT、Tesseract、Leptonica 及 OpenCV 源码
+随附的第三方声明。并非每份保守保留的声明都代表最终 DLL 实际链接该组件。
+Intel IPP EULA 保持原始 RTF 格式，须用支持 RTF 的查看器阅读。
+
+正式 tools/publish.ps1 删除未使用的 opencv_videoio_ffmpeg*.dll。
+直接 dotnet build/publish 的输出可能仍包含该 DLL；本目录的 OpenCV FFmpeg
+说明不是完整 FFmpeg 再分发合规包，勿将该输出直接作为正式发行包。
+原生构建报告启用了 non-free algorithms；GGEA 不调用这些算法，但附带许可
+不构成相关专利或其他权利的清理结论，公开二进制前仍需确认该构建适用性。
+
+OCR 模型来源与许可见 ../ocr/NOTICE.txt、model.json 及对应许可文件。
+游戏图像、识别模板、测试截图和 app.ico 不属于软件依赖许可覆盖范围；
+见仓库 LICENSE_SCOPE.md 和素材核查清单。
+
+维护：升级任一 NuGet/native/runtime 依赖时同步核对来源、许可与摘要；
+不能仅修改本文件版本号。旧发行包不会因本次补充而自动得到这些文件。

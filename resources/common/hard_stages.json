@@ -1,0 +1,164 @@
+{
+    "hardStages":  [
+                       {
+                           "id":  1,
+                           "work":  "Mobile Suit Gundam",
+                           "normalCount":  14,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_0010.webp"
+                       },
+                       {
+                           "id":  2,
+                           "work":  "Mobile Suit Zeta Gundam",
+                           "normalCount":  15,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_0810.webp"
+                       },
+                       {
+                           "id":  3,
+                           "work":  "Mobile Suit Gundam ZZ",
+                           "normalCount":  18,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_0950.webp"
+                       },
+                       {
+                           "id":  4,
+                           "work":  "Mobile Suit Gundam Char\u0027s Counter Attack",
+                           "normalCount":  5,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_1100.webp"
+                       },
+                       {
+                           "id":  5,
+                           "work":  "Mobile Suit Gundam Unicorn",
+                           "normalCount":  10,
+                           "sideStories": 0,
+                           "hardCount":  4,
+                           "screenshot":  "logo_l_series_1250.webp"
+                       },
+                       {
+                           "id":  6,
+                           "work":  "Mobile Suit Gundam Hathaway",
+                           "normalCount":  3,
+                           "sideStories": 0,
+                           "hardCount":  1,
+                           "screenshot":  "logo_l_series_1500.webp"
+                       },
+                       {
+                           "id":  7,
+                           "work":  "Mobile Suit Gundam F91",
+                           "normalCount":  5,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_1620.webp"
+                       },
+                       {
+                           "id":  8,
+                           "work":  "Mobile Suit Gundam Narrative",
+                           "normalCount":  4,
+                           "sideStories": 0,
+                           "hardCount":  2,
+                           "screenshot":  "logo_l_series_1440.webp"
+                       },
+                       {
+                           "id":  9,
+                           "work":  "Mobile Fighter G Gundam",
+                           "normalCount":  17,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_2000.webp"
+                       },
+                       {
+                           "id":  10,
+                           "work":  "Mobile Suit Gundam Wing",
+                           "normalCount":  17,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_2100.webp"
+                       },
+                       {
+                           "id":  11,
+                           "work":  "Mobile Suit Gundam Wing Endless Waltz",
+                           "normalCount":  5,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_2190.webp"
+                       },
+                       {
+                           "id":  12,
+                           "work":  "After War Gundam X",
+                           "normalCount":  18,
+                           "sideStories": 0,
+                           "hardCount":  4,
+                           "screenshot":  "logo_l_series_2300.webp"
+                       },
+                       {
+                           "id":  13,
+                           "work":  "Mobile Suit Gundam SEED",
+                           "normalCount":  17,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_3000.webp"
+                       },
+                       {
+                           "id":  14,
+                           "work":  "Mobile Suit Gundam SEED Recollection",
+                           "normalCount":  19,
+                           "sideStories": 0,
+                           "hardCount":  1,
+                           "screenshot":  "logo_l_series_3100.webp"
+                       },
+                       {
+                           "id":  15,
+                           "work":  "Mobile Suit Gundam SEED DESTINY",
+                           "normalCount":  22,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_3300.webp"
+                       },
+                       {
+                           "id":  16,
+                           "work":  "Mobile Suit Gundam 00",
+                           "normalCount":  24,
+                           "sideStories": 0,
+                           "hardCount":  5,
+                           "screenshot":  "logo_l_series_3700.webp"
+                       },
+                       {
+                           "id":  17,
+                           "work":  "Mobile Suit Gundam AGE",
+                           "normalCount":  17,
+                           "sideStories": 0,
+                           "hardCount":  4,
+                           "screenshot":  "logo_l_series_4000.webp"
+                       },
+                       {
+                           "id":  18,
+                           "work":  "Mobile Suit Gundam: IRON-BLOODED ORPHANS",
+                           "normalCount":  23,
+                           "sideStories": 6,
+                           "hardCount":  5,
+                           "screenshot":  "logo_l_series_4300.webp"
+                       },
+                       {
+                           "id":  19,
+                           "work":  "Mobile Suit Gundam the Witch from Mercury",
+                           "normalCount":  13,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_5010.webp"
+                       },
+                       {
+                           "id":  20,
+                           "work":  "Mobile Suit Victory Gundam",
+                           "normalCount":  20,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_1750.webp"
+                       }
+                   ]
+}

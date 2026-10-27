@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 直接编译生产源码，不维护替身实现；独立程序集没有 App.xaml/BAML，
+         加载到可回收上下文时不会覆盖 WPF 对 GGEA 资源程序集的解析。 -->
+    <Compile Include="..\..\src\GGEA.App\Vision\ImageCodecThread.cs" Link="ImageCodecThread.cs" />
+  </ItemGroup>
+</Project>

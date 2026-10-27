@@ -1,0 +1,85 @@
+{
+    "confusableGroups": [[1, 9], [2, 7]],
+    "hardStages":  [
+                       {
+                           "id":  1,
+                           "work":  "Mobile Suit Gundam Thunderbolt: December Sky",
+                           "normalCount":  7,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_0320.png"
+                       },
+                       {
+                           "id":  2,
+                           "work":  "Mobile Suit Gundam SEED Astray",
+                           "normalCount":  7,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_3050.png"
+                       },
+                       {
+                           "id":  3,
+                           "work":  "Mobile Suit Gundam Iron-Blooded Orphans Gekko",
+                           "normalCount":  7,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_4310.png"
+                       },
+                       {
+                           "id":  4,
+                           "work":  "Mobile Suit Gundam 0083: Stardust Memory",
+                           "normalCount":  7,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_0600.png"
+                       },
+                       {
+                           "id":  5,
+                           "work":  "Mobile Suit Gundam Side Story: The Blue Destiny",
+                           "normalCount":  7,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_0220.png"
+                       },
+                       {
+                           "id":  6,
+                           "work":  "Mobile Suit Gundam 0080: War in the Pocket",
+                           "normalCount":  7,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_0170.png"
+                       },
+                       {
+                           "id":  7,
+                           "work":  "Mobile Suit Gundam SEED X Astray",
+                           "normalCount":  7,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_3080.png"
+                       },
+                       {
+                           "id":  8,
+                           "work":  "Mobile Suit Gundam: The 08th MS Team",
+                           "normalCount":  8,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_0130.png"
+                       },
+                       {
+                           "id":  9,
+                           "work":  "Mobile Suit Gundam Thunderbolt: Bandit Flower",
+                           "normalCount":  7,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_0330.png"
+                       },
+                       {
+                           "id":  10,
+                           "work":  "Mobile Suit Gundam: Cross Dimension 0079",
+                           "normalCount":  17,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "screenshot":  "logo_l_series_0210.png"
+                       }
+                   ]
+}

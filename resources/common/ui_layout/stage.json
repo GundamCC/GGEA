@@ -1,0 +1,29 @@
+{
+  "screenWidth": 1920,
+  "screenHeight": 1080,
+  "anchors": [
+    { "name": "mainStage", "x": 140, "y": 710, "width": 580, "height": 120 },
+    { "name": "event", "x": 920, "y": 515, "width": 380, "height": 120 },
+    { "name": "masterLeague", "x": 1300, "y": 515, "width": 390, "height": 130 },
+    { "name": "upgradeStages", "x": 960, "y": 725, "width": 380, "height": 100 },
+    { "name": "eternalRoad", "x": 1300, "y": 720, "width": 460, "height": 115 },
+    { "name": "workSelect", "x": 1610, "y": 855, "width": 130, "height": 80 },
+    { "name": "stageBack", "x": 85, "y": 25, "width": 90, "height": 55 },
+    { "name": "stageSkip", "x": 1594, "y": 678, "width": 160, "height": 64 },
+    { "name": "skipDialogCancel", "x": 710, "y": 820, "width": 120, "height": 60 },
+    { "name": "skipDialogExecute", "x": 1090, "y": 820, "width": 120, "height": 60 },
+    { "name": "skipCountLeft", "x": 607, "y": 455, "width": 45, "height": 46 },
+    { "name": "skipCountRight", "x": 744, "y": 455, "width": 28, "height": 45 },
+    { "name": "skipResultOk", "x": 1640, "y": 960, "width": 72, "height": 56 },
+    { "name": "skipResultTitle", "x": 820, "y": 30, "width": 330, "height": 80 },
+    { "name": "skipCountLimit", "x": 1590, "y": 680, "width": 160, "height": 60 },
+    { "name": "stageTitle", "x": 850, "y": 60, "width": 1070, "height": 140 },
+    { "name": "apRecoveryClose", "x": 910, "y": 960, "width": 110, "height": 70 },
+    { "name": "fiveHardStage1", "x": 18, "y": 756, "width": 40, "height": 40 },
+    { "name": "stageSlot1", "x": 0, "y": 740, "width": 110, "height": 75 },
+    { "name": "stageSlot2", "x": 150, "y": 680, "width": 140, "height": 85 },
+    { "name": "stageSlot3", "x": 340, "y": 740, "width": 150, "height": 80 },
+    { "name": "stageSlot4", "x": 530, "y": 680, "width": 140, "height": 85 },
+    { "name": "stageSlot5", "x": 760, "y": 690, "width": 60, "height": 80 }
+  ]
+}

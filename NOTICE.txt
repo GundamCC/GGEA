@@ -1,0 +1,13 @@
+GGEA — SD Gundam G Generation ETERNAL Assistant
+Copyright 2026 GGEA contributors
+
+Project-developed source code is licensed under the Apache License, Version 2.0.
+See LICENSE and LICENSE_SCOPE.md for the license text and scope.
+
+Third-party software, OCR models, game screenshots, recognition templates,
+test screenshots, icons and game artwork are not relicensed by this notice.
+Their respective rights and license terms remain with their owners.
+
+GGEA is an unofficial community project and is not affiliated with or
+endorsed by the game's rights holders. This notice grants no trademark rights
+or permission to redistribute third-party game assets.

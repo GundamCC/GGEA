@@ -1,0 +1,119 @@
+{
+    "fierce_enemy":  [
+                       {
+                           "id":  1,
+                           "name_en":  "Red Gundam(0085)",
+                           "screenshot":  "ub_g0550u00200.webp"
+                       },
+                       {
+                           "id":  2,
+                           "name_en":  "Saikoro Gundam",
+                           "screenshot":  "ub_g7280u00100.webp"
+                       },
+                       {
+                           "id":  3,
+                           "name_en":  "Over.on (Armor Form)",
+                           "screenshot":  "ub_g1000u00200.webp"
+                       },
+                       {
+                           "id":  4,
+                           "name_en":  "Full Armor Hyaku-Shiki Kai",
+                           "screenshot":  "ub_g1150u00300.webp"
+                       },
+                       {
+                           "id":  5,
+                           "name_en":  "Destiny Impulse",
+                           "screenshot":  "ub_g3330u00100.webp"
+                       },
+                       {
+                           "id":  6,
+                           "name_en":  "Command Gundam",
+                           "screenshot":  "ub_g7090u00100.webp"
+                       },
+                       {
+                           "id":  7,
+                           "name_en":  "Musha Gundam",
+                           "screenshot":  "ub_g7000u00100.webp"
+                       },
+                       {
+                           "id":  8,
+                           "name_en":  "Titania",
+                           "screenshot":  "ub_g8500u02200.webp"
+                       },
+                       {
+                           "id":  9,
+                           "name_en":  "Byarlant Custom 02",
+                           "screenshot":  "ub_g1330u00600.webp"
+                       },
+                       {
+                           "id":  10,
+                           "name_en":  "Shining Gundam (Super Mode)",
+                           "screenshot":  "ub_g2000u00200.webp"
+                       },
+                       {
+                           "id":  11,
+                           "name_en":  "Gundam Hajiroboshi",
+                           "screenshot":  "ub_g4330u00100.webp"
+                       },
+                       {
+                           "id":  12,
+                           "name_en":  "Full Armor Gundam Mk-III",
+                           "screenshot":  "ub_g1150u00400.webp"
+                       },
+                       {
+                           "id":  13,
+                           "name_en":  "ZAKU Warrior (Live Concert Type)",
+                           "screenshot":  "ub_g3300u05900.webp"
+                       },
+                       {
+                           "id":  14,
+                           "name_en":  "G-Falcon GX",
+                           "screenshot":  "ub_g2300u05400.webp"
+                       },
+                       {
+                           "id":  15,
+                           "name_en":  "G-Xiphos",
+                           "screenshot":  "ub_g4080u00300.webp"
+                       },
+                       {
+                           "id":  16,
+                           "name_en":  "Scorpio",
+                           "screenshot":  "ub_g2120u00100.webp"
+                       },
+                       {
+                           "id":  17,
+                           "name_en":  "Gromlin",
+                           "screenshot":  "ub_g8500u02800.webp"
+                       },
+                       {
+                           "id":  18,
+                           "name_en":  "Gundam Mk-IV",
+                           "screenshot":  "ub_g8500u02000.webp"
+                       },
+                       {
+                           "id":  19,
+                           "name_en":  "Gundam F90 (Mars Independent Zeon Forces)",
+                           "screenshot":  "ub_g1550u00700.webp"
+                       },
+                       {
+                           "id":  20,
+                           "name_en":  "Musha Ghost",
+                           "screenshot":  "ub_g7300u00100.webp"
+                       },
+                       {
+                           "id":  21,
+                           "name_en":  "Knight Gundam (Centaur Form)",
+                           "screenshot":  "ub_g7050u05500.webp"
+                       },
+                       {
+                           "id":  22,
+                           "name_en":  "NT-X",
+                           "screenshot":  "ub_g8500u01400.webp"
+                       },
+                       {
+                           "id":  23,
+                           "name_en":  "Rig Ring",
+                           "screenshot":  "ub_g8500u05400.webp"
+                       }
+                   ]
+}

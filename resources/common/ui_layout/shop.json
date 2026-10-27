@@ -1,0 +1,17 @@
+{
+  "screenWidth": 1920,
+  "screenHeight": 1080,
+  "anchors": [
+    {"name": "premiumTab", "x": 180, "y": 440, "width": 180, "height": 110},
+    {"name": "freeItemBuy", "x": 430, "y": 730, "width": 290, "height": 80},
+    {"name": "freeItemPriceRegion", "x": 394, "y": 640, "width": 334, "height": 85},
+    {"name": "confirmBuy", "x": 950, "y": 920, "width": 400, "height": 140},
+    {"name": "resultClose", "x": 880, "y": 950, "width": 160, "height": 90},
+    {"name": "diamondRiskRegion", "x": 450, "y": 350, "width": 1050, "height": 340},
+    {"name": "confirmDialog", "x": 870, "y": 70, "width": 180, "height": 45, "template": "confirmDialog.png"},
+    {"name": "confirmFreeStatement", "x": 660, "y": 135, "width": 600, "height": 78, "template": "confirmFreeStatement.png"},
+    {"name": "confirmItem", "x": 483, "y": 227, "width": 420, "height": 41, "template": "confirmItem.png"},
+    {"name": "confirmZeroCost", "x": 1200, "y": 579, "width": 237, "height": 47, "template": "confirmZeroCost.png"},
+    {"name": "confirmRemaining", "x": 1200, "y": 638, "width": 238, "height": 47}
+  ]
+}

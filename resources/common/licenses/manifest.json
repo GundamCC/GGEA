@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 1,
+  "files": [
+    {
+      "file": "OPENCVSHARP-LICENSE.txt",
+      "component": "OpenCvSharp4 / OpenCvSharp4.runtime.win",
+      "version": "4.13.0.20260627",
+      "source": "https://raw.githubusercontent.com/shimat/opencvsharp/b161e7e012f5101f6d5dc68a835c59db6cc88b18/LICENSE",
+      "sha256": "93a73400a67ba64071d073386c96b21da8d8265574de0c71520061f741b0d645"
+    },
+    {
+      "file": "OPENCV-LICENSE.txt",
+      "component": "OpenCV",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "file": "OPENCV-CONTRIB-LICENSE.txt",
+      "component": "OpenCV contrib",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv_contrib/4.13.0/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "file": "ZLIB-LICENSE.txt",
+      "component": "ZLIB",
+      "version": "v1.3.1",
+      "source": "https://raw.githubusercontent.com/madler/zlib/v1.3.1/LICENSE",
+      "sha256": "845efc77857d485d91fb3e0b884aaa929368c717ae8186b66fe1ed2495753243"
+    },
+    {
+      "file": "PNG-LICENSE.txt",
+      "component": "PNG",
+      "version": "v1.6.55",
+      "source": "https://raw.githubusercontent.com/pnggroup/libpng/v1.6.55/LICENSE",
+      "sha256": "bdb0a645ea18c60507d0368379b1ac5474b92255fcc2d115e07486a7672ba526"
+    },
+    {
+      "file": "JPEG-TURBO-LICENSE.txt",
+      "component": "JPEG-TURBO",
+      "version": "3.1.3",
+      "source": "https://raw.githubusercontent.com/libjpeg-turbo/libjpeg-turbo/3.1.3/LICENSE.md",
+      "sha256": "2189dc45a8fe96204069f8124caa53a148dfdc193f50f584c6ca7849a6072872"
+    },
+    {
+      "file": "JPEG-TURBO-NOTICE.txt",
+      "component": "JPEG-TURBO",
+      "version": "3.1.3",
+      "source": "https://raw.githubusercontent.com/libjpeg-turbo/libjpeg-turbo/3.1.3/README.ijg",
+      "sha256": "75815e3bf6484201a3c3d17a1bbf10f2e8e3237f84df10a2357ea896db2a81d6"
+    },
+    {
+      "file": "WEBP-LICENSE.txt",
+      "component": "WEBP",
+      "version": "v1.6.0",
+      "source": "https://raw.githubusercontent.com/webmproject/libwebp/v1.6.0/COPYING",
+      "sha256": "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf"
+    },
+    {
+      "file": "WEBP-NOTICE.txt",
+      "component": "WEBP",
+      "version": "v1.6.0",
+      "source": "https://raw.githubusercontent.com/webmproject/libwebp/v1.6.0/PATENTS",
+      "sha256": "cc3273e0694ea5896145e0677699b53471b03ea43021ddc50e7923fbb9f5023c"
+    },
+    {
+      "file": "TESSERACT-LICENSE.txt",
+      "component": "TESSERACT",
+      "version": "5.5.2",
+      "source": "https://raw.githubusercontent.com/tesseract-ocr/tesseract/5.5.2/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "file": "LEPTONICA-LICENSE.txt",
+      "component": "LEPTONICA",
+      "version": "1.87.0",
+      "source": "https://raw.githubusercontent.com/DanBloomberg/leptonica/1.87.0/leptonica-license.txt",
+      "sha256": "87829abb5bbb00b55a107365da89e9a33f86c4250169e5a1e5588505be7d5806"
+    },
+    {
+      "file": "OPENCV-3rdparty_cpufeatures_LICENSE",
+      "component": "OpenCV bundled third-party: 3rdparty/cpufeatures/LICENSE",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/cpufeatures/LICENSE",
+      "sha256": "c870d52f42a8f93023b99a85fe68d02637d6b04e5f35bbcd7f98759adb4e4d49"
+    },
+    {
+      "file": "OPENCV-3rdparty_dlpack_LICENSE",
+      "component": "OpenCV bundled third-party: 3rdparty/dlpack/LICENSE",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/dlpack/LICENSE",
+      "sha256": "3e8f6bc39276a586d60c8c5aaece2ff989262181cf2b3d2a128db58f97a9300c"
+    },
+    {
+      "file": "OPENCV-3rdparty_ffmpeg_license.txt",
+      "component": "OpenCV bundled third-party: 3rdparty/ffmpeg/license.txt",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/ffmpeg/license.txt",
+      "sha256": "1f9d4168b4a9a2bdd1851023735a41d0ab09ffa5fcc1a721a99ebc1d7d35a9c5"
+    },
+    {
+      "file": "OPENCV-3rdparty_flatbuffers_LICENSE.txt",
+      "component": "OpenCV bundled third-party: 3rdparty/flatbuffers/LICENSE.txt",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/flatbuffers/LICENSE.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "file": "OPENCV-3rdparty_include_opencl_LICENSE.txt",
+      "component": "OpenCV bundled third-party: 3rdparty/include/opencl/LICENSE.txt",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/include/opencl/LICENSE.txt",
+      "sha256": "cfaceadff07c2c9458283079cd0166872aa2d93d5c480f1f417be321aa7e0f4d"
+    },
+    {
+      "file": "OPENCV-3rdparty_libjasper_LICENSE",
+      "component": "OpenCV bundled third-party: 3rdparty/libjasper/LICENSE",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/libjasper/LICENSE",
+      "sha256": "edf9f4257cc33a1f396f9b062ca4a01dca7c79747c7d85b8947e603e5166760e"
+    },
+    {
+      "file": "OPENCV-3rdparty_libjasper_copyright",
+      "component": "OpenCV bundled third-party: 3rdparty/libjasper/copyright",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/libjasper/copyright",
+      "sha256": "86c11bd7b94d24d6c372bd95f8d8998b8a69c7d82a91dd0247878b28223feabe"
+    },
+    {
+      "file": "OPENCV-3rdparty_libjpeg-turbo_LICENSE.txt",
+      "component": "OpenCV bundled third-party: 3rdparty/libjpeg-turbo/LICENSE.md",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/libjpeg-turbo/LICENSE.md",
+      "sha256": "96f5b328adbb78eeaaec6980d73fd558cb1e4d62560ed615646bc3cf5e532430"
+    },
+    {
+      "file": "OPENCV-3rdparty_libpng_LICENSE",
+      "component": "OpenCV bundled third-party: 3rdparty/libpng/LICENSE",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/libpng/LICENSE",
+      "sha256": "16d9daaafbf63a31a5bdc91d4600972548fef5aaa1244202393288dbd079c49a"
+    },
+    {
+      "file": "OPENCV-3rdparty_libspng_LICENSE",
+      "component": "OpenCV bundled third-party: 3rdparty/libspng/LICENSE",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/libspng/LICENSE",
+      "sha256": "a2656f1d2643b1f9d17f263be03eb0d0be8fa5e0561dbcfaf0cf8ec3befb1413"
+    },
+    {
+      "file": "OPENCV-3rdparty_libtiff_LICENSE.txt",
+      "component": "OpenCV bundled third-party: 3rdparty/libtiff/LICENSE.md",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/libtiff/LICENSE.md",
+      "sha256": "0e27c2382d7b8147972bbb746e04059a1152c8d0fda9d03ef1399d1a433c4ade"
+    },
+    {
+      "file": "OPENCV-3rdparty_libwebp_COPYING",
+      "component": "OpenCV bundled third-party: 3rdparty/libwebp/COPYING",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/libwebp/COPYING",
+      "sha256": "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf"
+    },
+    {
+      "file": "OPENCV-3rdparty_openexr_LICENSE",
+      "component": "OpenCV bundled third-party: 3rdparty/openexr/LICENSE",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/openexr/LICENSE",
+      "sha256": "14eba5f05238f57c77e94f0ebd29a0b3736ba0456ff990cda16e21b6903ac453"
+    },
+    {
+      "file": "OPENCV-3rdparty_openjpeg_LICENSE",
+      "component": "OpenCV bundled third-party: 3rdparty/openjpeg/LICENSE",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/openjpeg/LICENSE",
+      "sha256": "a6af136f3e15038a666b61f376612a07d9a4e48cb7c01adbf3e33b3f14ab49b6"
+    },
+    {
+      "file": "OPENCV-3rdparty_protobuf_LICENSE",
+      "component": "OpenCV bundled third-party: 3rdparty/protobuf/LICENSE",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/protobuf/LICENSE",
+      "sha256": "6e5e117324afd944dcf67f36cf329843bc1a92229a8cd9bb573d7a83130fea7d"
+    },
+    {
+      "file": "OPENCV-3rdparty_quirc_LICENSE",
+      "component": "OpenCV bundled third-party: 3rdparty/quirc/LICENSE",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/quirc/LICENSE",
+      "sha256": "f64a0d2030dd3bb501f303eb66097ed92cd0c63f824e515b1116dafbce5346fe"
+    },
+    {
+      "file": "OPENCV-3rdparty_zlib-ng_LICENSE.txt",
+      "component": "OpenCV bundled third-party: 3rdparty/zlib-ng/LICENSE.md",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/zlib-ng/LICENSE.md",
+      "sha256": "6c9f0d975b41afaa34d22f55bb8986ce69e5cb7ad327cb2b28820cd425edf5ee"
+    },
+    {
+      "file": "OPENCV-3rdparty_zlib_LICENSE",
+      "component": "OpenCV bundled third-party: 3rdparty/zlib/LICENSE",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/3rdparty/zlib/LICENSE",
+      "sha256": "845efc77857d485d91fb3e0b884aaa929368c717ae8186b66fe1ed2495753243"
+    },
+    {
+      "file": "OPENCV-modules_core_3rdparty_SoftFloat_COPYING.txt",
+      "component": "OpenCV bundled third-party: modules/core/3rdparty/SoftFloat/COPYING.txt",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/modules/core/3rdparty/SoftFloat/COPYING.txt",
+      "sha256": "0c5b08365136da52639d777f1ebfc03988b0169d80655c90c59f1b3fa3e526a2"
+    },
+    {
+      "file": "OPENCV-modules_features2d_3rdparty_mscr_chi_table_LICENSE.txt",
+      "component": "OpenCV bundled third-party: modules/features2d/3rdparty/mscr/chi_table_LICENSE.txt",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/modules/features2d/3rdparty/mscr/chi_table_LICENSE.txt",
+      "sha256": "676858659f4115246b41f2f44dcfbf17db52c6b1755f1102b78a87062dff0c07"
+    },
+    {
+      "file": "OPENCV-modules_gapi_src_3rdparty_vasot_LICENSE.txt",
+      "component": "OpenCV bundled third-party: modules/gapi/src/3rdparty/vasot/LICENSE.txt",
+      "version": "4.13.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv/4.13.0/modules/gapi/src/3rdparty/vasot/LICENSE.txt",
+      "sha256": "a9c8a68807d39b6810d593008f02e7835a8f8280781e5ce9b544a7fb973bb79e"
+    },
+    {
+      "file": "MICROSOFT.NETCORE.APP.RUNTIME.WIN-X64-LICENSE.TXT.txt",
+      "component": "microsoft.netcore.app.runtime.win-x64",
+      "version": "8.0.31",
+      "source": "https://www.nuget.org/packages/microsoft.netcore.app.runtime.win-x64/8.0.31",
+      "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b"
+    },
+    {
+      "file": "MICROSOFT.NETCORE.APP.RUNTIME.WIN-X64-THIRD-PARTY-NOTICES.TXT.txt",
+      "component": "microsoft.netcore.app.runtime.win-x64",
+      "version": "8.0.31",
+      "source": "https://www.nuget.org/packages/microsoft.netcore.app.runtime.win-x64/8.0.31",
+      "sha256": "b60b2912da28eaa6518593c9e2efb5334ee062d3c42e80d8fdfa806b3dc52977"
+    },
+    {
+      "file": "MICROSOFT.WINDOWSDESKTOP.APP.RUNTIME.WIN-X64-LICENSE.txt",
+      "component": "microsoft.windowsdesktop.app.runtime.win-x64",
+      "version": "8.0.31",
+      "source": "https://www.nuget.org/packages/microsoft.windowsdesktop.app.runtime.win-x64/8.0.31",
+      "sha256": "a89886665765362eb77e0f8e26602c924520041d1711b2eedc136434fe4d01ab"
+    },
+    {
+      "file": "INTEL-IPP-ippicv_win_EULA.rtf",
+      "component": "Intel IPP / IW",
+      "version": "2022.2.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv_3rdparty/c934a2a15a6df020446ac3dfa07e3acf72b63a8f/ippicv/ippicv_2022.2.0_win_intel64_20250730_general.zip#ippicv_win/EULA.rtf",
+      "sha256": "37f11c79f36fb5e1b00aca31c1234a7435c2929d83e181ee802a349ca8571749"
+    },
+    {
+      "file": "INTEL-IPP-ippicv_win_third-party-programs.txt",
+      "component": "Intel IPP / IW",
+      "version": "2022.2.0",
+      "source": "https://raw.githubusercontent.com/opencv/opencv_3rdparty/c934a2a15a6df020446ac3dfa07e3acf72b63a8f/ippicv/ippicv_2022.2.0_win_intel64_20250730_general.zip#ippicv_win/third-party-programs.txt",
+      "sha256": "a0a246b67784450f7a1b99b244d00cbdb8c001aa9b13755ababf4a218431703c"
+    },
+    {
+      "file": "INTEL-ITT-LICENSE.txt",
+      "component": "Intel ITT API",
+      "version": "3.25.4",
+      "source": "https://raw.githubusercontent.com/intel/ittapi/v3.25.4/LICENSES/BSD-3-Clause.txt",
+      "sha256": "cf48cdd9ed87c2031b68fb1b9f4cfb55d00dcf815b21a30bf8304aa1e5e6f76a"
+    },
+    {
+      "file": "TIFF-LICENSE.txt",
+      "component": "LibTIFF",
+      "version": "4.7.1",
+      "source": "https://gitlab.com/libtiff/libtiff/-/raw/v4.7.1/LICENSE.md",
+      "sha256": "0e27c2382d7b8147972bbb746e04059a1152c8d0fda9d03ef1399d1a433c4ade"
+    }
+  ]
+}

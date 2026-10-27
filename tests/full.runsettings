@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <!-- 显式覆盖测试项目的快速默认设置，保留所有既有回归用例。 -->
+  <RunConfiguration />
+</RunSettings>

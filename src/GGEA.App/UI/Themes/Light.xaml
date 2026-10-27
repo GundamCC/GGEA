@@ -1,0 +1,27 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 同名画刷由应用整体替换，保证文字、输入框及悬停状态同步切换。 -->
+    <SolidColorBrush x:Key="Brush.Selection" Color="#EBDBBD"/>
+    <SolidColorBrush x:Key="Brush.Focus" Color="#9B6937"/>
+    <SolidColorBrush x:Key="Brush.Background" Color="#E9E7E1"/>
+    <SolidColorBrush x:Key="Brush.Card" Color="#F4F3EE"/>
+    <SolidColorBrush x:Key="Brush.CardAlt" Color="#EAE8E0"/>
+    <SolidColorBrush x:Key="Brush.Border" Color="#C9C8BE"/>
+    <SolidColorBrush x:Key="Brush.Text" Color="#242720"/>
+    <SolidColorBrush x:Key="Brush.TextDim" Color="#65675E"/>
+    <SolidColorBrush x:Key="Brush.Accent" Color="#9B6937"/>
+    <SolidColorBrush x:Key="Brush.Success" Color="#447052"/>
+    <SolidColorBrush x:Key="Brush.Warn" Color="#936127"/>
+    <SolidColorBrush x:Key="Brush.Input" Color="#FAF9F5"/>
+    <SolidColorBrush x:Key="Brush.Primary" Color="#454842"/>
+    <SolidColorBrush x:Key="Brush.OnPrimary" Color="#FAF9F5"/>
+    <SolidColorBrush x:Key="Brush.PrimaryHover" Color="#565A52"/>
+    <SolidColorBrush x:Key="Brush.Disabled" Color="#E1E0D8"/>
+    <SolidColorBrush x:Key="Brush.DisabledText" Color="#76776F"/>
+    <SolidColorBrush x:Key="Brush.Hover" Color="#EAE5D9"/>
+    <SolidColorBrush x:Key="Brush.Scroll" Color="#B4B4A8"/>
+    <SolidColorBrush x:Key="Brush.InputSelection" Color="#D2B47F"/>
+    <SolidColorBrush x:Key="Brush.Toolbar" Color="#E2E0D7"/>
+    <SolidColorBrush x:Key="Brush.Danger" Color="#993F32"/>
+    <SolidColorBrush x:Key="Brush.DangerSoft" Color="#F1DDD4"/>
+</ResourceDictionary>

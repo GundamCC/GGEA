@@ -1,0 +1,13 @@
+{
+  "name": "en_PP-OCRv5_rec_mobile",
+  "file": "resources/ocr/en_PP-OCRv5_rec_mobile.onnx",
+  "source": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/rec/en_PP-OCRv5_rec_mobile.onnx",
+  "sha256": "c3461add59bb4323ecba96a492ab75e06dda42467c9e3d0c18db5d1d21924be8",
+  "bytes": 7872351,
+  "upstream": "PaddlePaddle/PaddleOCR",
+  "converter": "RapidAI/RapidOCR",
+  "license": "Apache-2.0",
+  "dictionary": "embedded character metadata; CTC blank at index 0, trailing space",
+  "input": "BGR grayscale replicated; NCHW 1x3x48xW, W=max(320, scaled line width); preserve aspect ratio; (pixel/255-0.5)/0.5; zero right padding",
+  "runtime": "Microsoft.ML.OnnxRuntime 1.23.2 CPU"
+}

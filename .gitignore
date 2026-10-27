@@ -1,0 +1,37 @@
+# 编译输出
+bin/
+obj/
+
+# 发布产物
+artifacts/
+# 本机依赖、构建工作区与研究资料（不属于发布产物）
+/dependencies/
+/build/
+/runtime/
+/backups/
+/research/
+/archive/
+/test-results/
+/dev/
+# 本机安装的插件不属于公共源码或普通发行包。
+/plugins/
+/config/plugins/
+/GGEA.ReleaseManager.exe
+# 维护者配置存放在 LocalAppData；以下规则防止手工备份或旧便携配置误入源码。
+/.local/
+**/release-manager.settings.json
+**/GGEA.ReleaseManager.settings.json
+**/ReleaseManager/settings.json
+.env
+.env.*
+!.env.example
+
+# 运行时日志
+logs/
+
+# 用户与本机配置
+*.user
+.vs/
+
+# 测试结果
+TestResults/

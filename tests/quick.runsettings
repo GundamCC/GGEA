@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <RunConfiguration>
+    <!-- 日常只验证少量核心边界；实机兼容和完整流程由用户体验反馈驱动。 -->
+    <TestCaseFilter>Category=Smoke</TestCaseFilter>
+  </RunConfiguration>
+</RunSettings>

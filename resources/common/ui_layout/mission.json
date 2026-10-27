@@ -1,0 +1,11 @@
+{
+  "screenWidth": 1920,
+  "screenHeight": 1080,
+  "anchors": [
+    { "name": "claimAll", "x": 1500, "y": 870, "width": 400, "height": 110 },
+    { "name": "claim1", "x": 1640, "y": 260, "width": 150, "height": 60 },
+    { "name": "claim2", "x": 1640, "y": 450, "width": 150, "height": 60 },
+    { "name": "claim3", "x": 1640, "y": 640, "width": 150, "height": 60 },
+    { "name": "claimResultOk", "x": 870, "y": 945, "width": 160, "height": 70 }
+  ]
+}

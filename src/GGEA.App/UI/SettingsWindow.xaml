@@ -1,0 +1,158 @@
+<Window x:Class="GGEA.App.UI.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:loc="clr-namespace:GGEA.App.Localization"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:GGEA.App.UI"
+        Title="{loc:Text Source='GGEA 设置'}"
+        Width="600" Height="700"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{DynamicResource Brush.Background}"
+        Foreground="{DynamicResource Brush.Text}"
+        FontFamily="{loc:UiFont}" UseLayoutRounding="True" SnapsToDevicePixels="True">
+    <Grid Margin="28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 设置卡片：内容超出窗口高度时显示竖向滚动条 -->
+        <ScrollViewer Grid.Row="0" Margin="0"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <!-- 助手语言与游戏素材独立；重启生效避免中途替换任务状态。 -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Text Source='界面语言 / Language'}" Style="{StaticResource CardTitle}"/>
+                        <ComboBox x:Name="UiLanguageCombo" Style="{StaticResource ComboBoxDark}" Margin="0,12,0,0"/>
+                        <TextBlock Text="{loc:Text Source='保存后重启 GGEA 生效；不改变游戏语言或识别素材。'}" Style="{StaticResource HintText}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+                <!-- 启动检查结果与手动检查在设置中共用更新组件，不再自动弹出更新窗口。 -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                    <local:UpdatePanel x:Name="Updates"/>
+                </Border>
+                <!-- 插件编辑独立于主配置，启停在重启后生效。 -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                    <local:PluginSettingsPanel x:Name="PluginSettings"/>
+                </Border>
+                <!-- ADB 路径设置卡片 -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Text Source='ADB 可执行文件'}" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="{loc:Text Source='选择已检索或保存的路径；也可浏览标准 ADB 或厂商 ADB，并点击测试。'}"
+                                   Style="{StaticResource HintText}"/>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="AdbPathBox" Grid.Column="0" Style="{StaticResource ComboBoxDark}"
+                                      SelectionChanged="AdbPathBox_SelectionChanged"
+                                      ToolTip="{Binding SelectedItem, RelativeSource={RelativeSource Self}}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" MaxWidth="350" ToolTip="{Binding}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button x:Name="BrowseButton" Grid.Column="2" Content="{loc:Text Source='浏览…'}"
+                                    Click="BrowseButton_Click"
+                                    Style="{StaticResource ButtonSecondary}"/>
+                        </Grid>
+                        <WrapPanel Margin="0,12,0,0">
+                            <Button x:Name="TestButton" Content="{loc:Text Source='测试 ADB'}"
+                                    Click="TestButton_Click"
+                                    Style="{StaticResource ButtonSecondary}"/>
+                            <TextBlock x:Name="StatusText" Style="{StaticResource HintText}" TextWrapping="Wrap" MaxWidth="440" Margin="0,8,0,0"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 通知设置与模拟器配置独立，默认开启并随配置保存。 -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Text Source='通知'}" Style="{StaticResource CardTitle}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <CheckBox x:Name="EnableWindowsNotificationsCheckBox"
+                                      Style="{StaticResource TaskCheckBox}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{loc:Text Source='启用 Windows 通知'}" Style="{StaticResource InlineLabel}"
+                                       Margin="8,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+
+                <!-- 区服限定可选游戏语言，包名由官方区服内部决定。 -->
+                <Border x:Name="GameRegionCard" Style="{StaticResource Card}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Text Source='游戏区服与语言'}" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="{loc:Text Source='游戏区服'}" Style="{StaticResource InlineLabel}" Margin="0,12,0,0"/>
+                        <ComboBox x:Name="GameServerCombo" Style="{StaticResource ComboBoxDark}" Margin="0,6,0,0"
+                                  SelectionChanged="GameServerCombo_SelectionChanged"/>
+                        <TextBlock Text="{loc:Text Source='游戏语言'}" Style="{StaticResource InlineLabel}" Margin="0,12,0,0"/>
+                        <ComboBox x:Name="GameLanguageCombo" Style="{StaticResource ComboBoxDark}" Margin="0,6,0,0"/>
+
+                    </StackPanel>
+                </Border>
+
+                <!-- 模拟器与游戏设置卡片 -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Text Source='模拟器与游戏'}" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="{loc:Text Source='用于“一键启动模拟器并打开游戏”。BlueStacks 会自动配对 HD-Adb.exe 与 HD-Player.exe；MuMu 默认打开第一个安卓设备（vmindex 0）。'}"
+                                   Style="{StaticResource HintText}"/>
+
+                        <TextBlock Text="{loc:Text Source='模拟器类型'}" Style="{StaticResource InlineLabel}" Margin="0,14,0,0"/>
+                        <ComboBox x:Name="EmulatorTypeCombo" Style="{StaticResource ComboBoxDark}" Margin="0,6,0,0"
+                                  SelectionChanged="EmulatorTypeCombo_SelectionChanged"/>
+
+                        <TextBlock Text="{loc:Text Source='模拟器路径'}" Style="{StaticResource InlineLabel}" Margin="0,14,0,0"/>
+                        <Grid Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="EmulatorPathBox" Grid.Column="0" Style="{StaticResource TextBoxDark}"/>
+                            <Button x:Name="BrowseEmulatorButton" Grid.Column="2" Content="{loc:Text Source='浏览…'}"
+                                    Click="BrowseEmulatorButton_Click"
+                                    Style="{StaticResource ButtonSecondary}"/>
+                        </Grid>
+
+                        <TextBlock Text="{loc:Text Source='启动参数'}" Style="{StaticResource InlineLabel}" Margin="0,12,0,0"/>
+                        <TextBox x:Name="EmulatorArgsBox" Margin="0,6,0,0"
+                                 Text="control launch --vmindex 0"
+                                 Style="{StaticResource TextBoxDark}"/>
+                        <TextBlock Text="{loc:Text Source='MuMu 示例: control launch --vmindex 0；雷电示例: launch --index 0'}"
+                                   Style="{StaticResource HintText}" Margin="0,4,0,0"/>
+
+
+                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                            <CheckBox x:Name="AllowGgeaDownloadCheckBox"
+                                      Style="{StaticResource TaskCheckBox}"
+                                      VerticalAlignment="Center"/>
+                            <TextBlock Text="{loc:Text Source='允许 GGEA 下载游戏数据'}"
+                                       Style="{StaticResource InlineLabel}"
+                                       Margin="8,0,0,0"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="{loc:Text Source='勾选后，游戏弹出下载界面时自动点击下载；未勾选时点击取消并提醒你。'}"
+                                   Style="{StaticResource HintText}" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button x:Name="SaveButton" Content="{loc:Text Source='保存'}" MinWidth="88"
+                    Click="SaveButton_Click"
+                    Style="{StaticResource ButtonPrimary}"/>
+            <Button x:Name="CancelButton" Content="{loc:Text Source='取消'}" MinWidth="88" Margin="10,0,0,0"
+                    Click="CancelButton_Click"
+                    Style="{StaticResource ButtonSecondary}"/>
+        </StackPanel>
+    </Grid>
+</Window>

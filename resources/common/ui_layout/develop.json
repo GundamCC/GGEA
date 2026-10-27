@@ -1,0 +1,15 @@
+{
+  "screenWidth": 1920,
+  "screenHeight": 1080,
+  "anchors": [
+    { "name": "firstRoadmap", "x": 450, "y": 240, "width": 360, "height": 200 },
+    { "name": "developAll", "x": 1570, "y": 907, "width": 350, "height": 173 },
+    { "name": "executeDevelop", "x": 0, "y": 880, "width": 1920, "height": 200 },
+    { "name": "executeConfirm", "x": 0, "y": 880, "width": 1920, "height": 200 },
+    { "name": "showcaseTapToNext", "x": 0, "y": 880, "width": 1920, "height": 200 },
+    { "name": "roadmapBack", "x": 0, "y": 0, "width": 240, "height": 130 },
+    { "name": "developTitle", "x": 210, "y": 12, "width": 350, "height": 88 },
+    { "name": "roadmapDisplaySettingsTitle", "x": 700, "y": 45, "width": 520, "height": 90 },
+    { "name": "roadmapDisplaySettingsConfirm", "x": 780, "y": 930, "width": 360, "height": 120 }
+  ]
+}

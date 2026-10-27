@@ -1,0 +1,13 @@
+GGEA 的关卡编号与 HARD STAGE 标题 OCR 在本机运行，不发送截图到外部服务。
+
+模型：en_PP-OCRv5_rec_mobile.onnx
+来源：PaddleOCR 英文轻量识别模型，由 RapidOCR 转换为 ONNX 并附带字符字典。
+模型固定来源、字节数和 SHA-256 见 model.json。
+PaddleOCR / RapidOCR：Apache License 2.0，完整许可证见 PADDLE-LICENSE.txt、RAPIDOCR-LICENSE.txt。
+
+运行库：Microsoft.ML.OnnxRuntime 1.23.2，CPU。
+ONNX Runtime：MIT License，见 ONNX-RUNTIME-LICENSE.txt。
+第三方组件声明见 ONNX-RUNTIME-ThirdPartyNotices.txt。
+
+部署：模型与声明由项目复制到输出目录，不需要用户安装 Python、PaddlePaddle 或 CUDA。
+维护者可使用 tools/prepare-ocr-model.ps1 按固定来源和摘要重新取得相同模型。

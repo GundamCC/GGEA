@@ -1,0 +1,31 @@
+{
+  "screenWidth": 1920,
+  "screenHeight": 1080,
+  "anchors": [
+    { "name": "stageBoostInfoTitle", "x": 700, "y": 390, "width": 520, "height": 100 },
+    { "name": "opponentSelectionTitle", "x": 200, "y": 0, "width": 440, "height": 100 },
+    { "name": "battleButton", "x": 1445, "y": 810, "width": 400, "height": 160 },
+    { "name": "opponent1Result", "x": 0, "y": 570, "width": 106, "height": 70 },
+    { "name": "opponent2Result", "x": 280, "y": 570, "width": 106, "height": 70 },
+    { "name": "opponent3Result", "x": 566, "y": 570, "width": 106, "height": 70 },
+    { "name": "opponent4Result", "x": 852, "y": 570, "width": 106, "height": 70 },
+    { "name": "opponent5Result", "x": 1138, "y": 570, "width": 106, "height": 70 },
+    { "name": "opponent1BattleEvaluation", "x": 6, "y": 718, "width": 272, "height": 66 },
+    { "name": "opponent2BattleEvaluation", "x": 292, "y": 718, "width": 272, "height": 66 },
+    { "name": "opponent3BattleEvaluation", "x": 578, "y": 718, "width": 272, "height": 66 },
+    { "name": "opponent4BattleEvaluation", "x": 864, "y": 718, "width": 272, "height": 66 },
+    { "name": "opponent5BattleEvaluation", "x": 1150, "y": 718, "width": 272, "height": 66 },
+    { "name": "opponentChangeRemaining", "x": 891, "y": 28, "width": 279, "height": 46 },
+    { "name": "opponent1Refresh", "x": 180, "y": 870, "width": 86, "height": 86 },
+    { "name": "opponent2Refresh", "x": 466, "y": 870, "width": 86, "height": 86 },
+    { "name": "opponent3Refresh", "x": 752, "y": 870, "width": 86, "height": 86 },
+    { "name": "opponent4Refresh", "x": 1038, "y": 870, "width": 86, "height": 86 },
+    { "name": "opponent5Refresh", "x": 1324, "y": 870, "width": 86, "height": 86 },
+    { "name": "refreshCount", "x": 1100, "y": 28, "width": 30, "height": 46 },
+    { "name": "opponent1Points", "x": 72, "y": 716, "width": 210, "height": 66 },
+    { "name": "opponent2Points", "x": 358, "y": 716, "width": 210, "height": 66 },
+    { "name": "opponent3Points", "x": 644, "y": 716, "width": 210, "height": 66 },
+    { "name": "opponent4Points", "x": 930, "y": 716, "width": 210, "height": 66 },
+    { "name": "opponent5Points", "x": 1216, "y": 716, "width": 210, "height": 66 }
+  ]
+}

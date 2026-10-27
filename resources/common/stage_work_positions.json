@@ -1,0 +1,124 @@
+{
+  "positions": [
+    {
+      "id": 1,
+      "canvasX": 769,
+      "canvasY": 485,
+      "verified": true
+    },
+    {
+      "id": 2,
+      "canvasX": 1400,
+      "canvasY": 485,
+      "verified": true
+    },
+    {
+      "id": 3,
+      "canvasX": 2565,
+      "canvasY": 485,
+      "verified": true
+    },
+    {
+      "id": 4,
+      "canvasX": 5069,
+      "canvasY": 485,
+      "verified": true
+    },
+    {
+      "id": 5,
+      "canvasX": 5653,
+      "canvasY": 485,
+      "verified": true
+    },
+    {
+      "id": 6,
+      "canvasX": 6642,
+      "canvasY": 190,
+      "verified": true
+    },
+    {
+      "id": 7,
+      "canvasX": 7438,
+      "canvasY": 525,
+      "verified": true
+    },
+    {
+      "id": 8,
+      "canvasX": 6883,
+      "canvasY": 485,
+      "verified": true
+    },
+    {
+      "id": 9,
+      "canvasX": 4112,
+      "canvasY": 770,
+      "verified": true
+    },
+    {
+      "id": 10,
+      "canvasX": 2271,
+      "canvasY": 770,
+      "verified": true
+    },
+    {
+      "id": 11,
+      "canvasX": 2865,
+      "canvasY": 771,
+      "verified": true
+    },
+    {
+      "id": 12,
+      "canvasX": 3521,
+      "canvasY": 190,
+      "verified": true
+    },
+    {
+      "id": 13,
+      "canvasX": 1688,
+      "canvasY": 190,
+      "verified": true
+    },
+    {
+      "id": 14,
+      "canvasX": 2271,
+      "canvasY": 190,
+      "verified": true
+    },
+    {
+      "id": 15,
+      "canvasX": 2896,
+      "canvasY": 190,
+      "verified": true
+    },
+    {
+      "id": 16,
+      "canvasX": 4702,
+      "canvasY": 770,
+      "verified": true
+    },
+    {
+      "id": 17,
+      "canvasX": 6642,
+      "canvasY": 771,
+      "verified": true
+    },
+    {
+      "id": 18,
+      "canvasX": 4112,
+      "canvasY": 190,
+      "verified": true
+    },
+    {
+      "id": 19,
+      "canvasX": 3521,
+      "canvasY": 769,
+      "verified": true
+    },
+    {
+      "id": 20,
+      "canvasX": 7938,
+      "canvasY": 525,
+      "verified": true
+    }
+  ]
+}

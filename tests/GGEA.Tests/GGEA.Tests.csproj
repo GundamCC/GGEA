@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- dotnet test 默认使用核心冒烟集；全量回归须显式指定 full.runsettings。 -->
+    <RunSettingsFilePath>$(MSBuildThisFileDirectory)..\quick.runsettings</RunSettingsFilePath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0-preview-24080-01" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GGEA.App\GGEA.App.csproj" />
+    <!-- 发布器作为独立工具构建，测试本机配置边界，不进入普通版引用链。 -->
+    <ProjectReference Include="..\..\src\GGEA.ReleaseManager\GGEA.ReleaseManager.csproj" />
+    <!-- 无 BAML 的测试夹具链接原始图像线程源码；隔离静态状态且不重复加载应用资源。 -->
+    <ProjectReference Include="..\GGEA.CodecLifetimeFixture\GGEA.CodecLifetimeFixture.csproj" />
+    <ProjectReference Include="..\..\samples\GGEA.SamplePlugin\GGEA.SamplePlugin.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <!-- 用真实独立 DLL 验证加载边界，示例只进入测试夹具，不进入产品输出。 -->
+    <None Include="..\..\samples\GGEA.SamplePlugin\bin\$(Configuration)\net8.0-windows\GGEA.SamplePlugin.dll" Link="Fixtures\Plugins\GGEA.SamplePlugin.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\samples\GGEA.SamplePlugin\bin\$(Configuration)\net8.0-windows\GGEA.SamplePlugin.deps.json" Link="Fixtures\Plugins\GGEA.SamplePlugin.deps.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- 保留小尺寸实机裁剪样本，防止透明合成、缩放或 ROI 改动导致识别退化。 -->
+    <None Update="Fixtures\WorkLogo\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\Shop\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\Base\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\Roadmap\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\Navigation\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\Develop\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\Sortie\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\StageNodes\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <!-- OCR 标题回归截图仅属于测试，不进入应用发布资源。 -->
+    <None Update="Fixtures\StageTitles\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\Formation\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <!-- 一次略过实机局部原帧，验证亮暗态及底部执行按钮的真实匹配。 -->
+    <None Update="Fixtures\Upgrade\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <!-- 日服消耗 AP 的原始前后帧，用于次数上限与选中节点回归，不进入发布包。 -->
+    <None Update="Fixtures\ApConsumption\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\Mission\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <!-- 日服招募两人的真实过程截图，仅用于回归，不进入发布包。 -->
+    <None Update="Fixtures\Scout\*.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

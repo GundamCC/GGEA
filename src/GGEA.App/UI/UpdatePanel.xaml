@@ -1,0 +1,41 @@
+<UserControl x:Class="GGEA.App.UI.UpdatePanel"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:loc="clr-namespace:GGEA.App.Localization"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ FontFamily="{loc:UiFont}" Foreground="{DynamicResource Brush.Text}">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Text Source='软件更新'}" Style="{StaticResource CardTitle}"/>
+                        <TextBlock x:Name="UpdateVersionText" Style="{StaticResource HintText}"/>
+                        <WrapPanel Margin="0,12,0,0">
+                            <Button x:Name="CheckUpdateButton" Content="{loc:Text Source='检查更新'}" Click="CheckUpdateButton_Click"
+                                    Style="{StaticResource ButtonPrimary}" Margin="0,0,8,8"/>
+                            <Button x:Name="DownloadUpdateButton" Content="{loc:Text Source='下载更新'}" Click="DownloadUpdateButton_Click"
+                                    Style="{StaticResource ButtonSecondary}" Visibility="Collapsed" Margin="0,0,8,8"/>
+                            <Button x:Name="CancelUpdateButton" Content="{loc:Text Source='取消更新'}" Click="CancelUpdateButton_Click"
+                                    Style="{StaticResource ButtonSecondary}" Visibility="Collapsed" Margin="0,0,8,8"/>
+                            <Button Content="{loc:Text Source='GitHub 发布页'}" Click="OpenReleasesButton_Click"
+                                    Style="{StaticResource ButtonSecondary}" Margin="0,0,8,8"/>
+                        </WrapPanel>
+                        <!-- 与通知选项共用 18px 复选框；说明沿文字左缘对齐，选项与状态分组留白。 -->
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
+                            <CheckBox x:Name="AutoInstallUpdatesCheckBox" Style="{StaticResource TaskCheckBox}"
+                                      IsChecked="True" VerticalAlignment="Center"
+                                      AutomationProperties.Name="{loc:Text Source='下载完成后自动重启安装'}"
+                                      Click="AutoInstallUpdatesCheckBox_Click"/>
+                            <TextBlock Text="{loc:Text Source='下载完成后自动重启安装'}" Style="{StaticResource InlineLabel}"
+                                       Margin="8,0,0,0" VerticalAlignment="Center" Cursor="Hand"
+                                       MouseLeftButtonUp="AutoInstallUpdatesLabel_Click"/>
+                        </StackPanel>
+                        <TextBlock Text="{loc:Text Source='选项即时保存。开启后，点击下载即同意校验成功后重启；其他未保存的设置不会保存。'}"
+                                   Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="26,0,0,16"/>
+                        <ProgressBar x:Name="UpdateProgress" Height="5" Minimum="0" Maximum="100"
+                                     Visibility="Collapsed" Margin="0,2,0,8"/>
+                        <TextBlock x:Name="UpdateStatusText" Style="{StaticResource HintText}" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="SourceStatusText" Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                        <TextBlock Text="{loc:Text Source='更新内容'}" x:Name="NotesHeading" Visibility="Collapsed" FontWeight="SemiBold" Margin="0,16,0,8"/>
+                        <ScrollViewer x:Name="NotesScroll" MaxHeight="140" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <TextBlock x:Name="UpdateNotesText" Style="{StaticResource HintText}" TextWrapping="Wrap"/>
+                        </ScrollViewer>
+                    </StackPanel>
+
+</UserControl>

@@ -1,0 +1,9 @@
+{
+  "screenWidth": 1920,
+  "screenHeight": 1080,
+  "anchors": [
+    { "name": "battleshipCruise", "x": 170, "y": 215, "width": 160, "height": 80 },
+    { "name": "claimAll", "x": 1465, "y": 785, "width": 440, "height": 180 },
+    { "name": "claimResultOk", "x": 870, "y": 945, "width": 160, "height": 70 }
+  ]
+}

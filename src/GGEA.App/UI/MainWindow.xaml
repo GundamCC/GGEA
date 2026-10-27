@@ -1,0 +1,1301 @@
+<Window x:Class="GGEA.App.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:loc="clr-namespace:GGEA.App.Localization"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="GGEA — SD Gundam G Generation ETERNAL Assistant"
+        Width="1280" Height="820"
+        MinWidth="1080" MinHeight="700"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource Brush.Background}"
+        Foreground="{DynamicResource Brush.Text}"
+        FontFamily="{loc:UiFont}" UseLayoutRounding="True" SnapsToDevicePixels="True">
+    <Grid Margin="28,10,28,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 档案终端页眉：品牌、用途与细线构成层级，装饰不参与命中测试。 -->
+        <Border Grid.Row="0" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1" Padding="0,0,0,18" Margin="0,0,0,18">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="GGEA" FontFamily="Segoe UI" FontSize="32" FontWeight="Bold" LineHeight="36"/>
+                    <TextBlock Text="SD Gundam G Generation ETERNAL Assistant" FontSize="11" FontWeight="SemiBold" Margin="1,2,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- 灯泡显示当前明暗状态；操作说明保留在提示与辅助功能名称中。 -->
+                    <Button x:Name="ThemeToggleButton" Width="38" Padding="8,5" Margin="0,0,10,0"
+                            ToolTip="{loc:Text Source='切换到日间模式'}" AutomationProperties.Name="{loc:Text Source='切换到日间模式'}"
+                            Click="ThemeToggleButton_Click" Style="{StaticResource ButtonSecondary}">
+                        <Grid Width="20" Height="22">
+                            <Path x:Name="BulbGlass" Data="M 6,14 C 6,11 3,11 3,7 A 7,7 0 0 1 17,7 C 17,11 14,11 14,14 Z"
+                                  Stroke="{DynamicResource Brush.TextDim}" StrokeThickness="1.3" Fill="Transparent"/>
+                            <Path Data="M 7,17 L 13,17 M 8,20 L 12,20" Stroke="{DynamicResource Brush.TextDim}" StrokeThickness="1.3"/>
+                            <Path x:Name="BulbRays" Data="M 7,7 L 9,10 L 11,7 M 9,10 L 9,14"
+                                  Stroke="{DynamicResource Brush.Text}" StrokeThickness="1" Visibility="Collapsed"/>
+                        </Grid>
+                    </Button>
+                    <Grid>
+                        <Button x:Name="SettingsButton" Content="{loc:Text Source='设置'}" Click="SettingsButton_Click"
+                                Style="{StaticResource ButtonSecondary}" AutomationProperties.Name="{loc:Text Source='设置'}"/>
+                        <!-- 标记不拦截点击；辅助功能名称同时提供新版提示，不只依赖颜色。 -->
+                        <Border x:Name="UpdateBadge" Width="9" Height="9" CornerRadius="5"
+                                Background="#F06449" BorderBrush="{DynamicResource Brush.Background}" BorderThickness="1"
+                                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-3,-3,0"
+                                Visibility="Collapsed" IsHitTestVisible="False"/>
+                    </Grid>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="310"/>
+                <ColumnDefinition Width="24"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左侧栏 -->
+            <!-- 设备与执行按钮固定，只有任务清单滚动，缩小窗口也可立即开始或停止。 -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <!-- 模拟器卡片 -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Text Source='设备连接'}" Style="{StaticResource CardTitle}"/>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="DeviceCombo"
+                                      Grid.Column="0"
+                                      Style="{StaticResource ComboBoxDark}"
+                                      VerticalContentAlignment="Center"
+                                      ToolTip="{Binding SelectedItem.Display, RelativeSource={RelativeSource Self}}"
+                                      SelectionChanged="DeviceCombo_SelectionChanged"/>
+                            <Button x:Name="RefreshButton"
+                                    Grid.Column="2"
+                                    Content="{loc:Text Source='刷新'}"
+                                    Click="RefreshButton_Click"
+                                    Style="{StaticResource ButtonSecondary}"/>
+                        </Grid>
+                        <!-- 状态并列呈现，为任务清单保留更多高度；状态保持单行，完整信息可悬停查看。 -->
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="DeviceStatusText" Style="{StaticResource StatusText}" Text="{loc:Text Source='未检测设备'}" Margin="0,0,8,0"/>
+                            <TextBlock x:Name="ConnectionStateText" Grid.Column="1" Style="{StaticResource StatusText}" Text="{loc:Text Source='未连接'}" Margin="0" TextAlignment="Right" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+                        </Grid>
+                        <!-- 重连与启动分行于设备选择，保留地址的可读宽度。 -->
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                        <Button x:Name="StartGameButton" Content="{loc:Text Source='启动模拟器 / 打开游戏'}"
+                                Click="StartGameButton_Click"
+                                Style="{StaticResource ButtonPrimary}"/>
+                        <Button x:Name="ReconnectButton" Grid.Column="1" Content="{loc:Text Source='重连'}" Margin="8,0,0,0"
+                                IsEnabled="False" Click="ReconnectButton_Click"
+                                ToolTip="{loc:Text Source='先选择离线 IP 设备，再重连该地址；不会启动游戏或重启共享 ADB 服务'}"
+                                Style="{StaticResource ButtonSecondary}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 每日任务卡片 -->
+                <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,12,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="{loc:Text Source='每日任务'}"
+                                       Style="{StaticResource CardTitle}"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{loc:Text Source='全选'}"
+                                       Style="{StaticResource InlineLabel}"
+                                       Margin="0,0,7,0"/>
+                            <CheckBox Grid.Column="2"
+                                      x:Name="DailySelectAllCheckBox"
+                                      Style="{StaticResource TaskCheckBox}"
+                                      ToolTip="{loc:Text Source='点击全选所有任务，再次点击取消全选'}"
+                                      Margin="0,0,9,0"
+                                      VerticalAlignment="Center"
+                                      Click="DailySelectAllCheckBox_Click"/>
+                        </Grid>
+
+                        <TextBlock Grid.Row="1" Text="{loc:Text Source='拖拽排序 · 按顺序执行已勾选任务'}"
+                                   Style="{StaticResource HintText}"
+                                   Margin="0,8,0,0"/>
+
+                        <ListBox Grid.Row="2" x:Name="DailyTaskList"
+                                 Style="{StaticResource ApPlanList}"
+                                 AllowDrop="True"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Margin="0,8,0,0"
+                                 PreviewMouseLeftButtonDown="DailyTaskList_PreviewMouseLeftButtonDown"
+                                 PreviewMouseMove="DailyTaskList_PreviewMouseMove"
+                                 DragOver="DailyTaskList_DragOver"
+                                 DragLeave="DailyTaskList_DragLeave"
+                                 Drop="DailyTaskList_Drop"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0,1"/>
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="ItemStateBorder"
+                                                        Background="Transparent"
+                                                        BorderBrush="Transparent"
+                                                        BorderThickness="2,0,0,0"
+                                                        CornerRadius="6">
+                                                    <ContentPresenter/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{DynamicResource Brush.CardAlt}"
+                                            BorderBrush="{DynamicResource Brush.Border}"
+                                            BorderThickness="0,0,0,1"
+                                            CornerRadius="6"
+                                            Padding="8,8,8,9"
+                                            ToolTip="{Binding Description}"
+                                            MouseLeftButtonUp="DailyTaskRow_MouseLeftButtonUp">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="26"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0"
+                                                       Text="⠿"
+                                                       Foreground="{DynamicResource Brush.TextDim}"
+                                                       FontSize="15"
+                                                       Cursor="SizeAll"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding DisplayName}"
+                                                       FontSize="12"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"
+                                                       MouseLeftButtonUp="DailyTaskName_MouseLeftButtonUp">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.Text}"/>
+                                                        <Setter Property="Cursor" Value="Arrow"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CanOpenSettings}" Value="True">
+                                                                <Setter Property="Cursor" Value="Hand"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Grid.Column="2"
+                                                       Text="⚙"
+                                                       FontSize="14"
+                                                       Width="22" Height="20" TextAlignment="Center"
+                                                       Margin="9,0,5,0"
+                                                       Cursor="Hand"
+                                                       VerticalAlignment="Center"
+                                                       ToolTip="{loc:Text Source='打开对应设置页'}"
+                                                       MouseLeftButtonUp="DailyTaskGearButton_Click">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextDim}"/>
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasSettings}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <!-- 与设置图标保持同一视觉层级；透明点击区保留键盘操作和删除语义。 -->
+                                            <Button Grid.Column="2" Margin="9,0,5,0" Width="22" Height="20"
+                                                    VerticalAlignment="Center" Cursor="Hand"
+                                                    AutomationProperties.Name="{loc:Text Source='删除强敌来袭任务'}"
+                                                    ToolTip="{loc:Text Source='删除此强敌来袭任务'}" Click="FierceEnemyRemoveButton_Click">
+                                                <Button.Style>
+                                                    <Style TargetType="Button">
+                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextDim}"/>
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <Border Background="Transparent">
+                                                                        <Path Width="14" Height="16" Stretch="Uniform"
+                                                                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                              Stroke="{TemplateBinding Foreground}" StrokeThickness="1.4"
+                                                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                                                              Data="M 2,4 L 14,4 M 5,4 L 5,1 L 11,1 L 11,4 M 3,4 L 4,15 L 12,15 L 13,4 M 6,7 L 6,12 M 10,7 L 10,12"/>
+                                                                    </Border>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CanRemove}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Danger}"/>
+                                                            </Trigger>
+                                                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.Danger}"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                            <CheckBox Grid.Column="3"
+                                                      Style="{StaticResource TaskCheckBox}"
+                                                      IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                      IsEnabled="{Binding IsSupported}"
+                                                      Margin="0,0,4,0"
+                                                      HorizontalAlignment="Right"
+                                                      VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <Button Grid.Row="3" x:Name="DailyStartButton"
+                                Content="{loc:Text Source='任务开始'}"
+                                Margin="0,12,0,0"
+                                Click="DailyStartButton_Click"
+                                Style="{StaticResource ButtonPrimary}" ToolTip="{loc:Text Source='执行已勾选的每日任务'}">
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- 账号状态卡片 -->
+                <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,12,0,0">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Text Source='账号状态'}" Style="{StaticResource CardTitle}"/>
+                        <TextBlock x:Name="AccountStatusText"
+                                   Text="{loc:Text Source='等待连接设备'}"
+                                   Style="{StaticResource HintText}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- 右侧主区域 -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="18"/>
+                    <RowDefinition Height="148"/>
+                </Grid.RowDefinitions>
+
+                <!-- 截图 / 操作卡片 -->
+                <Border Grid.Row="0" Style="{StaticResource Card}">
+                    <DockPanel>
+                    <TabControl x:Name="MainTabControl" Background="Transparent" BorderThickness="0">
+                    <TabItem x:Name="ApConsumptionTab" Header="{loc:Text Source='AP 消耗'}">
+                        <Grid Margin="0,14,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0"
+                                       Text="{loc:Text Source='拖拽作品调整执行顺序；至少勾选一个 Hard 关卡后，该作品才会加入 AP 消耗任务。'}"
+                                       Style="{StaticResource HintText}"
+                                       Margin="0,0,0,10"/>
+
+                            <!-- 配置工具栏使用标签在上的卡片布局，窄窗口下也能保持一致的控件边距。 -->
+                            <Border Grid.Row="1"
+                                    Margin="0,0,0,12"
+                                    Padding="12,10"
+                                    Background="{DynamicResource Brush.Toolbar}"
+                                    BorderBrush="{DynamicResource Brush.Border}"
+                                    BorderThickness="1"
+                                    CornerRadius="6">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1.15*" MinWidth="140"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*" MinWidth="130"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{loc:Text Source='已保存方案'}"
+                                                   Foreground="{DynamicResource Brush.TextDim}"
+                                                   FontSize="11"
+                                                   Margin="2,0,0,6"/>
+                                        <ComboBox x:Name="ApProfileCombo"
+                                                  Height="34"
+                                                  Padding="12,6"
+                                                  Margin="2,0,2,0"
+                                                  Style="{StaticResource ComboBoxDark}"
+                                                  SelectionChanged="ApProfileCombo_SelectionChanged">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}"
+                                                               Foreground="{DynamicResource Brush.Text}"
+                                                               FontSize="12"
+                                                               VerticalAlignment="Center"/>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                            <ComboBox.ItemContainerStyle>
+                                                <Style TargetType="ComboBoxItem">
+                                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Text}"/>
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Padding" Value="10,6"/>
+                                                    <Setter Property="Margin" Value="6,2"/>
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="ComboBoxItem">
+                                                                <Border x:Name="ItemBorder"
+                                                                        Background="{TemplateBinding Background}"
+                                                                        CornerRadius="6"
+                                                                        Padding="{TemplateBinding Padding}"
+                                                                        Margin="4,1">
+                                                                    <Grid>
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*"/>
+                                                                            <ColumnDefinition Width="Auto"/>
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <ContentPresenter Grid.Column="0"
+                                                                                          VerticalAlignment="Center"/>
+                                                                        <Button Grid.Column="1"
+                                                                                Width="24"
+                                                                                Height="24"
+                                                                                Padding="0"
+                                                                                Background="Transparent"
+                                                                                BorderThickness="0"
+                                                                                Cursor="Hand"
+                                                                                ToolTip="{loc:Text Source='删除方案'}"
+                                                                                Tag="{Binding}"
+                                                                                Click="DeleteApProfileButton_Click">
+                                                                            <Button.Template>
+                                                                                <ControlTemplate TargetType="Button">
+                                                                                    <Border x:Name="DeleteBorder"
+                                                                                            Background="Transparent"
+                                                                                            CornerRadius="6"
+                                                                                            Padding="2">
+                                                                                        <ContentPresenter HorizontalAlignment="Center"
+                                                                                                          VerticalAlignment="Center"/>
+                                                                                    </Border>
+                                                                                    <ControlTemplate.Triggers>
+                                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                                            <Setter TargetName="DeleteBorder"
+                                                                                                    Property="Background"
+                                                                                                    Value="{DynamicResource Brush.DangerSoft}"/>
+                                                                                        </Trigger>
+                                                                                    </ControlTemplate.Triggers>
+                                                                                </ControlTemplate>
+                                                                            </Button.Template>
+                                                                            <TextBlock Text="🗑"
+                                                                                       FontSize="13"
+                                                                                       Foreground="{DynamicResource Brush.Danger}"/>
+                                                                        </Button>
+                                                                    </Grid>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsHighlighted" Value="True">
+                                                                        <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource Brush.Hover}"/>
+                                                                    </Trigger>
+                                                                    <Trigger Property="IsSelected" Value="True">
+                                                                        <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource Brush.Selection}"/>
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </ComboBox.ItemContainerStyle>
+                                        </ComboBox>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="{loc:Text Source='方案名称'}"
+                                                   Foreground="{DynamicResource Brush.TextDim}"
+                                                   FontSize="11"
+                                                   Margin="2,0,0,6"/>
+                                        <TextBox x:Name="ApProfileNameBox"
+                                                 Height="34"
+                                                 Style="{StaticResource TextBoxDark}"/>
+                                    </StackPanel>
+
+                                    <Button x:Name="SaveApProfileButton"
+                                            Grid.Column="4"
+                                            MinWidth="124"
+                                            Height="34"
+                                            VerticalAlignment="Bottom"
+                                            Content="{loc:Text Source='保存方案'}"
+                                            Click="SaveApProfileButton_Click"
+                                            Style="{StaticResource ButtonPrimary}"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- 表头补偿列表的 3px 内层边距及右侧 17px 系统滚动槽，短列表也保留滚动槽以稳定列位置。 -->
+                            <Border Grid.Row="2" Margin="8,0,25,6"
+                                    Background="{DynamicResource Brush.CardAlt}"
+                                    BorderBrush="{DynamicResource Brush.Border}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="10,8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="26"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="58"/>
+                                        <ColumnDefinition Width="58"/>
+                                        <ColumnDefinition Width="58"/>
+                                        <ColumnDefinition Width="58"/>
+                                        <ColumnDefinition Width="58"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="1" Text="{loc:Text Source='作品'}" Style="{StaticResource InlineLabel}"/>
+                                    <TextBlock Grid.Column="2" Text="Hard1" Style="{StaticResource InlineLabel}" HorizontalAlignment="Center"/>
+                                    <TextBlock Grid.Column="3" Text="Hard2" Style="{StaticResource InlineLabel}" HorizontalAlignment="Center"/>
+                                    <TextBlock Grid.Column="4" Text="Hard3" Style="{StaticResource InlineLabel}" HorizontalAlignment="Center"/>
+                                    <TextBlock Grid.Column="5" Text="Hard4" Style="{StaticResource InlineLabel}" HorizontalAlignment="Center"/>
+                                    <TextBlock Grid.Column="6" Text="Hard5" Style="{StaticResource InlineLabel}" HorizontalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <ListBox x:Name="ApWorkList"
+                                     Grid.Row="3"
+                                     Style="{StaticResource ApPlanList}"
+                                     AllowDrop="True"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     PreviewMouseLeftButtonDown="ApWorkList_PreviewMouseLeftButtonDown"
+                                     PreviewMouseMove="ApWorkList_PreviewMouseMove"
+                                     DragOver="ApWorkList_DragOver"
+                                     DragLeave="ApWorkList_DragLeave"
+                                     Drop="ApWorkList_Drop"
+                                     ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Margin" Value="0,2"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="ItemStateBorder"
+                                                            Background="Transparent"
+                                                            BorderBrush="Transparent"
+                                                            BorderThickness="2"
+                                                            CornerRadius="6">
+                                                        <ContentPresenter/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="ItemStateBorder" Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+                                                            <Setter TargetName="ItemStateBorder" Property="Background" Value="{DynamicResource Brush.Selection}"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource Brush.CardAlt}"
+                                                BorderBrush="{DynamicResource Brush.Border}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="10,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="26"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="58"/>
+                                                    <ColumnDefinition Width="58"/>
+                                                    <ColumnDefinition Width="58"/>
+                                                    <ColumnDefinition Width="58"/>
+                                                    <ColumnDefinition Width="58"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Text="⋮⋮"
+                                                           Foreground="{DynamicResource Brush.TextDim}"
+                                                           FontSize="15"
+                                                           Cursor="SizeAll"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Work}"
+                                                           Foreground="{DynamicResource Brush.Text}"
+                                                           FontSize="12"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           VerticalAlignment="Center"/>
+                                                <CheckBox Grid.Column="2" Style="{StaticResource TaskCheckBox}"
+                                                          IsEnabled="{Binding IsHard1Enabled}"
+                                                          IsChecked="{Binding Hard1, Mode=TwoWay}"
+                                                          HorizontalAlignment="Center"/>
+                                                <CheckBox Grid.Column="3" Style="{StaticResource TaskCheckBox}"
+                                                          IsEnabled="{Binding IsHard2Enabled}"
+                                                          IsChecked="{Binding Hard2, Mode=TwoWay}"
+                                                          HorizontalAlignment="Center"/>
+                                                <CheckBox Grid.Column="4" Style="{StaticResource TaskCheckBox}"
+                                                          IsEnabled="{Binding IsHard3Enabled}"
+                                                          IsChecked="{Binding Hard3, Mode=TwoWay}"
+                                                          HorizontalAlignment="Center"/>
+                                                <CheckBox Grid.Column="5" Style="{StaticResource TaskCheckBox}"
+                                                          IsEnabled="{Binding IsHard4Enabled}"
+                                                          IsChecked="{Binding Hard4, Mode=TwoWay}"
+                                                          HorizontalAlignment="Center"/>
+                                                <CheckBox Grid.Column="6" Style="{StaticResource TaskCheckBox}"
+                                                          IsEnabled="{Binding IsHard5Enabled}"
+                                                          IsChecked="{Binding Hard5, Mode=TwoWay}"
+                                                          HorizontalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock x:Name="ApPlanStatusText"
+                                       Grid.Row="4"
+                                       Style="{StaticResource StatusText}"
+                                       Text="{loc:Text Source='在左侧每日任务中勾选“消耗AP”，然后点击开始。当前阶段仅测试作品间跳转。'}"/>
+                        </Grid>
+                    </TabItem>
+                    <!-- 位置：开发版作品画布坐标调试工具，发布版不显示。 -->
+                    <TabItem x:Name="StagePositionTab" Header="{loc:Text Source='位置'}" Visibility="Collapsed">
+                        <Grid Margin="0,12,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Text="{loc:Text Source='作品位置（画布坐标）'}" Style="{StaticResource CardTitle}"/>
+                            <TextBlock Grid.Row="1"
+                                       Text="{loc:Text Source='直接修改作品在主要关卡画布上的绝对坐标并保存；保存后立即对 AP 消耗的作品跳转生效。'}"
+                                       Style="{StaticResource HintText}"
+                                       Margin="0,4,0,10"/>
+
+                            <ListBox x:Name="StagePositionList"
+                                     Grid.Row="2"
+                                     Style="{StaticResource ApPlanList}"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource Brush.Toolbar}"
+                                                BorderBrush="{DynamicResource Brush.Border}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="10,7"
+                                                Margin="0,0,0,6">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="34"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="110"/>
+                                                    <ColumnDefinition Width="110"/>
+                                                    <ColumnDefinition Width="46"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Id}"
+                                                           Foreground="{DynamicResource Brush.TextDim}"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="12"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Work}"
+                                                           Foreground="{DynamicResource Brush.Text}"
+                                                           VerticalAlignment="Center"
+                                                           FontSize="12"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Margin="4,0,8,0"/>
+                                                <TextBox Grid.Column="2" Text="{Binding CanvasX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                         Style="{StaticResource TextBoxDark}"
+                                                         Height="30"
+                                                         Padding="6,3"
+                                                         VerticalContentAlignment="Center"
+                                                         Margin="0,0,6,0"/>
+                                                <TextBox Grid.Column="3" Text="{Binding CanvasY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                         Style="{StaticResource TextBoxDark}"
+                                                         Height="30"
+                                                         Padding="6,3"
+                                                         VerticalContentAlignment="Center"
+                                                         Margin="0,0,6,0"/>
+                                                <TextBlock Grid.Column="4" Text="✓"
+                                                           Foreground="{DynamicResource Brush.Success}"
+                                                           VerticalAlignment="Center"
+                                                           HorizontalAlignment="Center"
+                                                           FontSize="14"
+                                                           ToolTip="{loc:Text Source='已实机验证'}"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,8,0,0">
+                                <Button x:Name="StagePositionRefreshButton" Content="{loc:Text Source='重新加载'}"
+                                        Click="StagePositionRefreshButton_Click"
+                                        Style="{StaticResource ButtonSecondary}"/>
+                                <Button x:Name="StagePositionSaveButton" Content="{loc:Text Source='保存'}"
+                                        Margin="8,0,0,0"
+                                        Click="StagePositionSaveButton_Click"
+                                        Style="{StaticResource ButtonPrimary}"/>
+                                <TextBlock x:Name="StagePositionStatusText"
+                                           Style="{StaticResource StatusText}"
+                                           Margin="12,0,0,0"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- 奖励：配置“领取奖励”要执行的子任务。 -->
+                    <TabItem x:Name="RewardTab" Header="{loc:Text Source='奖励'}">
+                        <Grid Margin="0,14,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0"
+                                       Text="{loc:Text Source='勾选需要自动领取的奖励；每日任务中的“领取奖励”会按以下顺序执行。'}"
+                                       Style="{StaticResource HintText}"
+                                       Margin="0,0,0,10"/>
+
+                            <ListBox x:Name="RewardTaskList"
+                                     Grid.Row="1"
+                                     Style="{StaticResource ApPlanList}"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Padding" Value="0"/>
+                                        <Setter Property="Margin" Value="0,2"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="ItemStateBorder"
+                                                            Background="Transparent"
+                                                            BorderBrush="Transparent"
+                                                            BorderThickness="2"
+                                                            CornerRadius="6">
+                                                        <ContentPresenter/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="ItemStateBorder" Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+                                                            <Setter TargetName="ItemStateBorder" Property="Background" Value="{DynamicResource Brush.Selection}"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource Brush.CardAlt}"
+                                                BorderBrush="{DynamicResource Brush.Border}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="12,10">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid Grid.Column="0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="{Binding Name}"
+                                                               Foreground="{DynamicResource Brush.Text}"
+                                                               FontSize="12"
+                                                               VerticalAlignment="Center"/>
+                                                    <TextBlock x:Name="MissionHelpMark"
+                                                               Grid.Column="1"
+                                                               Text="?"
+                                                               FontSize="13"
+                                                               FontWeight="SemiBold"
+                                                               Margin="6,0,0,0"
+                                                               Cursor="Help"
+                                                               VerticalAlignment="Center"
+                                                               MouseEnter="MissionHelpMark_MouseEnter"
+                                                               MouseLeave="MissionHelpMark_MouseLeave">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="{DynamicResource Brush.TextDim}"/>
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasHelp}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <Popup x:Name="MissionHelpPopup"
+                                                           PlacementTarget="{Binding ElementName=MissionHelpMark}"
+                                                           Placement="Bottom"
+                                                           AllowsTransparency="True"
+                                                           StaysOpen="True"
+                                                           IsOpen="{Binding IsHelpOpen, Mode=TwoWay}">
+                                                        <Border Background="{DynamicResource Brush.Toolbar}"
+                                                                BorderBrush="{DynamicResource Brush.Border}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="6"
+                                                                Padding="12,10"
+                                                                MaxWidth="320">
+                                                            <TextBlock Text="{loc:Text Source='领取每日使命奖励会在每日任务队列最后再执行一次。'}"
+                                                                       Foreground="{DynamicResource Brush.Text}"
+                                                                       FontSize="12"
+                                                                       TextWrapping="Wrap"/>
+                                                        </Border>
+                                                    </Popup>
+                                                </Grid>
+                                                <CheckBox Grid.Column="1"
+                                                          Style="{StaticResource TaskCheckBox}"
+                                                          IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                          HorizontalAlignment="Right"
+                                                          VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock x:Name="RewardPlanStatusText"
+                                       Grid.Row="2"
+                                       Style="{StaticResource StatusText}"
+                                       Text="{loc:Text Source='在左侧每日任务中勾选“领取奖励”，然后点击开始。'}"/>
+                        </Grid>
+                    </TabItem>
+                    <!-- 自动刷本 -->
+                    <TabItem x:Name="AutoFarmTab" Header="{loc:Text Source='自动刷本'}">
+                        <Grid Margin="0,14,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                                <TextBlock Text="{loc:Text Source='请在出击准备页面使用本功能。'}"
+                                           Style="{StaticResource HintText}"/>
+                                <TextBlock Text="{loc:Text Source='将游戏本体的设定 → 战斗 → AUTO时隐藏战斗触发动画设定改为OFF可以实现自动挑战隐藏'}"
+                                           Style="{StaticResource HintText}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+
+                            <Border Grid.Row="1"
+                                    Padding="12,10"
+                                    Background="{DynamicResource Brush.Toolbar}"
+                                    BorderBrush="{DynamicResource Brush.Border}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    HorizontalAlignment="Left">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="12"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="12"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{loc:Text Source='刷取次数'}"
+                                                   Style="{StaticResource InlineLabel}"
+                                                   VerticalAlignment="Center"/>
+
+                                        <TextBox x:Name="AutoFarmCountBox"
+                                                 Grid.Column="2"
+                                                 Width="120"
+                                                 Height="34"
+                                                 Text="10"
+                                                 VerticalContentAlignment="Center"
+                                                 PreviewTextInput="AutoFarmCountBox_PreviewTextInput"
+                                                 DataObject.Pasting="AutoFarmCountBox_Pasting"
+                                                 Style="{StaticResource TextBoxDark}"/>
+
+                                        <Button x:Name="AutoFarmStartButton"
+                                                Grid.Column="4"
+                                                MinWidth="100"
+                                                Height="34"
+                                                VerticalAlignment="Center"
+                                                Content="{loc:Text Source='开始'}"
+                                                Click="AutoFarmStartButton_Click"
+                                                Style="{StaticResource ButtonPrimary}"/>
+                                    </Grid>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                        <CheckBox x:Name="EmptySlotSortieCheckBox"
+                                                  Style="{StaticResource TaskCheckBox}"
+                                                  IsChecked="True"
+                                                  VerticalAlignment="Center"/>
+                                        <TextBlock Text="{loc:Text Source='编制内存在空位时依旧出击'}"
+                                                   Style="{StaticResource InlineLabel}"
+                                                   Margin="8,0,0,0"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                        <CheckBox x:Name="TerrainUnsuitableSortieCheckBox"
+                                                  Style="{StaticResource TaskCheckBox}"
+                                                  IsChecked="True"
+                                                  VerticalAlignment="Center"/>
+                                        <TextBlock Text="{loc:Text Source='编制内存在不符合地形适性的单位时依旧出击'}"
+                                                   Style="{StaticResource InlineLabel}"
+                                                   Margin="8,0,0,0"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock x:Name="AutoFarmStatusText"
+                                       Grid.Row="2"
+                                       Style="{StaticResource StatusText}"
+                                       Text="{loc:Text Source='尚未开始。'}"
+                                       Margin="0,12,0,0"/>
+                        </Grid>
+                    </TabItem>
+                    <!-- 招募入口与自动刷本相邻，沿用现有主题与状态反馈。 -->
+                    <TabItem x:Name="AutoScoutTab" Header="{loc:Text Source='自动招募'}">
+                        <StackPanel Margin="0,14,0,0">
+                            <TextBlock Text="{loc:Text Source='请在招募页面使用本功能。'}" Style="{StaticResource HintText}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{loc:Text Source='持续循环招募，点击“中止招募”停止。'}" Style="{StaticResource HintText}"
+                                       TextWrapping="Wrap" Margin="0,4,0,0"/>
+                            <Button x:Name="ScoutStartButton" Content="{loc:Text Source='开始招募'}"
+                                    HorizontalAlignment="Left" MinWidth="140" Height="34" Margin="0,12,0,0"
+                                    Style="{StaticResource ButtonPrimary}" Click="ScoutStartButton_Click"/>
+                            <TextBlock x:Name="ScoutStatusText" Text="{loc:Text Source='尚未开始。'}" Margin="0,12,0,0"
+                                       Style="{StaticResource StatusText}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </TabItem>
+                    <!-- 推图队列、编制权限与当前状态共用执行会话，运行中禁止改写队列和策略。 -->
+                    <TabItem x:Name="AutoProgressTab" Header="{loc:Text Source='自动推图'}">
+                        <Grid Margin="0,8,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <!-- 最小窗口下内容可滚动，开始/中止与当前状态固定可见，队列不能被压成零高度。 -->
+                            <ScrollViewer x:Name="AutoProgressContentScroll" VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled" CanContentScroll="False">
+                                <Grid MinHeight="{Binding ViewportHeight, ElementName=AutoProgressContentScroll}" Margin="0,0,8,0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*" MinHeight="140"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="{loc:Text Source='请在非战斗界面使用'}" Style="{StaticResource HintText}"/>
+                                    <Grid Grid.Row="1" Margin="0,8,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox x:Name="AutoProgressTypeCombo" Height="34" Margin="0,0,12,0"
+                                                  SelectedIndex="0" SelectionChanged="AutoProgressTypeChanged"
+                                                  AutomationProperties.Name="{loc:Text Source='推图关卡类型'}" Style="{StaticResource ComboBoxDark}">
+                                            <ComboBoxItem Content="{loc:Text Source='主线关卡'}"/>
+                                            <ComboBoxItem Content="{loc:Text Source='历史关卡'}"/>
+                                            <ComboBoxItem x:Name="AutoProgressFierceEnemyTypeItem" Content="{loc:Text Source='强敌来袭'}"/>
+                                        </ComboBox>
+                                        <!-- 显式模板同时用于选中项和弹出列表，避免自定义样式回退为类型名。 -->
+                                        <ComboBox x:Name="AutoProgressWorkCombo" Grid.Column="1" Height="34" MaxDropDownHeight="280"
+                                                  TextSearch.TextPath="Work" AutomationProperties.Name="{loc:Text Source='选择推图目标'}"
+                                                  Style="{StaticResource ComboBoxDark}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Work}" TextTrimming="CharacterEllipsis"/>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                            <CheckBox x:Name="AutoProgressHistoryBossCheck" AutomationProperties.Name="{loc:Text Source='攻略 BOSS'}" IsChecked="True"
+                                                  Visibility="Collapsed" VerticalAlignment="Center" Margin="12,0,0,0"
+                                                  Style="{StaticResource TaskCheckBox}" ToolTip="{loc:Text Source='仅影响新添加的历史目标；取消后只攻略关卡。'}"/>
+                                            <TextBlock Text="{loc:Text Source='攻略 BOSS'}" VerticalAlignment="Center" Margin="6,0,0,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       Visibility="{Binding Visibility, ElementName=AutoProgressHistoryBossCheck}"/>
+                                            <Button x:Name="AutoProgressAddButton" Content="{loc:Text Source='添加目标'}" Margin="12,0,0,0"
+                                                IsEnabled="False" Style="{StaticResource ButtonSecondary}" Click="AutoProgressAddButton_Click"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid x:Name="AutoProgressOptionsPanel" Grid.Row="2" Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="240"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Text="{loc:Text Source='允许调整的部队'}" Style="{StaticResource InlineLabel}" VerticalAlignment="Center"/>
+                                        <!-- 多选下拉不把 ComboBox 单选状态当作权限，复选框才是设置真值。 -->
+                                        <ToggleButton x:Name="AutoProgressTeamsButton" Grid.Column="1" Height="34"
+                                                      AutomationProperties.Name="{loc:Text Source='允许调整的部队'}" Foreground="{DynamicResource Brush.Text}">
+                                            <ToggleButton.Template>
+                                                <ControlTemplate TargetType="ToggleButton">
+                                                    <Border x:Name="TeamsToggleBorder" Background="{DynamicResource Brush.Input}" BorderBrush="{DynamicResource Brush.Border}"
+                                                            BorderThickness="1" CornerRadius="6" Padding="8,5">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <ContentPresenter Grid.Column="0" VerticalAlignment="Center"/>
+                                                            <!-- 与相邻 ComboBox 使用相同矢量箭头，避免字体字形改变大小和对齐。 -->
+                                                            <Path Grid.Column="1" Width="10" Height="6" Margin="8,0,6,0"
+                                                                  VerticalAlignment="Center" Data="M 0 0 L 5 5 L 10 0 Z"
+                                                                  Fill="{DynamicResource Brush.TextDim}" Stretch="Uniform" IsHitTestVisible="False"/>
+                                                        </Grid>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="TeamsToggleBorder" Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsChecked" Value="True">
+                                                            <Setter TargetName="TeamsToggleBorder" Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </ToggleButton.Template>
+                                            <TextBlock x:Name="AutoProgressTeamsSummary" Text="{loc:Text Source='系列部队、自由部队'}"/>
+                                        </ToggleButton>
+                                        <Popup PlacementTarget="{Binding ElementName=AutoProgressTeamsButton}" Placement="Bottom"
+                                               StaysOpen="False" AllowsTransparency="True"
+                                               IsOpen="{Binding IsChecked, ElementName=AutoProgressTeamsButton, Mode=TwoWay}">
+                                            <Border Background="{DynamicResource Brush.Card}" BorderBrush="{DynamicResource Brush.Border}"
+                                                    BorderThickness="1" CornerRadius="6" Padding="12,8" Width="240" Margin="0,4,0,0">
+                                                <StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <CheckBox x:Name="AutoProgressSeriesCheck" IsChecked="True" Style="{StaticResource TaskCheckBox}"
+                                                                  AutomationProperties.Name="{loc:Text Source='允许调整系列部队'}"
+                                                                  Checked="AutoProgressOptionsChanged" Unchecked="AutoProgressOptionsChanged"/>
+                                                        <Label Content="{loc:Text Source='系列部队'}" Target="{Binding ElementName=AutoProgressSeriesCheck}" Margin="8,0,0,0"
+                                                               Foreground="{DynamicResource Brush.Text}"/>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                        <CheckBox x:Name="AutoProgressFreeCheck" IsChecked="True" Style="{StaticResource TaskCheckBox}"
+                                                                  AutomationProperties.Name="{loc:Text Source='允许调整自由部队'}"
+                                                                  Checked="AutoProgressOptionsChanged" Unchecked="AutoProgressOptionsChanged"/>
+                                                        <Label Content="{loc:Text Source='自由部队'}" Target="{Binding ElementName=AutoProgressFreeCheck}" Margin="8,0,0,0"
+                                                               Foreground="{DynamicResource Brush.Text}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </Popup>
+                                        <TextBlock Grid.Row="1" Text="{loc:Text Source='检测到系列部队存在空位时的处理'}" TextWrapping="Wrap" Margin="0,6,12,0"
+                                                   Style="{StaticResource InlineLabel}" VerticalAlignment="Center"/>
+                                        <ComboBox x:Name="AutoProgressEmptyActionCombo" Grid.Row="1" Grid.Column="1" Height="34" Margin="0,6,0,0"
+                                                  SelectedIndex="0" Style="{StaticResource ComboBoxDark}" SelectionChanged="AutoProgressOptionsChanged"
+                                                  AutomationProperties.Name="{loc:Text Source='系列部队空位处理'}">
+                                            <ComboBoxItem Content="{loc:Text Source='依旧出击'}"/>
+                                            <ComboBoxItem x:Name="AutoProgressEmptyAutoItem" Content="{loc:Text Source='自动编制'}"/>
+                                        </ComboBox>
+                                        <TextBlock Grid.Row="2" Text="{loc:Text Source='编制内存在不符合地形适性的单位时的处理'}" TextWrapping="Wrap" Margin="0,6,12,0"
+                                                   Style="{StaticResource InlineLabel}" VerticalAlignment="Center"/>
+                                        <ComboBox x:Name="AutoProgressTerrainActionCombo" Grid.Row="2" Grid.Column="1" Height="34" Margin="0,6,0,0"
+                                                  SelectedIndex="0" Style="{StaticResource ComboBoxDark}" SelectionChanged="AutoProgressOptionsChanged"
+                                                  AutomationProperties.Name="{loc:Text Source='地形适性处理'}">
+                                            <ComboBoxItem Content="{loc:Text Source='依旧出击'}"/>
+                                            <ComboBoxItem x:Name="AutoProgressTerrainAutoItem" Content="{loc:Text Source='自动编制'}"/>
+                                        </ComboBox>
+                                    </Grid>
+                                    <StackPanel x:Name="AutoProgressQueueHeader" Grid.Row="3" Margin="0,0,0,8">
+                                        <TextBlock Text="{loc:Text Source='执行任务队列'}" Style="{StaticResource CardTitle}"/>
+                                    </StackPanel>
+                                    <Grid x:Name="AutoProgressQueuePanel" Grid.Row="4">
+                                        <ListBox x:Name="AutoProgressQueueList" Style="{StaticResource ApPlanList}"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 HorizontalContentAlignment="Stretch" AutomationProperties.Name="{loc:Text Source='推图任务队列'}">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <DockPanel Margin="10,5">
+                                                        <Button DockPanel.Dock="Right" Content="{loc:Text Source='移除'}" Tag="{Binding}" Margin="12,0,0,0"
+                                                                Style="{StaticResource ButtonSecondary}" Click="AutoProgressRemoveButton_Click"/>
+                                                        <StackPanel VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Work}" TextWrapping="Wrap"
+                                                                       Foreground="{DynamicResource Brush.Text}"/>
+                                                            <TextBlock Margin="0,3,0,0" TextWrapping="Wrap" Style="{StaticResource HintText}"
+                                                                       Text="{Binding Summary}"/>
+                                                        </StackPanel>
+                                                    </DockPanel>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                        <TextBlock x:Name="AutoProgressEmptyText" Text="{loc:Text Source='尚未添加目标，请从上方选择并添加。'}"
+                                                   IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Style="{StaticResource HintText}"/>
+                                    </Grid>
+                                </Grid>
+                            </ScrollViewer>
+                            <StackPanel Grid.Row="1" Margin="0,8,0,0">
+                                <Button x:Name="AutoProgressStartButton" Content="{loc:Text Source='开始推图'}" HorizontalAlignment="Left" MinWidth="120"
+                                        Style="{StaticResource ButtonPrimary}" Click="AutoProgressStartButton_Click"/>
+                                <TextBlock x:Name="AutoProgressStatusText" Text="{loc:Text Source='主线推进至最终 HARD；历史复核双 100%；强敌推进至 EXPERT。出击会消耗 AP。'}" Margin="0,8,0,0"
+                                           Style="{StaticResource HintText}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+                    </TabItem>
+                    <!-- 活动导航止于左侧入口选择，后续玩法由独立流程接入。 -->
+                    <TabItem x:Name="FierceEnemyAssaultTab" Header="{loc:Text Source='强敌来袭'}">
+                        <StackPanel Margin="0,14,0,0">
+                            <TextBlock Text="{loc:Text Source='请在非战斗界面使用'}" Style="{StaticResource HintText}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{loc:Text Source='选择单位与难度，添加到每日任务后自动查找关卡并略过。'}"
+                                       Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                            <Grid x:Name="FierceEnemySelectionPanel" Margin="0,18,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,12,0">
+                                    <TextBlock Text="{loc:Text Source='强敌单位'}" Style="{StaticResource HintText}" Margin="0,0,0,6"/>
+                                    <ComboBox x:Name="FierceEnemyUnitBox" DisplayMemberPath="Name" Height="34" Style="{StaticResource ComboBoxDark}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                                    <TextBlock Text="{loc:Text Source='难度'}" Style="{StaticResource HintText}" Margin="0,0,0,6"/>
+                                    <ComboBox x:Name="FierceEnemyDifficultyBox" Height="34" Style="{StaticResource ComboBoxDark}"/>
+                                </StackPanel>
+                                <Button Grid.Column="2" x:Name="FierceEnemyAddButton" Content="{loc:Text Source='添加到每日任务'}" Height="34" VerticalAlignment="Bottom"
+                                        Style="{StaticResource ButtonPrimary}" Click="FierceEnemyAddButton_Click"/>
+                            </Grid>
+                            <TextBlock Text="{loc:Text Source='CHALLENGE 不支持略过。首次添加在消耗 AP 之前，再次添加替换现有强敌任务。'}"
+                                       Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                            <Button x:Name="FierceEnemyAssaultStartButton" Content="{loc:Text Source='执行单次略过'}"
+                                    HorizontalAlignment="Left" MinWidth="140" Height="34" Margin="0,20,0,0"
+                                    Style="{StaticResource ButtonPrimary}" Click="FierceEnemyAssaultStartButton_Click"/>
+                            <TextBlock x:Name="FierceEnemyAssaultStatusText" Text="{loc:Text Source='尚未开始。'}" Margin="0,12,0,0"
+                                       Style="{StaticResource StatusText}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </TabItem>
+                    <!-- 大师联盟完整流程；编制与败北刷新分别授权，默认均关闭。 -->
+                    <TabItem x:Name="MasterLeagueTab" Header="{loc:Text Source='大师联盟'}">
+                        <StackPanel Margin="0,14,0,0">
+                            <TextBlock Text="{loc:Text Source='请在非战斗界面使用'}" Style="{StaticResource HintText}" TextWrapping="Wrap"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                                <CheckBox x:Name="MasterLeagueAutoFormationCheck" IsChecked="False" Style="{StaticResource TaskCheckBox}"
+                                          AutomationProperties.Name="{loc:Text Source='进行自动编制'}"/>
+                                <Label Content="{loc:Text Source='进行自动编制'}" Target="{Binding ElementName=MasterLeagueAutoFormationCheck}"
+                                       Foreground="{DynamicResource Brush.Text}" Margin="8,0,0,0"/>
+                            </StackPanel>
+                            <!-- 刷新会舍弃原对手积分，只在五人均已挑战时执行。 -->
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0"
+                                        ToolTip="{loc:Text Source='五名对手均已挑战时，刷新败北对手并重新挑战；刷新会舍弃该对手原积分。'}">
+                                <CheckBox x:Name="MasterLeagueRetryDefeatedCheck" IsChecked="False" Style="{StaticResource TaskCheckBox}"
+                                          AutomationProperties.Name="{loc:Text Source='刷新挑战失败的对手'}"/>
+                                <Label Content="{loc:Text Source='刷新挑战失败的对手'}" Target="{Binding ElementName=MasterLeagueRetryDefeatedCheck}"
+                                       Foreground="{DynamicResource Brush.Text}" Margin="8,0,0,0"/>
+                            </StackPanel>
+                            <Button x:Name="MasterLeagueStartButton" Content="{loc:Text Source='开始大师联盟'}"
+                                    HorizontalAlignment="Left" MinWidth="140" Height="34" Margin="0,20,0,0"
+                                    Style="{StaticResource ButtonPrimary}" Click="MasterLeagueStartButton_Click"/>
+                            <TextBlock x:Name="MasterLeagueStatusText" Text="{loc:Text Source='尚未开始。'}" Margin="0,12,0,0"
+                                       Style="{StaticResource StatusText}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </TabItem>
+                    <!-- 铁球工厂入口。 -->
+                    <TabItem x:Name="BallFactoryTab" Header="{loc:Text Source='铁球工厂'}">
+                        <StackPanel Margin="0,14,0,0">
+                            <TextBlock Text="{loc:Text Source='请在非战斗界面使用。'}" Style="{StaticResource HintText}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{loc:Text Source='开发铁球直到达到单位上限，再解体铁球获得 GP。'}"
+                                       Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                            <TextBlock Text="{loc:Text Source='每台制造花费 1000 金币；解体返还 500 金币，并获得 20 GP。'}"
+                                       Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                                <Label Content="{loc:Text Source='目标 GP'}" Target="{Binding ElementName=BallFactoryGpBox}"
+                                       Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center" Padding="0" Margin="0,0,12,0"/>
+                                <TextBox x:Name="BallFactoryGpBox" Text="30000" Width="140" Height="34"
+                                         VerticalContentAlignment="Center" Style="{StaticResource TextBoxDark}"
+                                         PreviewTextInput="BallFactoryGpBox_PreviewTextInput"
+                                         PreviewKeyDown="BallFactoryGpBox_PreviewKeyDown"
+                                         DataObject.Pasting="BallFactoryGpBox_Pasting"
+                                         TextChanged="BallFactoryGpBox_TextChanged" LostFocus="BallFactoryGpBox_LostFocus"/>
+                                <Button x:Name="BallFactoryStartButton" Content="{loc:Text Source='开始制造'}" MinWidth="110" Height="34"
+                                        Margin="12,0,0,0" Style="{StaticResource ButtonPrimary}"
+                                        Click="BallFactoryStartButton_Click"/>
+                            </StackPanel>
+                            <TextBlock x:Name="BallFactoryGpHint" Text="" Visibility="Collapsed"
+                                       Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                            <TextBlock x:Name="BallFactoryStatusText" Text="{loc:Text Source='尚未开始。'}" Style="{StaticResource StatusText}" TextWrapping="Wrap" Margin="0,20,0,0"/>
+                        </StackPanel>
+                    </TabItem>
+                    <!-- 截图 / 操作：开发版显示，发布版不显示。 -->
+                    <TabItem x:Name="ScreenshotTab" Header="{loc:Text Source='截图与操作'}" Visibility="Collapsed">
+                    <Grid Margin="0,12,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="{loc:Text Source='截图 / 操作'}" Style="{StaticResource CardTitle}"/>
+
+                        <!-- 工具栏一：截图与点击/滑动 -->
+                        <WrapPanel Grid.Row="1" Margin="0,12,0,0">
+                            <Button x:Name="ScreenshotButton" Content="{loc:Text Source='截图'}"
+                                    Click="ScreenshotButton_Click"
+                                    Style="{StaticResource ButtonPrimary}"/>
+                            <Button x:Name="TapButton" Content="{loc:Text Source='点击所选'}" Margin="8,0,0,0"
+                                    Click="TapButton_Click"
+                                    Style="{StaticResource ButtonSecondary}"/>
+                            <Button x:Name="SwipeStartButton" Content="{loc:Text Source='设起点'}" Margin="8,0,0,0"
+                                    Click="SwipeStartButton_Click"
+                                    Style="{StaticResource ButtonSecondary}"/>
+                            <Button x:Name="SwipeEndButton" Content="{loc:Text Source='设终点'}" Margin="8,0,0,0"
+                                    Click="SwipeEndButton_Click"
+                                    Style="{StaticResource ButtonSecondary}"/>
+                            <Button x:Name="SwipeButton" Content="{loc:Text Source='滑动'}" Margin="8,0,0,0"
+                                    Click="SwipeButton_Click"
+                                    Style="{StaticResource ButtonSecondary}"/>
+                            <TextBlock Text="{loc:Text Source='时长(ms)'}" Style="{StaticResource InlineLabel}" Margin="16,0,0,0"/>
+                            <TextBox x:Name="SwipeDurationBox" Width="70" Text="500"
+                                     Style="{StaticResource TextBoxDark}"/>
+                        </WrapPanel>
+
+                        <!-- 工具栏二：模板采集与测试 -->
+                        <WrapPanel Grid.Row="2" Margin="0,10,0,0">
+                            <TextBlock Text="{loc:Text Source='模板名称'}" Style="{StaticResource InlineLabel}"/>
+                            <TextBox x:Name="TemplateNameBox" Width="150"
+                                     Style="{StaticResource TextBoxDark}"/>
+                            <Button x:Name="SaveTemplateButton" Content="{loc:Text Source='保存模板'}" Margin="8,0,0,0"
+                                    Click="SaveTemplateButton_Click"
+                                    Style="{StaticResource ButtonSecondary}"/>
+                            <TextBlock Text="{loc:Text Source='模板文件'}" Style="{StaticResource InlineLabel}" Margin="16,0,0,0"/>
+                            <ComboBox x:Name="TemplateCombo" Width="210"
+                                      Style="{StaticResource ComboBoxDark}"/>
+                            <TextBlock Text="{loc:Text Source='阈值'}" Style="{StaticResource InlineLabel}" Margin="12,0,0,0"/>
+                            <TextBox x:Name="ThresholdBox" Width="60" Text="0.85"
+                                     Style="{StaticResource TextBoxDark}"/>
+                            <Button x:Name="TestTemplateButton" Content="{loc:Text Source='测试模板'}" Margin="8,0,0,0"
+                                    Click="TestTemplateButton_Click"
+                                    Style="{StaticResource ButtonSecondary}"/>
+                        </WrapPanel>
+
+                        <!-- 截图显示区：Image + 覆盖层（用于框选 ROI / 显示匹配结果） -->
+                        <Border Grid.Row="3"
+                                Background="{DynamicResource Brush.CardAlt}"
+                                BorderBrush="{DynamicResource Brush.Border}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Margin="0,10,0,0"
+                                Padding="6">
+                            <ScrollViewer x:Name="ScreenScroll"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Auto">
+                                <Grid>
+                                    <Image x:Name="ScreenImage"
+                                           Stretch="None"
+                                           Cursor="Cross"
+                                           MouseLeftButtonDown="ScreenImage_MouseLeftButtonDown"
+                                           MouseMove="ScreenImage_MouseMove"
+                                           MouseLeftButtonUp="ScreenImage_MouseLeftButtonUp"/>
+                                    <Canvas x:Name="OverlayCanvas" IsHitTestVisible="False"/>
+                                </Grid>
+                            </ScrollViewer>
+                        </Border>
+
+                        <TextBlock x:Name="SelectionStatusText"
+                                   Grid.Row="4"
+                                   Style="{StaticResource StatusText}"
+                                   Text="{loc:Text Source='截图后可拖选 ROI，或单击选择坐标点'}"/>
+                    </Grid>
+                    </TabItem>
+
+
+                    <!-- AP 消耗：配置作品顺序和 Hard 关卡，本阶段用于多作品跳转测试。 -->
+                    
+                    </TabControl>
+                    </DockPanel>
+                </Border>
+
+                <!-- 日志卡片 -->
+                <Border Grid.Row="2" Style="{StaticResource Card}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="{loc:Text Source='日志'}" Style="{StaticResource CardTitle}"/>
+                        <ListBox x:Name="LogList"
+                                 Grid.Row="1"
+                                 Margin="0,8,0,0"
+                                 Style="{StaticResource LogList}"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- 底部状态与版权信息：状态靠左，版权归属固定靠右。 -->
+        <Grid Grid.Row="2" Margin="0,14,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="FooterText" TextTrimming="CharacterEllipsis" Margin="0,0,16,0"
+                       HorizontalAlignment="Left"
+                       FontSize="11"
+                       Foreground="{DynamicResource Brush.TextDim}"/>
+            <TextBlock x:Name="CopyrightText" Grid.Column="1"
+                       HorizontalAlignment="Right"
+                       FontSize="11"
+                       Foreground="{DynamicResource Brush.TextDim}"/>
+        </Grid>
+    </Grid>
+</Window>
