@@ -2,7 +2,9 @@
 
 ## 入口与当前状态
 
-GGEA 主仓库统一承载源码、Issues、版本标签和后续正式 Release。迁移版源码为 1.3.4.0；尚未打包、推送或发布，不能把源码版本当成已发布版本。主仓库尚无正式版时，已有正式下载仍位于 [GGEA-Release](https://github.com/GundamCC/GGEA-Release/releases)。
+GGEA 主仓库统一承载源码、Issues、版本标签和后续正式 Release。1.3.4.0 已完成正式打包并发布至 [GGEA 主仓库](https://github.com/GundamCC/GGEA/releases/tag/v1.3.4.0)，[GGEA-Release 兼容过渡版](https://github.com/GundamCC/GGEA-Release/releases/tag/v1.3.4.0)提供字节完全一致的安装包及校验文件。源码提交为 `a1c650021a190948bb1ec2072c3c70247afab008`，ZIP SHA-256 为 `c33f090bd6eac644a3aa5c4f6dbc091df9efd2459f64988393f4f927b7c85db1`。网站发布快照已切换主仓库，网站部署独立进行。
+
+验证范围：正式构建、核心冒烟与在线更新测试、ZIP 解压与文件摘要、EXE 自检、两仓库发布状态及附件摘要核对已通过。真实旧客户端的完整升级流程尚未完成验证，不能据此关闭旧仓库兼容入口；网站尚未部署。
 
 新版客户端只访问 `GundamCC/GGEA` 的最新正式 Release，并严格绑定同仓库、同标签的 ZIP 与校验文件。主仓库缺少正式版时检查会失败，不伪报“已经最新”，也不自动回退到旧仓库。网站可以在确认主仓库存在但尚无正式版时展示经核验的旧仓库版本；网络失败、限流和不完整发布不会触发该回退。
 
