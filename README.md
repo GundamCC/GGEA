@@ -2,9 +2,15 @@
 
 《SD高达G世纪 永恒》桌面游戏管理工具（v1.3.3.2，正式发布 / Release）。
 
-## 官网与文档站
+## 源码与下载
 
-官网与文档站源码独立维护，目前尚未提供已核验的公开站点地址。本仓库仅维护桌面程序。使用步骤见 [使用说明](使用说明.txt)，旧发行版已于 2026-10-28 下架，目前没有可下载的正式安装包；后续发行信息见 [发行页](https://github.com/GundamCC/GGEA-Release/releases)。
+- 源码：[GundamCC/GGEA](https://github.com/GundamCC/GGEA)，默认开发分支为 `main`。
+- 正式版：[v1.3.3.2 发行页](https://github.com/GundamCC/GGEA-Release/releases/tag/v1.3.3.2) · [Windows x64 安装包](https://github.com/GundamCC/GGEA-Release/releases/download/v1.3.3.2/GGEA-v1.3.3.2-win-x64.zip) · [SHA-256 校验文件](https://github.com/GundamCC/GGEA-Release/releases/download/v1.3.3.2/GGEA-v1.3.3.2-win-x64.zip.sha256)。
+- 使用步骤：[使用说明](使用说明.txt)；问题反馈：[GitHub Issues](https://github.com/GundamCC/GGEA/issues)。
+
+下载 ZIP 并完整解压后运行 `GGEA.exe`，不要将发行页自动生成的 Source code 压缩包当作程序。该版本构建自源码提交 [`9fbe302`](https://github.com/GundamCC/GGEA/commit/9fbe30250579a2e87393de4aeb5aaead0ba09100)。旧的 30 个发行版已于 2026-10-28 下架。
+
+官网与文档站源码独立维护，目前尚未提供已核验的公开站点地址。本仓库维护桌面程序及使用文档。
 
 ## v1.3.3.2 — 正式发布 / Release
 
@@ -267,4 +273,4 @@ AP 消耗已接入略过流程：进入作品详情后先识别右下角“选�
 
 自有代码采用 [Apache-2.0](LICENSE)，适用范围见 [许可证说明](LICENSE_SCOPE.md)。第三方组件、OCR 模型、游戏截图、识别模板和图标按各自权利与许可处理，不因本项目开源而自动获得再分发授权。本项目为非官方社区工具。
 
-开源准备状态见 [核查与待办](docs/open-source/readiness.md)，组件声明见 [第三方软件说明](resources/common/licenses/NOTICE.txt)，游戏素材见 [来源与隐私清单](docs/open-source/assets.md)。清单中的待确认事项尚未解决，当前没有执行新的远程公开。
+开源准备状态见 [核查与待办](docs/open-source/readiness.md)，组件声明见 [第三方软件说明](resources/common/licenses/NOTICE.txt)，游戏素材见 [来源与隐私清单](docs/open-source/assets.md)。源码与当前正式版已公开；素材授权及第三方原生构建适用性等待确认事项仍保留在清单中，不因发布完成而视为解决。

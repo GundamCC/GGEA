@@ -2,7 +2,9 @@
 
 原清单核查日期：2026-10-27，共 30 个 Release、60 个附件。2026-10-28 经维护者明确要求，按原清单逐一删除全部 30 个 Release；随后 API 复查剩余 0 个 Release。附件随 Release 移除，Git 标签未删除。以下保留历史名称与链接供追溯，链接不再代表可下载产物。
 
-来源：https://api.github.com/repos/GundamCC/GGEA-Release/releases?per_page=100
+本清单仅记录已下架的旧发行版。此后发布的 [v1.3.3.2](https://github.com/GundamCC/GGEA-Release/releases/tag/v1.3.3.2) 不在删除范围内，当前可从该发行页下载。
+
+原清单来源：https://api.github.com/repos/GundamCC/GGEA-Release/releases?per_page=100
 
 | Release | 发布日期 UTC | 附件（字节） |
 | --- | --- | --- |
