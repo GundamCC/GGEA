@@ -172,6 +172,7 @@ public sealed class WorkLogoVisionTests
     [Theory]
     [InlineData("initial_canvas_logo.png")]
     [InlineData("initial_canvas_bright.png")]
+    [InlineData("initial_canvas_20261028.png")]
     public void ActualInitialLogo_FindsCanvasCoordinates(string fixture)
     {
         var (vision, works, _) = CreateVision();
@@ -186,11 +187,13 @@ public sealed class WorkLogoVisionTests
         Assert.Null(observation.SelectButton);
     }
 
-    /// <summary>原始候选低于门槛时，缺失或不匹配的实机校准素材都不能授权点击。</summary>
+    /// <summary>正确 WebP 可独立识别平滑渲染；错误 WebP 与错误校准图不能授权点击。</summary>
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void InitialLogo_RequiresMatchingCalibration(bool unrelatedCalibration)
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    public void InitialLogo_ValidatesWebpIndependentlyOfCalibration(bool unrelatedCalibration, bool correctWebp)
     {
         var (_, works, resources) = CreateVision();
         var target = works.Single(work => work.Id == 1);
@@ -198,16 +201,24 @@ public sealed class WorkLogoVisionTests
         Directory.CreateDirectory(directory);
         try
         {
-            File.Copy(ConfigService.ResolvePath(Path.Combine(resources, "templates/stage/main_stage", target.Screenshot)),
+            File.Copy(correctWebp ? ConfigService.ResolvePath(Path.Combine(resources, "templates/stage/main_stage", target.Screenshot)) : Fixture("seed_recollection_canvas.png"),
                 Path.Combine(directory, target.Screenshot));
             if (unrelatedCalibration)
                 File.Copy(Fixture("seed_recollection_canvas.png"), Path.Combine(directory, "initial_canvas.png"));
             var vision = new WorkLogoVision(new FakeAdbService([]), new TemplateMatcher(), directory,
                 Path.Combine(directory, "main_stage.png"), new StageNavigationOptions());
             var pixels = TestImageFactory.CreateBgra(1920, 1080, 20);
-            Paste(pixels, Fixture("initial_canvas_bright.png"), 709, 471);
+            Paste(pixels, Fixture("initial_canvas_20261028.png"), 709, 471);
             var observation = vision.Inspect(ImageCodec.EncodePng(pixels, 1920, 1080), target, [target]);
-            Assert.Empty(observation.Works);
+            if (correctWebp)
+            {
+                var match = Assert.Single(observation.Works);
+                Assert.Equal(1, match.WorkId);
+                Assert.True(match.Confidence >= .78);
+                Assert.InRange(match.X, 777, 787);
+                Assert.InRange(match.Y, 528, 538);
+            }
+            else Assert.Empty(observation.Works);
             Assert.False(observation.TargetTitleVisible);
             Assert.Null(observation.SelectButton);
         }

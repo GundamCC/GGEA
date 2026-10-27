@@ -16,12 +16,26 @@ public sealed class RecognitionEvidence
 {
     private readonly string _directory;
     private readonly IGgeaLog _log;
-    private readonly object _gate = new();
-    private readonly Dictionary<string, DateTime> _lastSaved = new();
-    private int _slot;
+    // 同一进程同一目录必须共享锁、限频和轮转状态，导航器重建不能从槽位一覆盖别的流程。
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, EvidenceState> States =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly EvidenceState _state;
 
-    /// <summary>由主窗口共享实例，使设置重建检测器后仍保留限频与轮转状态。</summary>
-    public RecognitionEvidence(string directory, IGgeaLog log) { _directory = directory; _log = log; }
+    /// <summary>目录拥有轮转状态，实例只负责提交证据。</summary>
+    private sealed class EvidenceState
+    {
+        public readonly object Gate = new();
+        public readonly Dictionary<string, DateTime> LastSaved = new();
+        public int Slot;
+    }
+
+    /// <summary>以规范化目录共享状态，使不同流程与重建实例遵守同一五槽位上限。</summary>
+    public RecognitionEvidence(string directory, IGgeaLog log)
+    {
+        _directory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
+        _log = log;
+        _state = States.GetOrAdd(_directory, _ => new EvidenceState());
+    }
 
     /// <summary>保存流程最后观察到的帧，不为取证再次截图或复用上一次流程的状态。</summary>
     internal Task SaveAsync(string kind, RecognitionFrame frame)
@@ -34,17 +48,17 @@ public sealed class RecognitionEvidence
     /// <summary>先在临时文件完成 ZIP，再替换自己的固定槽位，避免暴露半写入诊断包。</summary>
     private void Save(string kind, string serial, byte[] png, ScreenImage screen, RecognitionCandidate[] candidates)
     {
-        lock (_gate)
+        lock (_state.Gate)
         {
             var key = kind + "|" + serial;
             var now = DateTime.UtcNow;
-            if (_lastSaved.TryGetValue(key, out var last) && now - last < TimeSpan.FromMinutes(1)) return;
-            _lastSaved[key] = now; // 写入失败同样限频，避免磁盘异常时反复阻塞识图。
+            if (_state.LastSaved.TryGetValue(key, out var last) && now - last < TimeSpan.FromMinutes(1)) return;
+            _state.LastSaved[key] = now; // 写入失败同样限频，避免磁盘异常时反复阻塞识图。
             string? temporary = null;
             try
             {
                 Directory.CreateDirectory(_directory);
-                var path = Path.Combine(_directory, $"recognition-{Environment.ProcessId}-{_slot % 5 + 1}.zip");
+                var path = Path.Combine(_directory, $"recognition-{Environment.ProcessId}-{_state.Slot % 5 + 1}.zip");
                 temporary = path + ".tmp";
                 using (var file = File.Create(temporary))
                 using (var zip = new ZipArchive(file, ZipArchiveMode.Create))
@@ -63,8 +77,8 @@ public sealed class RecognitionEvidence
                     Write(zip, "diagnostic.json", JsonSerializer.SerializeToUtf8Bytes(metadata, new JsonSerializerOptions { WriteIndented = true }));
                 }
                 File.Move(temporary, path, overwrite: true);
-                _slot++;
-                _lastSaved[key] = now;
+                _state.Slot++;
+                _state.LastSaved[key] = now;
                 _log.Warn($"识图失败证据已保存: {path}（{kind}，包含实际游戏画面与模板，仅本地保存；反馈前请检查隐私内容）");
             }
             catch (Exception ex)

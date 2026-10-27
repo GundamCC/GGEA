@@ -21,7 +21,7 @@ public sealed class WorkLogoVision : IWorkLogoVision
     private readonly StageNavigationOptions _options;
     private readonly TemplateMatcher _matcher;
     // 仅缓存托管像素，短生命周期 Mat 均使用 using 释放，不将原生内存留给终结器。
-    private readonly Dictionary<(string Path, int Width, int Height, bool Overview, byte Background), LogoPixels> _logos = new();
+    private readonly Dictionary<(string Path, int Width, int Height, bool Overview, byte Background, bool Smooth), LogoPixels> _logos = new();
     private readonly Dictionary<string, ScreenImage> _buttons = new();
 
     /// <summary>路径由组合根传入；截图与 CPU 匹配在后台执行，不阻塞 WPF。</summary>
@@ -207,6 +207,13 @@ public sealed class WorkLogoVision : IWorkLogoVision
             ct.ThrowIfCancellationRequested();
             var match = MatchLogoSingle(gray, work, candidate, roi, scales, coarse, ct);
             if (match is not null && match.Confidence >= threshold) return match;
+            if (coarse && work.Screenshot == "logo_l_series_0010.webp")
+            {
+                // 游戏缩小渲染会平滑浅色 G 的细边缘；仍使用同一 WebP、遮罩与业务阈值。
+                var rendered = MatchLogoSingle(gray, work, candidate, roi, scales, coarse, ct, smooth: true);
+                if (rendered is not null && rendered.Confidence >= threshold) return rendered;
+                if (rendered?.Confidence > match?.Confidence) match = rendered;
+            }
             if (observed is null || match?.Confidence > observed.Confidence) observed = match;
         }
         // 初代浅色 G 的原始 WebP 与游戏实际渲染存在差异。仅在原 Logo 已定位但未过门槛时，
@@ -229,7 +236,7 @@ public sealed class WorkLogoVision : IWorkLogoVision
 
     /// <summary>低于原业务门槛才补试通用 Logo；未达标观察仅用于诊断和竞争校验。</summary>
     private WorkLogoMatch? MatchLogoSingle(Mat gray, HardStageEntry work, string path, Roi roi,
-        double[] scales, bool coarse, CancellationToken ct)
+        double[] scales, bool coarse, CancellationToken ct, bool smooth = false)
     {
         if (!File.Exists(path)) return null;
         using var original = Cv2.ImRead(path, ImreadModes.Unchanged);
@@ -243,9 +250,9 @@ public sealed class WorkLogoVision : IWorkLogoVision
         foreach (var scale in scales)
         {
             ct.ThrowIfCancellationRequested();
-            var template = GetLogo(path, original, scale, !coarse, background);
+            var template = GetLogo(path, original, scale, !coarse, background, smooth);
             if (template.Width > region.Width || template.Height > region.Height) continue;
-            var searchTemplate = coarse ? GetLogo(path, original, scale / 2, false, background) : template;
+            var searchTemplate = coarse ? GetLogo(path, original, scale / 2, false, background, smooth) : template;
             var candidates = Peaks(coarse ? small : region, searchTemplate, coarse ? 5 : 1);
             foreach (var candidate in candidates)
             {
@@ -271,11 +278,11 @@ public sealed class WorkLogoVision : IWorkLogoVision
     }
 
     /// <summary>保留半透明抗锯齿：画布合成亮灰底并选主体，详情页合成暗底以保留完整光晕结构。</summary>
-    private LogoPixels GetLogo(string path, Mat source, double scale, bool overview, byte background)
+    private LogoPixels GetLogo(string path, Mat source, double scale, bool overview, byte background, bool smooth = false)
     {
         var width = Math.Max(1, (int)Math.Round(source.Width * scale));
         var height = Math.Max(1, (int)Math.Round(source.Height * scale));
-        var key = (path, width, height, overview, background);
+        var key = (path, width, height, overview, background, smooth);
         if (_logos.TryGetValue(key, out var cached)) return cached;
         using var sourceGray = new Mat();
         using var sourceAlpha = new Mat();
@@ -297,6 +304,8 @@ public sealed class WorkLogoVision : IWorkLogoVision
         // 浅色 G 使用严格不透明区域，沿用原前景颜色以保留微弱的主体色差。
         if (!overview && background == 255)
             Cv2.Resize(sourceGray, gray, new Size(width, height), 0, 0, InterpolationFlags.Lanczos4);
+        // 0.8 像素对应本次实机边缘的平滑宽度；半分辨率搜索使用等比例核，避免粗搜与精搜不一致。
+        if (smooth) Cv2.GaussianBlur(gray, gray, new Size(0, 0), 0.8 * scale / 0.417);
         var pixels = new byte[width * height]; var maskBytes = new byte[pixels.Length];
         Marshal.Copy(gray.Data, pixels, 0, pixels.Length);
         Marshal.Copy(alpha.Data, maskBytes, 0, maskBytes.Length);

@@ -2,10 +2,14 @@
 
 《SD高达G世纪 永恒》的非官方 Windows 桌面助手，提供模拟器连接、每日任务、奖励领取与关卡辅助操作。
 
+当前源码版本为 **v1.3.3.3**，构建渠道为「正式发布 / Release」。此版本修复尚未发布，下载入口仍提供上一正式版；已发布包的版本与源码提交见 [发布记录](docs/open-source/readiness.md)。
+
+本版修复：初代高达 Logo 的平滑渲染识别，以及多个流程保存诊断证据时的覆盖问题；保持原识别阈值与身份校验。完整说明见 [更新记录](CHANGELOG.md)。
+
 ## 源码与下载
 
 - 源码：[GundamCC/GGEA](https://github.com/GundamCC/GGEA)，默认开发分支为 `main`。
-- 正式版：[v1.3.3.2 发行页](https://github.com/GundamCC/GGEA-Release/releases/tag/v1.3.3.2) · [Windows x64 安装包](https://github.com/GundamCC/GGEA-Release/releases/download/v1.3.3.2/GGEA-v1.3.3.2-win-x64.zip) · [SHA-256 校验文件](https://github.com/GundamCC/GGEA-Release/releases/download/v1.3.3.2/GGEA-v1.3.3.2-win-x64.zip.sha256)。
+- 正式版：[发行与下载页](https://github.com/GundamCC/GGEA-Release/releases/latest)，在附件中下载 Windows x64 ZIP 与对应的 SHA-256 校验文件。
 - 使用步骤：[使用说明](使用说明.txt)；问题反馈：[GitHub Issues](https://github.com/GundamCC/GGEA/issues)。
 
 下载 ZIP 并完整解压后运行 `GGEA.exe`，不要将发行页自动生成的 Source code 压缩包当作程序。该版本构建自源码提交 [`9fbe302`](https://github.com/GundamCC/GGEA/commit/9fbe30250579a2e87393de4aeb5aaead0ba09100)。旧的 30 个发行版已于 2026-10-28 下架。
@@ -15,8 +19,6 @@
 [使用文档（本地预览）](http://127.0.0.1:4173/docs/guide/) · [离线使用说明](使用说明.txt) · [更新记录](CHANGELOG.md)
 
 详细文档由独立的 `GGEA-website` 仓库维护，尚未部署。上述预览地址仅在本机启动网站预览服务后可访问。发布包保留离线 `使用说明.txt`。本仓库为桌面程序唯一开发仓库，默认分支为 `main`。
-
-当前源码版本为 **v1.3.3.2**，构建渠道为「正式发布 / Release」。
 
 ## 主要能力
 
