@@ -9,6 +9,26 @@ namespace GGEA.Tests;
 
 public sealed partial class OnlineUpdateTests
 {
+    /// <summary>新客户端只访问主仓库的固定入口；尚无正式版必须报告失败，不能伪报已经最新。</summary>
+    [Fact]
+    public async Task Sources_MigrationUsesMainRepository_AndMissingReleaseIsNotSuccess()
+    {
+        using var temp = new TempDirectory();
+        var requests = new List<string>();
+        using var client = new OnlineUpdateClient(temp.Path, handler: new ReplyHandler(request =>
+        {
+            var url = request.RequestUri!.AbsoluteUri;
+            requests.Add(url);
+            return url == "https://raw.githubusercontent.com/GundamCC/GGEA/main/update-sources.json"
+                ? JsonReply(Catalog()) : new(HttpStatusCode.NotFound);
+        }));
+        await Assert.ThrowsAsync<HttpRequestException>(() => client.CheckAsync(new Version(1, 3, 4, 0), default));
+        Assert.Equal(2, requests.Count);
+        Assert.Contains("https://raw.githubusercontent.com/GundamCC/GGEA/main/update-sources.json", requests);
+        Assert.Contains("https://api.github.com/repos/GundamCC/GGEA/releases/latest", requests);
+        Assert.Empty(new UpdateSourceStore(temp.Path).Load());
+    }
+
     /// <summary>即使没有新版本也学习来源；下一次 GitHub 完全离线时仍可从磁盘缓存发现新版。</summary>
     [Fact]
     public async Task Sources_LearnWhileUpToDate_ThenUseCacheWhenGitHubIsOffline()

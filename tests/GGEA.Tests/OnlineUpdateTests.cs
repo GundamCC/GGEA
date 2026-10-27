@@ -15,7 +15,11 @@ public sealed partial class OnlineUpdateTests
     [Fact]
     public async Task Check_SelectsStableAssets_AndDoesNotDowngrade()
     {
-        using var client = new GitHubUpdateClient(new ReplyHandler(_ => JsonReply(ReleaseJson("1.1.10.0")))) ;
+        using var client = new GitHubUpdateClient(new ReplyHandler(request =>
+        {
+            Assert.Equal("https://api.github.com/repos/GundamCC/GGEA/releases/latest", request.RequestUri!.AbsoluteUri);
+            return JsonReply(ReleaseJson("1.1.10.0"));
+        }));
         var update = await client.CheckAsync(new Version(1, 1, 9, 1), default);
         Assert.Equal(new Version(1, 1, 10, 0), update!.Version);
         Assert.Equal("GGEA-v1.1.10.0-win-x64.zip", update.PackageName);
@@ -31,7 +35,8 @@ public sealed partial class OnlineUpdateTests
         {
             ReleaseJson("1.1.10.0").Replace(".zip.sha256", ".zip.missing"),
             ReleaseJson("1.1.10.0").Replace("\"prerelease\":false", "\"prerelease\":true"),
-            ReleaseJson("1.1.10.0").Replace("https://github.com/", "https://example.org/")
+            ReleaseJson("1.1.10.0").Replace("https://github.com/", "https://example.org/"),
+            ReleaseJson("1.1.10.0").Replace("GundamCC/GGEA/", "GundamCC/GGEA-Release/")
         })
         {
             using var client = new GitHubUpdateClient(new ReplyHandler(_ => JsonReply(json)));

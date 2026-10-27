@@ -9,7 +9,8 @@ namespace GGEA.App.Updates;
 /// <summary>GitHub 正式 Release 更新源，匿名请求固定的官方仓库。</summary>
 public sealed class GitHubUpdateClient : IDisposable
 {
-    public const string Repository = "GundamCC/GGEA-Release";
+    // 新版只信任源码仓库的正式附件；旧客户端由旧仓库中的过渡包完成迁移。
+    public const string Repository = "GundamCC/GGEA";
     public const string ReleasesUrl = "https://github.com/" + Repository + "/releases";
     private const string LatestUrl = "https://api.github.com/repos/" + Repository + "/releases/latest";
     private readonly UpdateHttpTransport _http;

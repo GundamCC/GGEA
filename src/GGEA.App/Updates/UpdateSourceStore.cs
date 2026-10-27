@@ -9,8 +9,8 @@ public sealed class UpdateSourceStore(string installation, Action<string>? repor
 {
     public const string ImportFile = "config/update-sources.json";
     public const string CacheFile = ".ggea-update/sources-cache.json";
-    // 此入口固定在本版本中；以后修改公开分发仓库的文件即可让已安装客户端学习新来源。
-    public const string DiscoveryUrl = "https://raw.githubusercontent.com/GundamCC/GGEA-Release/main/update-sources.json";
+    // 新版来源配置随主仓库维护；旧仓库的同名文件继续服务尚未升级的客户端。
+    public const string DiscoveryUrl = "https://raw.githubusercontent.com/GundamCC/GGEA/main/update-sources.json";
 
     /// <summary>本地明确导入的同 ID 来源优先，剩余位置按远程配置顺序填充。</summary>
     public UpdateSource[] Load()

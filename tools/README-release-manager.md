@@ -33,7 +33,9 @@ pwsh -File tools/build-release-manager.ps1
 
 ## 在线更新附件约定
 
-客户端优先读取公开仓库 `GundamCC/GGEA-Release` 的最新正式 Release。继续上传精确命名的 `GGEA-v四段版本-win-x64.zip` 与同名 `.zip.sha256`，不需要新增服务器或 Token。附件尚未上传完整时，客户端会提示稍后重试，不会安装半成品。ZIP 保留现有打包脚本的一层根目录（允许清单提交号前 12 位后缀）和 `build-info.json`；客户端兼容 Windows ZIP 分隔符并核对目录提交号。发布校验额外要求 `GGEA.Updater.exe`；应用项目的 Publish 目标自动生成自包含更新器。
+正式发布入口迁移与旧客户端过渡步骤见 [发布迁移说明](../docs/release-migration.md)。在完成正式打包、双仓库过渡发布及升级核验前，不视为线上迁移完成。
+
+新客户端优先读取源码仓库 `GundamCC/GGEA` 的最新正式 Release。继续上传精确命名的 `GGEA-v四段版本-win-x64.zip` 与同名 `.zip.sha256`，不需要新增服务器或 Token。附件尚未上传完整时，客户端会提示稍后重试，不会安装半成品。ZIP 保留现有打包脚本的一层根目录（允许清单提交号前 12 位后缀）和 `build-info.json`；客户端兼容 Windows ZIP 分隔符并核对目录提交号。发布校验额外要求 `GGEA.Updater.exe`；应用项目的 Publish 目标自动生成自包含更新器。
 
 在线安装使用 GitHub HTTPS、精确附件地址、SHA-256 和包内文件清单校验；SHA-256 不等同于独立数字签名，信任边界为官方 GitHub 仓库及账号。开发版只允许检查；包含本次更新支持的本地普通版可以在线升级为正式包，旧普通版需先手动更换程序；今后版本需继续保留发布清单格式和更新器。
 
@@ -44,10 +46,10 @@ pwsh -File tools/build-release-manager.ps1
 随包的 `config/update-sources.json` 初始为 `{"schemaVersion":1,"sources":[]}`，不预填任何第三方镜像。客户端在每次启动检查或手动检查时，并行读取固定入口：
 
 ```text
-https://raw.githubusercontent.com/GundamCC/GGEA-Release/main/update-sources.json
+https://raw.githubusercontent.com/GundamCC/GGEA/main/update-sources.json
 ```
 
-维护者以后在**公开分发仓库 main 分支根目录**新增或修改这个文件即可，无须更换客户端、Tag 或 Release 附件；当前源码仓库中的模板不会自动上传。入口不存在、离线、超时或配置损坏时保留原有缓存。成功读取并校验后原子写入安装目录 `.ggea-update/sources-cache.json`，即使程序已经是最新版也照常缓存。有效的空列表明确清空远程缓存。先前的 v1.1.10.0 不支持该协议，必须先安装支持版本。
+维护者以后在**GGEA 仓库 main 分支根目录**修改这个文件即可，无须更换客户端、Tag 或 Release 附件；根目录文件随源码提交推送后才生效，随包的 `config/update-sources.json` 不会自动上传。旧客户端仍读取 GGEA-Release 根目录的同名文件，该兼容入口必须保留。入口不存在、离线、超时或配置损坏时保留原有缓存。成功读取并校验后原子写入安装目录 `.ggea-update/sources-cache.json`，即使程序已经是最新版也照常缓存。有效的空列表明确清空远程缓存。先前的 v1.1.10.0 不支持该协议，必须先安装支持版本。
 
 备用源仅由维护者管理，用户界面不提供导入或编辑入口。当前地址列表为空；维护者提供服务器后，可在后续版本配置 `config/update-sources.json`，或通过上述固定入口下发并缓存。没有缓存且 GitHub 完全不可访问的客户端，须等待网络恢复或手动安装包含备用源的新正式包。同 ID 的随包配置优先于缓存，最多使用 4 个来源。
 

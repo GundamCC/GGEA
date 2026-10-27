@@ -11,11 +11,11 @@
 🌟 GGEA SD高达G世纪永恒小助手 🌟
 </div>
 
-[简体中文](README.md) | [日本語](https://github.com/GundamCC/GGEA-Release/blob/main/README.ja.md)
+[简体中文](README.md) | [日本語](README.ja.md)
 
-[下载](https://github.com/GundamCC/GGEA-Release/releases/latest) · [使用说明](使用说明.txt) · [文档站（本地预览）](http://127.0.0.1:4173/docs/guide/) · [更新记录](CHANGELOG.md)
+[下载](https://github.com/GundamCC/GGEA/releases) · [使用说明](使用说明.txt) · [文档站（本地预览）](http://127.0.0.1:4173/docs/guide/) · [更新记录](CHANGELOG.md)
 
-当前源码 **v1.3.3.3**，正式发布 / Release 渠道；该源码版本尚未发布，下载包版本以发行页为准。文档站由独立的 `GGEA-website` 仓库维护，尚未部署，本地预览地址仅在本机启动网站后可用。
+当前源码 **v1.3.4.0**，正式发布 / Release 渠道；该源码版本尚未发布，下载包版本以发行页为准。文档站由独立的 `GGEA-website` 仓库维护，尚未部署，本地预览地址仅在本机启动网站后可用。
 
 ## 功能简介
 
@@ -32,7 +32,7 @@
 ## 快速开始
 ### 下载方式
 #### 方式一：GitHub Releases（推荐）
-前往 [Releases](https://github.com/GundamCC/GGEA-Release/releases) 下载最新版本:
+前往 [Releases](https://github.com/GundamCC/GGEA/releases) 下载正式版本。主仓库尚无正式包时，可使用[旧客户端兼容下载](https://github.com/GundamCC/GGEA-Release/releases)。源码更新不代表安装包已经发布。
 #### 方式二：QQ群组文件下载
 GGEA官方群：[1002150086](https://qm.qq.com/q/zkxGhEiVQQ)
 
