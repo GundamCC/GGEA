@@ -1,21 +1,10 @@
 <div align="center">
-  <h1 align="center">
-    <br/>
-    GGEA
-  </h1>
+  <h1>GGEA</h1>
+  <p>🌟 GGEA SD高达G世纪永恒小助手 🌟</p>
+  <p><a href="README.md">简体中文</a> | <a href="README.ja.md">日本語</a></p>
+  <p>快速开始：<a href="https://github.com/GundamCC/GGEA/releases/latest">下载最新版</a>并访问<a>使用教程</a>。</p>
+  <p><a href="CHANGELOG.md">更新记录</a> · <a>FAQ</a></p>
 </div>
-
-<br/>
-
-<div align="center">
-🌟 GGEA SD高达G世纪永恒小助手 🌟
-</div>
-
-[简体中文](README.md) | [日本語](README.ja.md)
-
-[下载](https://github.com/GundamCC/GGEA/releases) · [使用说明](使用说明.txt) · [文档站（本地预览）](http://127.0.0.1:4173/docs/guide/) · [更新记录](CHANGELOG.md)
-
-当前源码 **v1.3.4.0**，正式发布 / Release 渠道；安装包发布状态与下载包版本以发行页为准。文档站由独立的 `GGEA-website` 仓库维护，尚未部署，本地预览地址仅在本机启动网站后可用。
 
 ## 功能简介
 
@@ -74,6 +63,8 @@ Release 附件提供同名 `.zip.sha256` 文件，可用 PowerShell 的 `Get-Fil
 
 
 ## 开发与贡献
+
+源码版本：**v1.3.4.0** · 正式发布 / Release。
 
 欢迎提交代码、完善文档或反馈问题。本仓库为 GGEA 桌面程序源码，开发分支为 `main`。
 
