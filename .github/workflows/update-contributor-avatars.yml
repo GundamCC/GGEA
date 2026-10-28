@@ -1,0 +1,53 @@
+name: Update contributor avatars
+
+on:
+  schedule:
+    # UTC 02:23，即香港时间 10:23；避开整点运行高峰。
+    - cron: '23 2 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/update-contributor-avatars.yml'
+      - 'tools/update-contributor-avatars.ps1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contributor-avatars
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: github.repository == 'GundamCC/GGEA' && github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+      - name: Refresh circular avatars
+        run: ./tools/update-contributor-avatars.ps1
+      - name: Commit changed avatars
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git add -- docs/contributors/periaperia.svg docs/contributors/Torfaen.svg
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to stage avatars' }
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { Write-Output 'No avatar changes'; exit 0 }
+          if ($LASTEXITCODE -ne 1) { throw 'Failed to inspect avatar changes' }
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Avatar diff check failed' }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'docs: 自动同步贡献者头像'
+          if ($LASTEXITCODE -ne 0) { throw 'Avatar commit failed' }
+          # 分支并发变化时安全失败；不强推、不重写历史，下次执行重新获取最新分支。
+          git push origin HEAD:refs/heads/main
+          if ($LASTEXITCODE -ne 0) { throw 'Avatar push failed; inspect branch rules or concurrent updates' }
