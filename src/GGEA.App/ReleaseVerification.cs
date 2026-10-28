@@ -16,6 +16,11 @@ internal static class ReleaseVerification
         try
         {
             var root = AppContext.BaseDirectory;
+            // 正式包自检覆盖与启动相同的依赖探针，但只返回诊断，不弹窗或启动安装器。
+            if (!File.Exists(Path.Combine(root, RuntimeDependencies.SetupFileName)))
+                throw new InvalidDataException("发布包缺少运行库安装脚本。");
+            if (RuntimeDependencies.Check(root) is { } failure)
+                throw new InvalidDataException($"原生依赖检查失败：{failure.Library} / {failure.Kind} / {failure.Detail}");
             using var info = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "build-info.json")));
             if (info.RootElement.GetProperty("version").GetString() != typeof(App).Assembly.GetName().Version?.ToString(4))
                 throw new InvalidDataException("程序版本与 build-info 不一致。");

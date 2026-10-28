@@ -122,6 +122,13 @@ public partial class App : Application
             }
         }
 
+        // 更新恢复优先；原生环境不完整时不创建主窗口或启动任务。
+        if (!RuntimeDependencies.EnsureAvailable(AppContext.BaseDirectory))
+        {
+            Shutdown(1);
+            return;
+        }
+
         base.OnStartup(e);
     }
 

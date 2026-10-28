@@ -34,6 +34,8 @@ GGEA官方群：[1002150086](https://qm.qq.com/q/zkxGhEiVQQ)
 <br/>
 选择对应功能并开始任务。
 
+VC++ v14 x64 运行库仍需安装。当前源码新增启动检测及随包 `DependencySetup_依赖库安装.bat` 安装/修复入口；旧包没有脚本时使用[微软官方下载](https://aka.ms/vc14/vc_redist.x64.exe)。详见[安装说明](https://www.gundamc.com/ggea/docs/guide/install/)，以实际发布包为准。
+
 ## 注意事项
 - 推荐使用 mumu 模拟器或雷电模拟器，获得最佳的使用体验。
 - 目前支持的服务器：国际服、日服。
@@ -64,7 +66,7 @@ Release 附件提供同名 `.zip.sha256` 文件，可用 PowerShell 的 `Get-Fil
 
 ## 开发与贡献
 
-源码版本：**v1.3.4.0** · 正式发布 / Release。
+源码版本：**v1.3.5.0** · 正式发布 / Release。
 
 欢迎提交代码、完善文档或反馈问题。本仓库为 GGEA 桌面程序源码，开发分支为 `main`。
 

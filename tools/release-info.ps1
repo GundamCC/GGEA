@@ -130,7 +130,7 @@ function Assert-ReleaseInfo([string]$Directory, [string]$Version, [string]$Expec
     foreach ($entry in $expected) {
         if (-not $files.Contains($entry.Name) -or $files[$entry.Name] -ne $entry.Value) { throw "Release hash mismatch: $($entry.Name)" }
     }
-    foreach ($required in @('GGEA.exe', 'GGEA.Updater.exe', 'OpenCvSharpExtern.dll', 'onnxruntime.dll', 'resources/common/ocr/en_PP-OCRv5_rec_mobile.onnx', 'config/ggea.config.json', 'config/ap_consumption_profiles.json', 'config/update-sources.json', '使用说明.txt', 'RELEASE.txt')) {
+    foreach ($required in @('DependencySetup_依赖库安装.bat', 'GGEA.exe', 'GGEA.Updater.exe', 'OpenCvSharpExtern.dll', 'onnxruntime.dll', 'resources/common/ocr/en_PP-OCRv5_rec_mobile.onnx', 'config/ggea.config.json', 'config/ap_consumption_profiles.json', 'config/update-sources.json', '使用说明.txt', 'RELEASE.txt')) {
         if (-not $files.Contains($required)) { throw "Missing release file: $required" }
     }
     $exe = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $Directory 'GGEA.exe'))

@@ -32,7 +32,7 @@ try {
     & dotnet publish $project -c Debug -r win-x64 --self-contained true -p:PublishSingleFile=true -o $staging
     if ($LASTEXITCODE -ne 0) { throw 'Debug publish failed.' }
     Assert-NoReleaseManagerPrivateFiles -Directory $staging
-    foreach ($required in @('GGEA.exe', 'OpenCvSharpExtern.dll', 'onnxruntime.dll', 'config/ggea.config.json', 'resources/common/templates', 'resources/common/ocr/en_PP-OCRv5_rec_mobile.onnx')) {
+    foreach ($required in @('DependencySetup_依赖库安装.bat', 'GGEA.exe', 'OpenCvSharpExtern.dll', 'onnxruntime.dll', 'config/ggea.config.json', 'resources/common/templates', 'resources/common/ocr/en_PP-OCRv5_rec_mobile.onnx')) {
         if (-not (Test-Path -LiteralPath (Join-Path $staging $required))) { throw "Missing development output: $required" }
     }
     # 明示开发包的源码状态，防止未提交工作区产物被误认为正式发布包。

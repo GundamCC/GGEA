@@ -6,7 +6,7 @@ namespace GGEA.App.Vision;
 /// <summary>将 OCR 原生加载异常转换为可操作的诊断；不改变模型错误、推理结果或失败返回。</summary>
 internal static class OnnxRuntimeDiagnostics
 {
-    internal const string RuntimeDownloadUrl = "https://aka.ms/vc14/vc_redist.x64.exe";
+    internal const string RuntimeDownloadUrl = RuntimeDependencies.DownloadUrl;
 
     /// <summary>覆盖 SessionOptions 和会话的首次初始化，使 UI 只记录 Message 时仍保留底层原因。</summary>
     internal static T Initialize<T>(Func<T> initialize)
@@ -38,7 +38,7 @@ internal static class OnnxRuntimeDiagnostics
         var nativeExists = File.Exists(Path.Combine(baseDirectory, "onnxruntime.dll")) ||
             File.Exists(Path.Combine(baseDirectory, "runtimes", $"win-{architecture}", "native", "onnxruntime.dll"));
         const string unpack = "请重新完整解压最新 win-x64 发布包，保留 GGEA.exe 同目录的 DLL 和 resources，勿混用旧版本文件或只复制 EXE。";
-        var install = $"请安装或修复 Microsoft Visual C++ v14 x64 运行库（微软官方下载：{RuntimeDownloadUrl}），然后关闭并重新启动 GGEA。";
+        var install = $"请运行程序目录内的 {RuntimeDependencies.SetupFileName} 安装或修复 Microsoft Visual C++ v14 x64 运行库（微软官方下载：{RuntimeDownloadUrl}），然后关闭并重新启动 GGEA。";
         var guidance = cause switch
         {
             BadImageFormatException => $"原生 DLL 架构不符或文件损坏。{unpack}",

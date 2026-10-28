@@ -45,7 +45,7 @@ try {
     Get-ChildItem -LiteralPath $staging -Filter 'opencv_videoio_ffmpeg*.dll' -File | Remove-Item -Force
     Get-ChildItem -LiteralPath $staging -Recurse -File |
         Where-Object { $_.Extension -in @('.pdb', '.md') } | Remove-Item -Force
-    foreach ($required in @('GGEA.exe', 'OpenCvSharpExtern.dll', 'onnxruntime.dll', 'config/ggea.config.json',
+    foreach ($required in @('DependencySetup_依赖库安装.bat', 'GGEA.exe', 'OpenCvSharpExtern.dll', 'onnxruntime.dll', 'config/ggea.config.json',
             'resources/common/templates', 'resources/common/ocr/en_PP-OCRv5_rec_mobile.onnx')) {
         if (-not (Test-Path -LiteralPath (Join-Path $staging $required))) { throw "Missing normal build output: $required" }
     }
