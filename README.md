@@ -2,8 +2,8 @@
   <h1>GGEA</h1>
   <p>🌟 GGEA SD高达G世纪永恒小助手 🌟</p>
   <p><a href="README.md">简体中文</a> | <a href="README.ja.md">日本語</a></p>
-  <p>快速开始：<a href="https://github.com/GundamCC/GGEA/releases/latest">下载最新版</a>并访问<a>使用教程</a>。</p>
-  <p><a href="CHANGELOG.md">更新记录</a> · <a>FAQ</a></p>
+  <p>快速开始：<a href="https://github.com/GundamCC/GGEA/releases/latest">下载最新版</a>并访问<a href="https://www.gundamc.com/ggea/docs/guide/">使用文档</a>。</p>
+  <p><a href="https://www.gundamc.com/ggea/">官网</a> · <a href="CHANGELOG.md">更新记录</a> · <a href="https://www.gundamc.com/ggea/docs/guide/faq/download/">FAQ</a></p>
 </div>
 
 ## 功能简介
