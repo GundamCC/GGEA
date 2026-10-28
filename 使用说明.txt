@@ -1,8 +1,8 @@
 GGEA v1.3.4.0 使用说明 — 正式发布 / Release
 
 官网：https://www.gundamc.com/ggea/
-在线使用文档：https://www.gundamc.com/ggea/docs/guide/
-日本語ドキュメント：https://www.gundamc.com/ggea/docs/ja/guide/
+在线使用文档：https://www.gundamc.com/ggea/docs/guide/install/
+日本語ドキュメント：https://www.gundamc.com/ggea/docs/ja/guide/install/
 
 本版更新：正式发布入口迁至 GGEA 源码仓库，新客户端从主仓库检查更新并发现备用源，继续严格校验附件所属仓库、版本与摘要。旧客户端由 GGEA-Release 保留下载及来源发现入口，待过渡包正式发布后完成迁移；同步中日文说明和网站入口。
 

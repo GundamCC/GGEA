@@ -2,7 +2,7 @@
   <h1>GGEA</h1>
   <p>🌟 SDガンダム ジージェネレーション エターナル アシスタント 🌟</p>
   <p><a href="README.md">简体中文</a> | <a href="README.ja.md">日本語</a></p>
-  <p>はじめに：<a href="https://github.com/GundamCC/GGEA/releases/latest">最新版をダウンロード</a>して、<a href="https://www.gundamc.com/ggea/docs/ja/guide/">ドキュメント</a>をご覧ください。</p>
+  <p>はじめに：<a href="https://github.com/GundamCC/GGEA/releases/latest">最新版をダウンロード</a>して、<a href="https://www.gundamc.com/ggea/docs/ja/guide/install/">ドキュメント</a>をご覧ください。</p>
   <p><a href="https://www.gundamc.com/ggea/ja/">公式サイト</a> · <a href="CHANGELOG.md">更新履歴</a> · <a href="https://www.gundamc.com/ggea/docs/ja/guide/faq/download/">FAQ</a></p>
 </div>
 
