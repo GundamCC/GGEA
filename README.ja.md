@@ -72,11 +72,9 @@ Releaseには、ZIPと同名の `.zip.sha256` ファイルも添付されてい�
 GGEA に貢献してくださった以下の皆様に感謝します！
 
 <p>
-  <a href="https://github.com/periaperia"><img src="https://github.com/periaperia.png?size=160" width="80" height="80" alt="periaperia" title="periaperia" /></a>
-  <a href="https://github.com/Torfaen"><img src="https://github.com/Torfaen.png?size=160" width="80" height="80" alt="Torfaen" title="Torfaen" /></a>
+  <a href="https://github.com/periaperia"><img src="docs/contributors/periaperia.svg" width="80" height="80" alt="periaperia" title="periaperia" /></a>
+  <a href="https://github.com/Torfaen"><img src="docs/contributors/Torfaen.svg" width="80" height="80" alt="Torfaen" title="Torfaen" /></a>
 </p>
-
-[periaperia](https://github.com/periaperia) · [Torfaen](https://github.com/Torfaen)
 
 ## 開発とライセンス
 

@@ -75,11 +75,9 @@ Release 附件提供同名 `.zip.sha256` 文件，可用 PowerShell 的 `Get-Fil
 感谢以下成员为 GGEA 作出的贡献！
 
 <p>
-  <a href="https://github.com/periaperia"><img src="https://github.com/periaperia.png?size=160" width="80" height="80" alt="periaperia" title="periaperia" /></a>
-  <a href="https://github.com/Torfaen"><img src="https://github.com/Torfaen.png?size=160" width="80" height="80" alt="Torfaen" title="Torfaen" /></a>
+  <a href="https://github.com/periaperia"><img src="docs/contributors/periaperia.svg" width="80" height="80" alt="periaperia" title="periaperia" /></a>
+  <a href="https://github.com/Torfaen"><img src="docs/contributors/Torfaen.svg" width="80" height="80" alt="Torfaen" title="Torfaen" /></a>
 </p>
-
-[periaperia](https://github.com/periaperia) · [Torfaen](https://github.com/Torfaen)
 
 ## 开源许可
 
