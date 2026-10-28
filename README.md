@@ -70,6 +70,17 @@ Release 附件提供同名 `.zip.sha256` 文件，可用 PowerShell 的 `Get-Fil
 
 [开发指南](docs/development.md) · [开发规范](agent.md) · [工作约定](AGENTS.md) · [插件开发](docs/plugins.md)
 
+## 贡献者与致谢
+
+感谢以下成员为 GGEA 作出的贡献！
+
+<p>
+  <a href="https://github.com/periaperia"><img src="https://github.com/periaperia.png?size=160" width="80" height="80" alt="periaperia" title="periaperia" /></a>
+  <a href="https://github.com/Torfaen"><img src="https://github.com/Torfaen.png?size=160" width="80" height="80" alt="Torfaen" title="Torfaen" /></a>
+</p>
+
+[periaperia](https://github.com/periaperia) · [Torfaen](https://github.com/Torfaen)
+
 ## 开源许可
 
 自有代码采用 [Apache-2.0](LICENSE)，详见[许可范围](LICENSE_SCOPE.md)。第三方组件与游戏素材保留各自权利，见[第三方声明](resources/common/licenses/NOTICE.txt)和[素材清单](docs/open-source/assets.md)。本项目为非官方社区工具，与游戏官方无关联。

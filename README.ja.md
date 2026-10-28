@@ -67,6 +67,17 @@ Releaseには、ZIPと同名の `.zip.sha256` ファイルも添付されてい�
 
 [公式QQグループ：1002150086](https://qm.qq.com/q/zkxGhEiVQQ) でも不具合報告や機能の提案を受け付けています。
 
+## コントリビューターへの謝辞
+
+GGEA に貢献してくださった以下の皆様に感謝します！
+
+<p>
+  <a href="https://github.com/periaperia"><img src="https://github.com/periaperia.png?size=160" width="80" height="80" alt="periaperia" title="periaperia" /></a>
+  <a href="https://github.com/Torfaen"><img src="https://github.com/Torfaen.png?size=160" width="80" height="80" alt="Torfaen" title="Torfaen" /></a>
+</p>
+
+[periaperia](https://github.com/periaperia) · [Torfaen](https://github.com/Torfaen)
+
 ## 開発とライセンス
 
 [開発ガイド](docs/development.md) · [プラグイン](docs/plugins.md) · [任意の拡張機能](https://github.com/GundamCC/GGEA-Extensions)
