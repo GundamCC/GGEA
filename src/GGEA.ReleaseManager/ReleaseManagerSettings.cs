@@ -7,7 +7,7 @@ namespace GGEA.ReleaseManager;
 /// <summary>仅保存维护者的本机路径。凭证不属于配置模型，未知字段拒绝读取，避免静默丢弃旧数据。</summary>
 public sealed record ReleaseManagerSettings
 {
-    public int SchemaVersion { get; init; } = 1;
+    public int SchemaVersion { get; init; } = 2;
     public string SourceRepository { get; init; } = "";
 }
 
@@ -49,12 +49,32 @@ public sealed class ReleaseManagerSettingsStore
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
-    /// <summary>配置仅接受本机目录路径，拒绝 URL 与不支持的版本。</summary>
+    /// <summary>相对路径始终以 EXE 目录为基准，不受快捷方式或子进程工作目录影响。</summary>
+    public static string ResolveSource(string path, string baseDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(path)) throw new InvalidDataException("源码仓库路径不能为空。");
+        Validate(new() { SourceRepository = path });
+        return Path.GetFullPath(path, baseDirectory);
+    }
+
+    /// <summary>同盘保存相对路径，跨盘保留绝对路径，避免生成无法解析的盘符相对路径。</summary>
+    public static string StoreSource(string path, string baseDirectory) =>
+        Path.GetRelativePath(baseDirectory, ResolveSource(path, baseDirectory));
+
+    /// <summary>旧绝对配置优先迁移到工具所在仓库；已经保存的相对选择保持用户意图。</summary>
+    public static string InitialSource(string saved, string? discovered, string baseDirectory, bool migrateAbsolute = true)
+    {
+        string selected = string.IsNullOrEmpty(saved) || (migrateAbsolute && Path.IsPathFullyQualified(saved))
+            ? discovered ?? saved : saved;
+        return string.IsNullOrEmpty(selected) ? string.Empty : StoreSource(selected, baseDirectory);
+    }
+
+    /// <summary>允许明确的相对路径和绝对路径，拒绝 URL、盘符相对路径与不支持的版本。</summary>
     private static void Validate(ReleaseManagerSettings settings)
     {
-        if (settings.SchemaVersion != 1) throw new InvalidDataException("不支持的本机配置版本。");
+        if (settings.SchemaVersion is not (1 or 2)) throw new InvalidDataException("不支持的本机配置版本。");
         foreach (string path in new[] { settings.SourceRepository })
-            if (path is null || (path.Length > 0 && (!Path.IsPathFullyQualified(path) || path.Contains("://"))))
-                throw new InvalidDataException("仓库必须是绝对目录路径。");
+            if (path is null || (path.Length > 0 && (path.Contains("://") || (!Path.IsPathFullyQualified(path) && (Path.IsPathRooted(path) || path.Contains(':'))))))
+                throw new InvalidDataException("仓库必须是本机绝对路径或相对路径。");
     }
 }

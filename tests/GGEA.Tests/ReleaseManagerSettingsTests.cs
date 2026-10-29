@@ -25,7 +25,7 @@ public sealed class ReleaseManagerSettingsTests : IDisposable
 
     [Theory]
     [InlineData("{broken")]
-    [InlineData("{\"schemaVersion\":2}")]
+    [InlineData("{\"schemaVersion\":3}")]
     [InlineData("{\"schemaVersion\":1,\"token\":\"TEST-NOT-A-CREDENTIAL\"}")]
     public void Settings_InvalidData_IsPreserved(string content)
     {
@@ -44,6 +44,28 @@ public sealed class ReleaseManagerSettingsTests : IDisposable
         string previous = File.ReadAllText(store.FilePath);
         Assert.Throws<InvalidDataException>(() => store.Save(new() { SourceRepository = "https://example.invalid/source" }));
         Assert.Equal(previous, File.ReadAllText(store.FilePath));
+    }
+
+    [Fact]
+    public void RelativeSource_FollowsExecutable_AfterMovingRepository()
+    {
+        Assert.Equal(@"D:\moved\GGEA", ReleaseManagerSettingsStore.ResolveSource(".", @"D:\moved\GGEA"));
+        Assert.Equal(".", ReleaseManagerSettingsStore.InitialSource(@"C:\old", @"D:\moved\GGEA", @"D:\moved\GGEA"));
+        Assert.Equal(@"..\other", ReleaseManagerSettingsStore.InitialSource(@"..\other", @"D:\moved\GGEA", @"D:\moved\GGEA"));
+        Assert.Equal(@"C:\other", ReleaseManagerSettingsStore.StoreSource(@"C:\other", @"D:\moved\GGEA"));
+        Assert.Equal(@"C:\other", ReleaseManagerSettingsStore.InitialSource(@"C:\other", @"D:\repo", @"D:\repo", migrateAbsolute: false));
+        var store = new ReleaseManagerSettingsStore(_directory);
+        store.Save(new() { SourceRepository = "." });
+        Assert.Equal(".", store.Load().SourceRepository);
+    }
+
+    [Theory]
+    [InlineData(@"C:relative")]
+    [InlineData(@"\rooted")]
+    [InlineData("https://example.invalid/source")]
+    public void RelativeSource_RejectsAmbiguousPaths(string path)
+    {
+        Assert.Throws<InvalidDataException>(() => ReleaseManagerSettingsStore.ResolveSource(path, @"C:\repo"));
     }
 
     public void Dispose()

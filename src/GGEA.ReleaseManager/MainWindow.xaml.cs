@@ -29,7 +29,7 @@ public partial class MainWindow : Window
             _settingsWritable = false;
             AppendLog("本机配置读取失败，原文件保持不变。请检查本机设置路径中的 settings.json 后重启。");
         }
-        SourcePathBox.Text = string.IsNullOrEmpty(settings.SourceRepository) ? source ?? string.Empty : settings.SourceRepository;
+        SourcePathBox.Text = ReleaseManagerSettingsStore.InitialSource(settings.SourceRepository, source, AppContext.BaseDirectory, settings.SchemaVersion == 1);
         Closing += (_, e) =>
         {
             if (_busy) { e.Cancel = true; return; }
@@ -39,7 +39,7 @@ public partial class MainWindow : Window
         RefreshState();
     }
 
-    private string SourceRoot => SourcePathBox.Text.Trim();
+    private string SourceRoot => ReleaseManagerSettingsStore.ResolveSource(SourcePathBox.Text.Trim(), AppContext.BaseDirectory);
 
     /// <summary>支持把发布工具放在仓库的 artifacts 目录，也允许从窗口选择其他检出目录。</summary>
     private static string? FindSourceRoot(string start)
@@ -196,7 +196,7 @@ public partial class MainWindow : Window
         }
         try
         {
-            _settingsStore.Save(new ReleaseManagerSettings { SourceRepository = SourceRoot });
+            _settingsStore.Save(new ReleaseManagerSettings { SourceRepository = ReleaseManagerSettingsStore.StoreSource(SourcePathBox.Text.Trim(), AppContext.BaseDirectory) });
             return true;
         }
         catch
@@ -226,9 +226,13 @@ public partial class MainWindow : Window
     private void BrowseSourceButton_Click(object sender, RoutedEventArgs e)
     {
         if (_busy) return;
-        using System.Windows.Forms.FolderBrowserDialog picker = new() { Description = "选择 GGEA 源码仓库", SelectedPath = SourceRoot };
+        string initialDirectory = AppContext.BaseDirectory;
+        try { if (Directory.Exists(SourceRoot)) initialDirectory = SourceRoot; }
+        catch (Exception ex) when (ex is ArgumentException or IOException or NotSupportedException)
+        { /* 无效输入仍允许通过目录选择器修复。 */ }
+        using System.Windows.Forms.FolderBrowserDialog picker = new() { Description = "选择 GGEA 源码仓库", SelectedPath = initialDirectory };
         if (picker.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
-        SourcePathBox.Text = picker.SelectedPath;
+        SourcePathBox.Text = ReleaseManagerSettingsStore.StoreSource(picker.SelectedPath, AppContext.BaseDirectory);
         SaveSettings();
         RefreshState();
     }
