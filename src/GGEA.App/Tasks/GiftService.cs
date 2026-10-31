@@ -50,7 +50,8 @@ public sealed class GiftService
             ?? throw new InvalidOperationException("主界面布局缺少 navGift 锚点");
         // 全宽底部搜索不能沿用窄文字锚点的 .85：真实关卡页灰色背景可产生 .857 的假暗态。
         // 与其它完整底部按钮共用既有门槛，调用方要求更严格时仍保留其值。
-        threshold = Math.Max(threshold, RecognitionRegions.BottomButtonThreshold);
+        var stateThreshold = Math.Max(threshold, RecognitionRegions.BottomButtonThreshold);
+        // 结果 OK 保留调用方阈值（默认 .85）：真实按钮约 .893，不能沿用状态按钮的 .90。
         // 三种完整按钮都在底部搜索；布局的旧文字锚点不再限制模板尺寸。
         var bottom = RecognitionRegions.Resolve(RecognitionRegion.BottomButtons, giftLayout.ScreenWidth, giftLayout.ScreenHeight);
 
@@ -64,7 +65,7 @@ public sealed class GiftService
         var checkWait = new WaitOptions
         {
             PollIntervalMs = GameTiming.RecognitionIntervalMs,
-            Threshold = threshold,
+            Threshold = stateThreshold,
             Roi = bottom,
         };
         var deadline = Environment.TickCount64 + waitTimeoutMs;
@@ -111,7 +112,7 @@ public sealed class GiftService
 
         // 4. 关闭礼物页，回到主界面
         if (!await ClickWhenAppearsAsync(
-                serial, closeTemplatePath, bottom, "礼物页关闭按钮", waitTimeoutMs, threshold, ct))
+                serial, closeTemplatePath, bottom, "礼物页关闭按钮", waitTimeoutMs, stateThreshold, ct))
         {
             return false;
         }

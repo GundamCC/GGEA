@@ -78,6 +78,47 @@ public class GiftServiceTests
             Assert.Equal((1300 + collectImage.Width / 2, 930 + collectImage.Height / 2), adb.Taps[1]);
     }
 
+    /// <summary>模拟约 89% 的结果按钮匹配，防止状态按钮的严格门槛再次泄漏到 OK；显式严格阈值仍被尊重。</summary>
+    [Theory]
+    [InlineData(.85, true)]
+    [InlineData(.90, false)]
+    public async Task ResultOk_BelowStateThreshold_UsesCallerThreshold(double threshold, bool expected)
+    {
+        using var temp = new TempDirectory();
+        var files = CreateTemplateFiles(temp);
+        var screen = TestImageFactory.CreateBgra(1920, 1080, 20);
+        TestImageFactory.PasteBlock(screen, 1920, 180, 70, 1060, 960, 200);
+        TestImageFactory.PasteBlock(screen, 1920, 120, 60, 720, 965, 160);
+        var template = TestImageFactory.CreateBgra(160, 70, 0);
+        var random = new Random(42);
+        // 人工灰度纹理帧：每像素固定偏差 28，对应 SSD 匹配度约 89.0%，不是实机截图。
+        for (var y = 0; y < 70; y++)
+        for (var x = 0; x < 160; x++)
+        {
+            var value = (byte)random.Next(60, 161);
+            for (var c = 0; c < 3; c++)
+            {
+                template[(y * 160 + x) * 4 + c] = value;
+                screen[((945 + y) * 1920 + 870 + x) * 4 + c] = (byte)(value + 28);
+            }
+        }
+        File.WriteAllBytes(files.Ok, ImageCodec.EncodePng(template, 160, 70));
+        var matcher = new TemplateMatcher();
+        var match = matcher.Match(screen, 1920, 1080, template, 160, 70, .85,
+            new Roi(870, 945, 160, 70));
+        Assert.NotNull(match);
+        Assert.InRange(match.Confidence, .88, .90 - .001);
+        var adb = new FakeAdbService(ImageCodec.EncodePng(screen, 1920, 1080));
+        using var automation = new AutomationService(adb, matcher, new TestLog());
+        var result = await new GiftService(automation, new TestLog()).CollectGiftsAsync(
+            "serial", CreateMainLayout(), CreateGiftLayout(), files.Collect, files.Disabled,
+            files.Ok, files.Close, stepDelayMs: 0, networkSettleDelayMs: 0,
+            waitTimeoutMs: 300, threshold: threshold);
+        Assert.Equal(expected, result);
+        Assert.Equal(expected ? 4 : 2, adb.Taps.Count);
+        if (expected) Assert.Equal((950, 980), adb.Taps[2]);
+    }
+
     private static UiLayout CreateMainLayout() => new()
     {
         Anchors = new List<UiAnchor>
