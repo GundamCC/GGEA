@@ -114,6 +114,11 @@
                            "id":  23,
                            "name_en":  "Rig Ring",
                            "screenshot":  "ub_g8500u05400.webp"
+                       },
+                       {
+                           "id":  24,
+                           "name_en":  "Dark Gundam Jr.",
+                           "screenshot":  "ub_g8500u03100.webp"
                        }
                    ]
 }

@@ -11,11 +11,13 @@ namespace GGEA.Tests;
 public sealed class FierceEnemySkipTests
 {
     /// <summary>裁切、缩放后的立绘仍依据素材识别；错误单位与空白画面不得命中。</summary>
-    [Fact]
-    public void UnitMatcher_AcceptsCroppedPortraitRejectsWrongUnit()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(24)]
+    public void UnitMatcher_AcceptsCroppedPortraitRejectsWrongUnit(int unitId)
     {
         var units = FierceEnemyUnit.Load();
-        var red = units.Single(u => u.Id == 1);
+        var red = units.Single(u => u.Id == unitId);
         using var original = Cv2.ImRead(red.TemplatePath, ImreadModes.Unchanged);
         using var resized = new Mat();
         Cv2.Resize(original, resized, new Size(), .6, .6);
