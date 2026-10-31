@@ -61,7 +61,7 @@ public sealed class OnlineUpdateClient : IDisposable
     /// <summary>下载失败后只选择完全相同版本与大小的镜像；已知摘要必须一致，不能偷偷换包或升级版本。</summary>
     public async Task<string> DownloadAsync(UpdateRelease update, IProgress<double> progress, CancellationToken cancellationToken)
     {
-        var downloader = new UpdatePackageDownloader(_http);
+        var downloader = new UpdatePackageDownloader(_http, _report);
         var expectedHash = update.Sha256;
         try
         {

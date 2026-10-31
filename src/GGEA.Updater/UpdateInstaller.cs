@@ -27,6 +27,10 @@ public static class UpdateInstaller
 
         var replacements = next.Files.Keys.Append("build-info.json")
             .Where(path => !UpdateFiles.IsUserFile(path) || !File.Exists(UpdateFiles.SafePath(target, path)))
+            // 下载阶段已重建完整包；安装只备份并替换实际变化的文件，减少大模型和运行库的磁盘写入。
+            .Where(path => !File.Exists(UpdateFiles.SafePath(target, path)) ||
+                !UpdateFiles.Hash(UpdateFiles.SafePath(target, path)).Equals(
+                    UpdateFiles.Hash(UpdateFiles.SafePath(package, path)), StringComparison.OrdinalIgnoreCase))
             .ToArray();
         var removals = old.Files.Keys.Except(next.Files.Keys, StringComparer.OrdinalIgnoreCase)
             .Where(path => !UpdateFiles.IsUserFile(path)).ToArray();

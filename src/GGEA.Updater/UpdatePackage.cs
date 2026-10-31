@@ -71,6 +71,15 @@ public static class UpdatePackage
 
     /// <summary>只能展开到尚不存在的独立目录，且 ZIP 必须采用正式发布脚本的一层根目录。</summary>
     public static UpdateManifest Extract(string archive, string destination, string version, CancellationToken cancellationToken = default)
+        => ExtractCore(archive, destination, version, null, null, cancellationToken);
+
+    /// <summary>差异包先校验下载内容，再从本机复制并校验复用文件；完整暂存包仍走原安装事务。</summary>
+    public static UpdateManifest ExtractDelta(string archive, string destination, string version, string installation,
+        string baseVersion, CancellationToken cancellationToken = default)
+        => ExtractCore(archive, destination, version, installation, baseVersion, cancellationToken);
+
+    private static UpdateManifest ExtractCore(string archive, string destination, string version, string? installation,
+        string? baseVersion, CancellationToken cancellationToken)
     {
         _ = UpdateFiles.ParseVersion(version);
         UpdateFiles.RejectLinks(destination);
@@ -120,8 +129,10 @@ public static class UpdatePackage
         var manifest = UpdateManifest.Read(destination);
         if (manifest.Version != version || !manifest.Files.ContainsKey("GGEA.Updater.exe") ||
             (rootName != baseName && rootName != baseName + "-" + manifest.Commit[..12]) ||
-            !paths.SetEquals(manifest.Files.Keys.Append("build-info.json")))
+            (installation is null && !paths.SetEquals(manifest.Files.Keys.Append("build-info.json"))))
             throw new InvalidDataException("更新包身份或文件集合不完整。");
+        if (installation is not null)
+            UpdateDeltaPackage.Complete(destination, installation, baseVersion!, manifest, paths, expandedBytes, cancellationToken);
         manifest.Verify(destination, cancellationToken: cancellationToken);
         return manifest;
     }

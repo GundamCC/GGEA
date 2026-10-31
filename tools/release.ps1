@@ -1,9 +1,11 @@
 ﻿param(
     [string]$Commit = 'HEAD',
-    [switch]$FullTests
+    [switch]$FullTests,
+    [string]$BaseDirectory = ''
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
+if ($BaseDirectory) { $BaseDirectory = [IO.Path]::GetFullPath($BaseDirectory) }
 # 固定一次提交解析；后续不再从可能变化的工作区复制源文件、配置或文档。
 $revision = [string](& git -C $root rev-parse --verify "$Commit^{commit}")
 if ($LASTEXITCODE -ne 0 -or $revision -notmatch '^[a-f0-9]{40}$') { throw 'Invalid release commit' }
@@ -23,7 +25,7 @@ Push-Location $source
 try {
     & (Join-Path $source 'tools/publish.ps1') -SourceCommit $revision -FullTests:$FullTests
     & (Join-Path $source 'tools/test-release.ps1') -PublishDirectory (Join-Path $source 'artifacts/publish') -SourceCommit $revision
-    & (Join-Path $source 'tools/package-dist.ps1') -SourceCommit $revision -OutputDirectory (Join-Path $root 'artifacts/dist')
+    & (Join-Path $source 'tools/package-dist.ps1') -SourceCommit $revision -OutputDirectory (Join-Path $root 'artifacts/dist') -BaseDirectory $BaseDirectory
 }
 finally { Pop-Location }
 # 保留快照、构建输出与测试证据用于定位失败，全部位于忽略的 build 下。

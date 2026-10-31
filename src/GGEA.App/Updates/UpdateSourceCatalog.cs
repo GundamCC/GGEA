@@ -16,7 +16,12 @@ public sealed record UpdateRelease(Version Version, string Notes, string Package
     public string SourceId { get; init; } = "github";
     public string SourceName { get; init; } = "GitHub";
     public IReadOnlyCollection<string> AllowedHosts { get; init; } = UpdateHttpTransport.GitHubHosts;
+    public UpdateDeltaRelease? Delta { get; init; }
 }
+
+/// <summary>可选差异附件绑定检查时的旧版本；完整包始终是发布与镜像回退的必备项。</summary>
+public sealed record UpdateDeltaRelease(string BaseVersion, string PackageName, Uri PackageUrl,
+    long PackageSize, Uri ChecksumUrl, string? Sha256);
 
 /// <summary>一个备用源提供静态版本清单及其可用的 HTTPS 下载域名。</summary>
 public sealed record UpdateSource(string Id, string Name, string ManifestUrl, string[] AllowedHosts);

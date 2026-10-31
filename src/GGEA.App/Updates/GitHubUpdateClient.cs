@@ -43,7 +43,22 @@ public sealed class GitHubUpdateClient : IDisposable
         var notes = release.TryGetProperty("body", out var body) ? body.GetString() ?? "" : "";
         if (notes.Length > 12000) notes = notes[..12000] + L.Text("\n…更多内容请查看 GitHub 发布页。");
         return new UpdateRelease(version, notes, name, AssetUri(zip, tag, name), size,
-            AssetUri(checksum, tag, name + ".sha256"), ReadDigest(zip));
+            AssetUri(checksum, tag, name + ".sha256"), ReadDigest(zip))
+        { Delta = ReadDelta(assets, tag, version, current, size) };
+    }
+
+    /// <summary>差异附件尚未发布完整或不比全量包小则直接使用全量包；已发布的附件仍须通过地址和摘要校验。</summary>
+    private static UpdateDeltaRelease? ReadDelta(JsonElement[] assets, string tag, Version version, Version current, long fullSize)
+    {
+        var name = $"GGEA-v{version}-from-v{current.ToString(4)}-win-x64.delta.zip";
+        var matches = assets.Where(a => a.GetProperty("name").GetString() == name && a.GetProperty("state").GetString() == "uploaded").ToArray();
+        var checksums = assets.Where(a => a.GetProperty("name").GetString() == name + ".sha256" && a.GetProperty("state").GetString() == "uploaded").ToArray();
+        if (matches.Length == 0 || checksums.Length == 0) return null;
+        if (matches.Length != 1 || checksums.Length != 1) throw new InvalidDataException(L.Text("差异更新附件重复。"));
+        var size = matches[0].GetProperty("size").GetInt64();
+        if (size <= 0 || size >= fullSize) return null;
+        return new(current.ToString(4), name, AssetUri(matches[0], tag, name), size,
+            AssetUri(checksums[0], tag, name + ".sha256"), ReadDigest(matches[0]));
     }
 
     /// <summary>GitHub 的摘要为可选字段；存在时必须明确使用 SHA-256。</summary>

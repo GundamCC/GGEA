@@ -6,11 +6,13 @@ using GGEA.Updater;
 
 namespace GGEA.App.Updates;
 
-/// <summary>不同来源共用完整包下载与校验；校验失败不作为切换来源的理由。</summary>
+/// <summary>优先下载适用的文件差异包，重建完整暂存包；校验失败不作为切换来源的理由。</summary>
 public sealed class UpdatePackageDownloader
 {
     private readonly UpdateHttpTransport _http;
-    internal UpdatePackageDownloader(UpdateHttpTransport http) => _http = http;
+    private readonly Action<UpdateSourceStatus>? _report;
+    internal UpdatePackageDownloader(UpdateHttpTransport http, Action<UpdateSourceStatus>? report = null)
+    { _http = http; _report = report; }
 
     /// <summary>先解析独立校验文件，并与来源元数据中的摘要交叉核对。</summary>
     internal async Task<string> ResolveHashAsync(UpdateRelease update, CancellationToken cancellationToken)
@@ -31,6 +33,33 @@ public sealed class UpdatePackageDownloader
 
     /// <summary>下载完整包并验证服务端摘要及逐文件清单；失败时不留下可误用的半成品。</summary>
     public async Task<string> DownloadAsync(UpdateRelease update, string installation, IProgress<double> progress, CancellationToken cancellationToken)
+    {
+        if (update.Delta is { } delta && File.Exists(UpdateFiles.SafePath(installation, "build-info.json")))
+        {
+            var differential = update with
+            {
+                PackageName = delta.PackageName, PackageUrl = delta.PackageUrl, PackageSize = delta.PackageSize,
+                ChecksumUrl = delta.ChecksumUrl, Sha256 = delta.Sha256, Delta = null
+            };
+            try
+            {
+                _report?.Invoke(new(L.Text("正在下载文件差异包，并校验可复用的本机文件。")));
+                var hash = await ResolveHashAsync(differential, cancellationToken);
+                return await DownloadPackageAsync(differential with { Sha256 = hash }, installation, progress, cancellationToken, delta.BaseVersion);
+            }
+            catch (Exception error) when (!cancellationToken.IsCancellationRequested &&
+                error is UpdateBaseUnavailableException or HttpRequestException or OperationCanceledException)
+            {
+                _report?.Invoke(new(L.Text("差异包不可用或本机文件无法复用，正在改用完整更新包。")));
+                progress.Report(0);
+            }
+        }
+        _report?.Invoke(new(L.Text("正在下载完整更新包。")));
+        return await DownloadPackageAsync(update, installation, progress, cancellationToken);
+    }
+
+    private async Task<string> DownloadPackageAsync(UpdateRelease update, string installation, IProgress<double> progress,
+        CancellationToken cancellationToken, string? baseVersion = null)
     {
         var workspace = UpdateFiles.SafePath(installation, ".ggea-update/download-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workspace);
@@ -69,7 +98,8 @@ public sealed class UpdatePackageDownloader
                 timeout.Token.ThrowIfCancellationRequested();
                 if (!UpdateFiles.Hash(archive).Equals(expected, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException(L.Text("更新包 SHA-256 校验失败，未修改当前安装。"));
-                UpdatePackage.Extract(archive, package, update.Version.ToString(4), timeout.Token);
+                if (baseVersion is null) UpdatePackage.Extract(archive, package, update.Version.ToString(4), timeout.Token);
+                else UpdatePackage.ExtractDelta(archive, package, update.Version.ToString(4), installation, baseVersion, timeout.Token);
             }, timeout.Token);
             File.Delete(archive);
             return package;

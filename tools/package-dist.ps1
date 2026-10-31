@@ -3,7 +3,8 @@
     [string]$PublishDirectory = '',
     [string]$SourceCommit = '',
     [string]$OutputDirectory = '',
-    [switch]$BuildIfNeeded
+    [switch]$BuildIfNeeded,
+    [string]$BaseDirectory = ''
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -38,7 +39,7 @@ if ($BuildIfNeeded -and -not $PublishDirectory -and -not (Test-Path -LiteralPath
         $info.runtime -ne $Runtime -or $info.configuration -ne 'Release' -or
         $info.selfContained -ne $true -or $info.singleFile -ne $true) {
         Write-Host "No matching publish for v$version / $($SourceCommit.Substring(0, 12)); building from the fixed source commit."
-        & (Join-Path $PSScriptRoot 'release.ps1') -Commit $SourceCommit
+        & (Join-Path $PSScriptRoot 'release.ps1') -Commit $SourceCommit -BaseDirectory $BaseDirectory
         return
     }
 }
@@ -71,6 +72,7 @@ try {
         Write-Host "Verified existing ZIP: $zip"
         Write-Host "SHA-256: $hash"
         Write-Host "Acceptance directory (extracted from ZIP): $acceptance"
+        if ($BaseDirectory) { & (Join-Path $PSScriptRoot 'package-delta.ps1') -BaseDirectory $BaseDirectory -PublishDirectory $acceptance -OutputDirectory $dist }
         return
     }
     Copy-DirectoryContents $publishDir $package -Exclude @('logs')
@@ -95,6 +97,7 @@ try {
     Write-Host "Verified ZIP: $zip"
     Write-Host "SHA-256: $hash"
     Write-Host "Acceptance directory (extracted from ZIP): $acceptance"
+    if ($BaseDirectory) { & (Join-Path $PSScriptRoot 'package-delta.ps1') -BaseDirectory $BaseDirectory -PublishDirectory $acceptance -OutputDirectory $dist }
 }
 finally {
     $resolved = [IO.Path]::GetFullPath($work)

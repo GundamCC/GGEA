@@ -83,3 +83,5 @@ GGEA に貢献してくださった以下の皆様に感謝します！
 [開発ガイド](docs/development.md) · [プラグイン](docs/plugins.md) · [任意の拡張機能](https://github.com/GundamCC/GGEA-Extensions)
 
 独自コードは [Apache-2.0](LICENSE) で提供します。[ライセンス範囲](LICENSE_SCOPE.md)と[第三者ライセンス](resources/common/licenses/NOTICE.txt)を確認してください。ゲーム公式とは関係のないコミュニティツールです。
+
+ファイル単位の差分更新をソースコードに追加しました。対応クライアントと現在のバージョンに合う差分添付ファイルがある場合に使用し、利用できない場合は完全パッケージへ切り替えます。初回インストールには完全パッケージを使用します。公開状況は正式 Release を確認してください。

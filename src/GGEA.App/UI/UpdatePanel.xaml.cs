@@ -89,6 +89,8 @@ public partial class UpdatePanel : UserControl
         NotesHeading.Visibility = Visibility.Visible;
         SourceStatusText.Text = L.Format($"当前更新来源：{update.SourceName} · GitHub 优先，连接失败时尝试备用源。");
         UpdateStatusText.Text = L.Format($"发现 v{update.Version}，完整包 {update.PackageSize / 1024d / 1024d:F1} MB。");
+        if (update.Delta is { } delta)
+            UpdateStatusText.Text += L.Format($"\n可用差异包 {delta.PackageSize / 1024d / 1024d:F1} MB；无法复用时使用完整包。");
         UpdateNotesText.Text = string.IsNullOrWhiteSpace(update.Notes) ? L.Text("本次发布未填写更新说明。") : update.Notes;
         var reason = UpdateLauncher.InstallationUnavailableReason(AppContext.BaseDirectory);
         if (reason is not null) UpdateStatusText.Text += "\n" + reason;
@@ -100,7 +102,7 @@ public partial class UpdatePanel : UserControl
     {
         if (_updateCancellation is not null || _availableUpdate is null) return;
         if (_preparedPackage is not null) { await InstallPreparedUpdateAsync(); return; }
-        using var cancellation = BeginUpdateOperation(L.Text("正在下载完整更新包…"));
+        using var cancellation = BeginUpdateOperation(L.Text("正在准备更新下载…"));
         using var client = new OnlineUpdateClient(AppContext.BaseDirectory, ReportSourceStatus);
         try
         {

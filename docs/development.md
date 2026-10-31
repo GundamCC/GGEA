@@ -52,6 +52,8 @@ pwsh -File tools/release.ps1 -Commit HEAD
 `build-info.json` 包含完整提交、程序版本、构建参数、SDK、构建时间、资源/配置内容版本和逐文件 SHA-256。
 资源/配置版本是排序后路径与摘要的内容哈希，无须维护另一个手工版本号。
 
+文件级差异包可通过 `tools/release.ps1 -BaseDirectory <旧版原始解压目录>` 随完整包生成，也可单独执行 `tools/package-delta.ps1`。附件命名、基线校验、完整包兜底与发布步骤见[构建工具说明](../tools/README-release-manager.md#文件级差异附件)。差异包不能单独作为安装包分发。
+
 实际 ZIP 解压验收目录保留为同级的 `*-verified/`。**人工验收也必须从该目录启动程序**，按使用说明检查设备、截图和单项流程；启动自检只检查原生库、PNG、JSON 完整性，不代表游戏、UI 或所有模拟器实测通过。
 完整构建证据保留在 `build/release-work-*/`，均不纳入 Git。
 
