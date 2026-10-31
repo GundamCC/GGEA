@@ -39,7 +39,7 @@ public static class UpdateDeltaPackage
         }
 
         var basePath = UpdateFiles.SafePath(installation, "build-info.json");
-        if (!File.Exists(basePath) || !UpdateFiles.Hash(basePath).Equals(baseHash, StringComparison.OrdinalIgnoreCase))
+        if (!File.Exists(basePath) || !HashBaseFile(basePath).Equals(baseHash, StringComparison.OrdinalIgnoreCase))
             throw new UpdateBaseUnavailableException("本机发布清单与差异包基线不一致。");
         var previous = UpdateManifest.Read(installation);
         if (previous.Version != baseVersion) throw new UpdateBaseUnavailableException("本机版本与差异包基线不一致。");
@@ -50,16 +50,45 @@ public static class UpdateDeltaPackage
             if (!previous.Files.TryGetValue(relative, out var oldHash) || !oldHash.Equals(hash, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("差异包遗漏了新增或变化的文件。");
             var source = UpdateFiles.SafePath(installation, relative);
-            if (!File.Exists(source) || !UpdateFiles.Hash(source).Equals(hash, StringComparison.OrdinalIgnoreCase))
+            if (!File.Exists(source))
                 throw new UpdateBaseUnavailableException($"本机文件无法复用：{relative}");
-            expandedBytes += new FileInfo(source).Length;
+            using var input = OpenBaseFile(source);
+            expandedBytes += input.Length;
             if (expandedBytes > UpdatePackage.MaximumExpandedBytes) throw new InvalidDataException("更新暂存大小超限。");
             var destination = UpdateFiles.SafePath(package, relative);
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            File.Copy(source, destination, false);
+            // 仅源文件读取失败允许全量兜底；磁盘空间、权限等目标写入错误不能被误归为基线问题。
+            using (var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                var buffer = new byte[81920];
+                while (true)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    int count;
+                    try { count = input.Read(buffer); }
+                    catch (IOException) { throw new UpdateBaseUnavailableException($"本机文件读取失败：{relative}"); }
+                    if (count == 0) break;
+                    output.Write(buffer, 0, count);
+                }
+            }
             if (!UpdateFiles.Hash(destination).Equals(hash, StringComparison.OrdinalIgnoreCase))
                 throw new UpdateBaseUnavailableException($"复制期间本机文件发生变化：{relative}");
         }
         File.Delete(metadataPath);
+    }
+
+    /// <summary>路径及链接已由调用方校验；这里只转换本机源文件的访问失败，不吞掉安全校验。</summary>
+    private static FileStream OpenBaseFile(string path)
+    {
+        try { return File.OpenRead(path); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        { throw new UpdateBaseUnavailableException("本机基线文件无法读取。"); }
+    }
+
+    private static string HashBaseFile(string path)
+    {
+        using var stream = OpenBaseFile(path);
+        try { return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream)).ToLowerInvariant(); }
+        catch (IOException) { throw new UpdateBaseUnavailableException("本机发布清单读取失败。"); }
     }
 }

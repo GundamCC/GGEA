@@ -59,6 +59,7 @@ public sealed partial class OnlineUpdateTests
     [InlineData("missing", true)]
     [InlineData("modified", true)]
     [InlineData("identity", true)]
+    [InlineData("locked", true)]
     [InlineData("network", true)]
     [InlineData("tampered", false)]
     [InlineData("cancel", false)]
@@ -77,6 +78,8 @@ public sealed partial class OnlineUpdateTests
         if (scenario == "modified") File.WriteAllText(Path.Combine(previous, "stable.dll"), "changed");
         if (scenario == "identity") File.AppendAllText(Path.Combine(previous, "build-info.json"), " ");
         if (scenario == "tampered") deltaBytes[0] ^= 1;
+        using var locked = scenario == "locked"
+            ? new FileStream(Path.Combine(previous, "stable.dll"), FileMode.Open, FileAccess.Read, FileShare.None) : null;
         var fullName = "GGEA-v1.1.10.0-win-x64.zip";
         var deltaName = "GGEA-v1.1.10.0-from-v1.1.9.1-win-x64.delta.zip";
         var prefix = $"https://github.com/{GitHubUpdateClient.Repository}/releases/download/v1.1.10.0/";
@@ -154,6 +157,67 @@ public sealed partial class OnlineUpdateTests
         using var client = new GitHubUpdateClient(new ReplyHandler(_ => JsonReply(JsonSerializer.Serialize(json))));
         Assert.Equal(expected, (await client.CheckAsync(new(1, 1, 9, 1), default))!.Delta is not null);
         Assert.Null((await client.CheckAsync(new(1, 1, 8, 0), default))!.Delta);
+    }
+
+    /// <summary>重建包安装失败时恢复删除项和旧配置；新补入的默认配置必须撤销，恢复被占用阻断后仍可重试。</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Delta_RollbackPreservesOriginalState_AndRetriesAfterLock(bool interruptRecovery)
+    {
+        using var temp = new TempDirectory();
+        var previous = Path.Combine(temp.Path, "old");
+        var next = Path.Combine(temp.Path, "next");
+        CreateDeltaFixtures(previous, next);
+        var archive = CreateDeltaArchive(temp.Path, previous, next);
+        var config = Path.Combine(previous, "config/ggea.config.json");
+        File.WriteAllText(config, "user settings");
+        var missing = Path.Combine(previous, "config/ap_consumption_profiles.json");
+        File.Delete(missing);
+        File.WriteAllText(Path.Combine(previous, "config/private.json"), "private");
+        var before = Directory.GetFiles(previous, "*", SearchOption.AllDirectories)
+            .ToDictionary(path => Path.GetRelativePath(previous, path), File.ReadAllBytes);
+        var prepared = Path.Combine(temp.Path, "prepared");
+        UpdatePackage.ExtractDelta(archive, prepared, "1.1.10.0", previous, "1.1.9.1");
+        FileStream? locked = null;
+        try
+        {
+            Assert.Throws<IOException>(() => UpdateInstaller.Install(previous, prepared, "1.1.10.0", directory =>
+            {
+                if (directory != previous) return;
+                Assert.Equal("user settings", File.ReadAllText(config));
+                Assert.True(File.Exists(missing));
+                Assert.False(File.Exists(Path.Combine(previous, "old.dll")));
+                if (interruptRecovery) locked = new FileStream(Path.Combine(previous, "GGEA.exe"), FileMode.Open, FileAccess.Read, FileShare.Read);
+                throw new IOException("simulated startup failure");
+            }));
+            Assert.Equal(interruptRecovery, File.Exists(Path.Combine(previous, UpdateFiles.JournalName)));
+        }
+        finally { locked?.Dispose(); }
+        UpdateInstaller.Recover(previous);
+        UpdateInstaller.Recover(previous);
+        foreach (var (path, bytes) in before) Assert.Equal(bytes, File.ReadAllBytes(Path.Combine(previous, path)));
+        Assert.False(File.Exists(missing));
+        Assert.False(File.Exists(Path.Combine(previous, "new.dll")));
+        Assert.False(File.Exists(Path.Combine(previous, UpdateFiles.JournalName)));
+    }
+
+    /// <summary>恢复记录可能包含旧、新清单并集，不能以单份清单的条数上限拒绝；仍先验证备份，不执行损坏恢复。</summary>
+    [Fact]
+    public void Recovery_AcceptsCombinedInventoryLimit_ButRejectsCorruptBackup()
+    {
+        using var temp = new TempDirectory();
+        var backupRelative = ".ggea-update/backup-" + new string('a', 32);
+        var backup = UpdateFiles.SafePath(temp.Path, backupRelative);
+        Directory.CreateDirectory(backup);
+        File.WriteAllText(Path.Combine(backup, "first.dll"), "bad");
+        var files = new List<UpdateBackupFile> { new("first.dll", true, new string('a', 64)) };
+        files.AddRange(Enumerable.Range(0, 20001).Select(i => new UpdateBackupFile($"file-{i}.dll", false, null)));
+        UpdateFiles.WriteJson(UpdateFiles.SafePath(temp.Path, UpdateFiles.JournalName),
+            new UpdateJournal(backupRelative, "1.1.9.1", "1.1.10.0", files));
+        var error = Assert.Throws<InvalidDataException>(() => UpdateInstaller.Recover(temp.Path));
+        Assert.Contains("备份摘要", error.Message);
+        Assert.True(File.Exists(UpdateFiles.SafePath(temp.Path, UpdateFiles.JournalName)));
     }
 
     private static void CreateDeltaFixtures(string previous, string next)

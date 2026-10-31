@@ -59,6 +59,9 @@ public static class UpdateInstaller
             if (hash != UpdateFiles.Hash(source)) throw new IOException("备份期间目标文件发生变化，已停止更新。");
             journal.Files.Add(new(relative, true, hash));
         }
+        // 恢复器的读取上限同样约束写入，避免生成安装后无法读取的恢复记录。
+        if (System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(journal, UpdateJsonContext.Default.UpdateJournal).Length > 8 * 1024 * 1024)
+            throw new InvalidDataException("更新恢复记录过大，尚未修改当前安装。");
         UpdateFiles.WriteJson(pending, journal, UpdateJsonContext.Default.UpdateJournal);
         try
         {
@@ -96,7 +99,8 @@ public static class UpdateInstaller
         var journal = System.Text.Json.JsonSerializer.Deserialize(File.ReadAllText(pending), UpdateJsonContext.Default.UpdateJournal)
             ?? throw new InvalidDataException("更新恢复记录损坏。");
         if (!System.Text.RegularExpressions.Regex.IsMatch(journal.BackupDirectory, @"^\.ggea-update/backup-[a-f0-9]{32}$") ||
-            journal.Files.Count > 20001)
+            // 旧、新清单各最多 20000 项，完全替换时并集还需包含 build-info.json。
+            journal.Files.Count > 40001)
             throw new InvalidDataException("更新恢复目录无效。");
         var backup = UpdateFiles.SafePath(target, journal.BackupDirectory);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
