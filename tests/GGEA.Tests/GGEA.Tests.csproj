@@ -34,6 +34,7 @@
     <None Include="..\..\samples\GGEA.SamplePlugin\bin\$(Configuration)\net8.0-windows\GGEA.SamplePlugin.deps.json" Link="Fixtures\Plugins\GGEA.SamplePlugin.deps.json" CopyToOutputDirectory="PreserveNewest" />
     <!-- 保留小尺寸实机裁剪样本，防止透明合成、缩放或 ROI 改动导致识别退化。 -->
     <None Update="Fixtures\WorkLogo\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\Rewards\*.png" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\Shop\*.png" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\Base\*.png" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\Roadmap\*.png" CopyToOutputDirectory="PreserveNewest" />

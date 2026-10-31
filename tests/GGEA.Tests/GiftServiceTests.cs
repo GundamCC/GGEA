@@ -11,6 +11,35 @@ namespace GGEA.Tests;
 /// </summary>
 public class GiftServiceTests
 {
+    /// <summary>使用雷电真实底栏验证默认阈值：礼物空页只关闭，关卡底栏不能误判已领取并继续点击。</summary>
+    [Theory]
+    [InlineData("gift_empty_footer.png", true)]
+    [InlineData("stage_footer.png", false)]
+    public async Task ActualFooter_DefaultThresholdRejectsUnrelatedPage(string fixture, bool expected)
+    {
+        var root = AppContext.BaseDirectory;
+        var frame = TestImageFactory.CreateBgra(1920, 1080, 20);
+        var footer = ImageCodec.DecodePng(File.ReadAllBytes(Path.Combine(root, "Fixtures", "Rewards", fixture)));
+        Buffer.BlockCopy(footer.Bgra, 0, frame, 880 * 1920 * 4, footer.Bgra.Length);
+        var adb = new FakeAdbService(ImageCodec.EncodePng(frame, 1920, 1080));
+        using var automation = new AutomationService(adb, new TemplateMatcher(), new TestLog());
+        var service = new GiftService(automation, new TestLog());
+        var success = await service.CollectGiftsAsync("serial", CreateMainLayout(), CreateGiftLayout(),
+            Path.Combine(root, "resources/zh-CN/templates/gift/button_collect_all.png"),
+            Path.Combine(root, "resources/zh-CN/templates/gift/button_collect_all_disabled.png"),
+            Path.Combine(root, "resources/common/templates/dialog/button_ok.png"),
+            Path.Combine(root, "resources/common/templates/common/close.png"),
+            stepDelayMs: 0, networkSettleDelayMs: 0, waitTimeoutMs: 200);
+        Assert.Equal(expected, success);
+        if (expected)
+        {
+            Assert.Equal(2, adb.Taps.Count);
+            Assert.InRange(adb.Taps.Last().Item1, 765, 780);
+            Assert.InRange(adb.Taps.Last().Item2, 988, 1000);
+        }
+        else Assert.Single(adb.Taps);
+    }
+
     /// <summary>真实素材组合帧验证完整按钮可识别，关闭按钮偏离旧锚点时仍点击实际中心；非底部按钮不授权点击。</summary>
     [Theory]
     [InlineData(false, 930, true)]

@@ -48,6 +48,9 @@ public sealed class GiftService
     {
         var navGift = mainLayout.Find("navGift")
             ?? throw new InvalidOperationException("主界面布局缺少 navGift 锚点");
+        // 全宽底部搜索不能沿用窄文字锚点的 .85：真实关卡页灰色背景可产生 .857 的假暗态。
+        // 与其它完整底部按钮共用既有门槛，调用方要求更严格时仍保留其值。
+        threshold = Math.Max(threshold, RecognitionRegions.BottomButtonThreshold);
         // 三种完整按钮都在底部搜索；布局的旧文字锚点不再限制模板尺寸。
         var bottom = RecognitionRegions.Resolve(RecognitionRegion.BottomButtons, giftLayout.ScreenWidth, giftLayout.ScreenHeight);
 

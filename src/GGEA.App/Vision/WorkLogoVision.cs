@@ -309,10 +309,21 @@ public sealed class WorkLogoVision : IWorkLogoVision
         var pixels = new byte[width * height]; var maskBytes = new byte[pixels.Length];
         Marshal.Copy(gray.Data, pixels, 0, pixels.Length);
         Marshal.Copy(alpha.Data, maskBytes, 0, maskBytes.Length);
+        // V 高达原素材的半透明白边在画布蓝色光带上混色明显，固定灰底不能代表实机背景。
+        // 仅画布改用不透明主体并内缩边缘；保留原相关性阈值、完整图形及详情页光晕匹配。
+        var opaqueCanvasCore = !overview && Path.GetFileName(path) == "logo_l_series_1750.webp";
+        var minimumOpacity = opaqueCanvasCore ? 254 : background == 255 ? 245 : 128;
         for (var i = 0; i < pixels.Length; i++)
         {
             var opacity = maskBytes[i];
-            maskBytes[i] = overview || opacity >= (background == 255 ? 245 : 128) ? (byte)255 : (byte)0;
+            maskBytes[i] = overview || opacity >= minimumOpacity ? (byte)255 : (byte)0;
+        }
+        if (opaqueCanvasCore)
+        {
+            using var mask = Mat.FromPixelData(height, width, MatType.CV_8UC1, maskBytes);
+            using var kernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3));
+            // 粗搜只负责定位，原尺寸精搜再次以一像素内缩主体复核，不能以粗层分数授权。
+            Cv2.Erode(mask, mask, kernel);
         }
         return _logos[key] = new(width, height, pixels, maskBytes);
     }

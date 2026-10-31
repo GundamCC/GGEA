@@ -9,6 +9,48 @@ namespace GGEA.Tests;
 /// <summary>真实 WebP 素材与小尺寸实机裁剪样本验证，不依赖运行中的模拟器。</summary>
 public sealed class WorkLogoVisionTests
 {
+    /// <summary>雷电失败帧和独立重采帧均保留真实渲染；画布修正不能取消 .80 门槛或跳过详情身份确认。</summary>
+    [Theory]
+    [InlineData("victory_canvas_failure.png", 1208)]
+    [InlineData("victory_canvas_live.png", 1225)]
+    public void ActualVictoryCanvas_RecognizesOpaqueCore(string fixture, int expectedX)
+    {
+        var (vision, works, _) = CreateVision();
+        var pixels = TestImageFactory.CreateBgra(1920, 1080, 20);
+        Paste(pixels, Fixture(fixture), 1080, 450);
+        var observation = vision.Inspect(ImageCodec.EncodePng(pixels, 1920, 1080), works.Single(w => w.Id == 20), works);
+        var match = Assert.Single(observation.Works, w => w.WorkId == 20);
+        Assert.True(match.Confidence >= .80, observation.Diagnostic);
+        Assert.InRange(match.X, expectedX - 3, expectedX + 3);
+        Assert.InRange(match.Y, 531, 537);
+        Assert.False(observation.TargetTitleVisible);
+        Assert.Null(observation.SelectButton);
+    }
+
+    /// <summary>V 的不透明主体只用于画布；详情页仍以原光晕标题及选择按钮共同确认。</summary>
+    [Fact]
+    public void ActualVictoryTitle_PreservesOverviewVerification()
+    {
+        var (vision, works, resources) = CreateVision();
+        var pixels = TestImageFactory.CreateBgra(1920, 1080, 20);
+        Paste(pixels, Fixture("victory_title.png"), 123, 120);
+        Paste(pixels, Path.Combine(resources, "templates/stage/select.png"), 1494, 831);
+        var png = ImageCodec.EncodePng(pixels, 1920, 1080);
+        Assert.True(vision.Inspect(png, works.Single(w => w.Id == 20), works).TargetTitleVisible);
+        Assert.False(vision.Inspect(png, works.Single(w => w.Id == 7), works).TargetTitleVisible);
+    }
+
+    /// <summary>真实 F91 标题及相同亮色背景不能被 V 的核心遮罩误识别为目标。</summary>
+    [Fact]
+    public void ActualOtherWork_DoesNotAuthorizeVictoryCanvas()
+    {
+        var (vision, works, _) = CreateVision();
+        var pixels = TestImageFactory.CreateBgra(1920, 1080, 20);
+        Paste(pixels, Fixture("f91_title.png"), 1080, 450);
+        var observation = vision.Inspect(ImageCodec.EncodePng(pixels, 1920, 1080), works.Single(w => w.Id == 20), works);
+        Assert.DoesNotContain(observation.Works, w => w.WorkId == 20);
+    }
+
     /// <summary>实机 Recollection 标题不可因共用 SEED 主体而被同位置竞争拒绝。</summary>
     [Fact]
     public void ActualSeedRecollectionCanvas_RecognizesDistinctWork()
