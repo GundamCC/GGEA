@@ -23,6 +23,7 @@ public sealed class ThemeTests
                 app.InitializeComponent();
                 VerifyControlGeometry(app);
                 var window = new MainWindow();
+                VerifyHeaderHoverDelay(window);
                 VerifyFierceEnemyTasks(window);
                 VerifyAutoProgressSelector(window);
                 VerifyBallFactoryTab(window);
@@ -82,6 +83,43 @@ public sealed class ThemeTests
         thread.Start();
         thread.Join();
         if (failure is not null) ExceptionDispatchInfo.Capture(failure).Throw();
+    }
+
+    /// <summary>使用实际模板与动画时钟，验证延迟悬停、离开取消和重新进入后的重置。</summary>
+    private static void VerifyHeaderHoverDelay(MainWindow window)
+    {
+        var button = (Button)window.FindName("DocumentationButton");
+        button.ApplyTemplate();
+        var highlight = (Border)button.Template.FindName("HoverHighlight", button);
+        var border = (Border)button.Template.FindName("ButtonBorder", button);
+        var normalBorder = border.BorderBrush;
+        void Enter() => button.RaiseEvent(new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, 0)
+            { RoutedEvent = System.Windows.Input.Mouse.MouseEnterEvent });
+        void Leave() => button.RaiseEvent(new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, 0)
+            { RoutedEvent = System.Windows.Input.Mouse.MouseLeaveEvent });
+        void Advance(int milliseconds = 180)
+        {
+            var frame = new System.Windows.Threading.DispatcherFrame();
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(milliseconds) };
+            timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
+            timer.Start();
+            System.Windows.Threading.Dispatcher.PushFrame(frame);
+        }
+        Enter();
+        Assert.Equal(0, highlight.Opacity);
+        Advance();
+        Assert.Equal(1, highlight.Opacity);
+        Leave();
+        // WPF 在下一动画帧移除时钟；这里只等待一次正常绘制，不再等待悬停延时。
+        Advance(40);
+        Assert.Equal(0, highlight.Opacity);
+        Assert.Same(normalBorder, border.BorderBrush);
+        Enter();
+        Assert.Equal(0, highlight.Opacity);
+        Leave();
+        Advance();
+        Assert.Equal(0, highlight.Opacity);
+        Assert.NotNull(button.FocusVisualStyle);
     }
 
     /// <summary>真实插件视图验证编辑隔离、保存与两种主题；只渲染窗口，不启动设备探测。</summary>

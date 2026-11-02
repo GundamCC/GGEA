@@ -9,6 +9,63 @@
         Background="{DynamicResource Brush.Background}"
         Foreground="{DynamicResource Brush.Text}"
         FontFamily="{loc:UiFont}" UseLayoutRounding="True" SnapsToDevicePixels="True">
+    <Window.Resources>
+        <!-- WPF 仅在键盘导航时显示 FocusVisualStyle，避免鼠标点击后留下焦点框。 -->
+        <Style x:Key="HeaderKeyboardFocus" TargetType="Control">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Rectangle Margin="3" Stroke="{DynamicResource Brush.Focus}" StrokeThickness="1"
+                                   StrokeDashArray="1,2" RadiusX="4" RadiusY="4"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- 顶部入口独立管理悬停反馈，不继承通用按钮的即时悬停与持久焦点边框。 -->
+        <Style x:Key="HeaderIconButton" TargetType="Button">
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource HeaderKeyboardFocus}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Border x:Name="ButtonBorder" Background="Transparent" CornerRadius="6"
+                                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"/>
+                            <Border x:Name="HoverHighlight" Opacity="0" IsHitTestVisible="False" CornerRadius="6"
+                                    Background="{DynamicResource Brush.Selection}" BorderBrush="{DynamicResource Brush.Focus}" BorderThickness="1"/>
+                            <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <EventTrigger RoutedEvent="MouseEnter">
+                                <BeginStoryboard Name="HoverDelay">
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="HoverHighlight" Storyboard.TargetProperty="Opacity">
+                                            <DiscreteDoubleKeyFrame KeyTime="0:0:0" Value="0"/>
+                                            <DiscreteDoubleKeyFrame KeyTime="0:0:0.1" Value="1"/>
+                                        </DoubleAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="MouseLeave">
+                                <RemoveStoryboard BeginStoryboardName="HoverDelay"/>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="Unloaded">
+                                <RemoveStoryboard BeginStoryboardName="HoverDelay"/>
+                            </EventTrigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource Brush.Selection}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                                <Setter TargetName="HoverHighlight" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
     <Grid Margin="28,10,28,16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -31,7 +88,7 @@
                     <!-- 灯泡显示当前明暗状态；操作说明保留在提示与辅助功能名称中。 -->
                     <Button x:Name="ThemeToggleButton" Width="38" Padding="8,5" Margin="0,0,10,0"
                             ToolTip="{loc:Text Source='切换到日间模式'}" AutomationProperties.Name="{loc:Text Source='切换到日间模式'}"
-                            Click="ThemeToggleButton_Click" Style="{StaticResource ButtonSecondary}">
+                            Click="ThemeToggleButton_Click" Style="{StaticResource HeaderIconButton}">
                         <Grid Width="20" Height="22">
                             <Path x:Name="BulbGlass" Data="M 6,14 C 6,11 3,11 3,7 A 7,7 0 0 1 17,7 C 17,11 14,11 14,14 Z"
                                   Stroke="{DynamicResource Brush.TextDim}" StrokeThickness="1.3" Fill="Transparent"/>
@@ -42,7 +99,7 @@
                     </Button>
                     <Button x:Name="QqGroupButton" Width="38" Padding="8,5" Margin="0,0,10,0"
                             ToolTip="{loc:Text Source='加入官方 QQ 群'}" AutomationProperties.Name="{loc:Text Source='加入官方 QQ 群'}"
-                            Click="QqGroupButton_Click" Style="{StaticResource ButtonSecondary}">
+                            Click="QqGroupButton_Click" Style="{StaticResource HeaderIconButton}">
                         <!-- Remix Icon v4.6.0 qq-line：保留原始路径与非零填充规则，随主题调整颜色。 -->
                         <Viewbox Width="20" Height="22">
                             <Canvas Width="24" Height="24">
@@ -52,7 +109,7 @@
                     </Button>
                     <Button x:Name="WebsiteButton" Width="38" Padding="8,5" Margin="0,0,10,0"
                             ToolTip="{loc:Text Source='官方网站'}" AutomationProperties.Name="{loc:Text Source='官方网站'}"
-                            Click="WebsiteButton_Click" Style="{StaticResource ButtonSecondary}">
+                            Click="WebsiteButton_Click" Style="{StaticResource HeaderIconButton}">
                         <!-- Remix Icon v4.6.0 earth-line：保留原始路径与非零填充规则，随主题调整颜色。 -->
                         <Viewbox Width="20" Height="22">
                             <Canvas Width="24" Height="24">
@@ -62,7 +119,7 @@
                     </Button>
                     <Button x:Name="DocumentationButton" Width="38" Padding="8,5" Margin="0,0,10,0"
                             ToolTip="{loc:Text Source='使用文档'}" AutomationProperties.Name="{loc:Text Source='使用文档'}"
-                            Click="DocumentationButton_Click" Style="{StaticResource ButtonSecondary}">
+                            Click="DocumentationButton_Click" Style="{StaticResource HeaderIconButton}">
                         <!-- Remix Icon v4.6.0 book-open-line：保留原始路径与非零填充规则，随主题调整颜色。 -->
                         <Viewbox Width="20" Height="22">
                             <Canvas Width="24" Height="24">
@@ -72,7 +129,7 @@
                     </Button>
                     <Grid>
                         <Button x:Name="SettingsButton" Width="38" Padding="8,5" Click="SettingsButton_Click"
-                                ToolTip="{loc:Text Source='设置'}" Style="{StaticResource ButtonSecondary}" AutomationProperties.Name="{loc:Text Source='设置'}">
+                                ToolTip="{loc:Text Source='设置'}" Style="{StaticResource HeaderIconButton}" AutomationProperties.Name="{loc:Text Source='设置'}">
                             <!-- Remix Icon v4.6.0 settings-3-line；外层 Grid 保留更新圆点的独立定位。 -->
                             <Viewbox Width="20" Height="22">
                                 <Canvas Width="24" Height="24">
