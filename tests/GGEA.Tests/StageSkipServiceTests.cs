@@ -10,7 +10,7 @@ using GGEA.App.Vision;
 namespace GGEA.Tests;
 
 /// <summary>独立略过服务测试。</summary>
-public class StageSkipServiceTests
+public partial class StageSkipServiceTests
 {
     /// <summary>缺少结果识别时，不能以二十秒睡眠伪造成功；必须在消费前停止。</summary>
     [Fact]

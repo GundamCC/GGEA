@@ -3464,6 +3464,8 @@ public partial class MainWindow : Window
             _logger ?? throw new InvalidOperationException(L.Text("日志服务尚未初始化")),
             new StageSkipOptions
             {
+                // 当前恢复证据对应标准 HARD 的 AP/次数布局，强敌和强化培育保留各自确认策略。
+                RecoverUnchangedExecutionDialog = !forUpgradeStages && postSkipConfirmation is null,
                 PostSkipTimeoutMs = GameTiming.ShortRecognitionTimeoutMs,
                 PostSkipConfirmation = postSkipConfirmation,
                 ContinueUnitAcquisition = postSkipConfirmation is not null,

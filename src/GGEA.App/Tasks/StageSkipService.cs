@@ -1,6 +1,7 @@
 using System.IO;
 using GGEA.App.Automation;
 using GGEA.App.Logging;
+using GGEA.App.Localization;
 using GGEA.App.UI;
 using GGEA.App.Vision;
 using OpenCvSharp;
@@ -32,6 +33,7 @@ public sealed class StageSkipService
     private readonly StageSkipOptions _options;
     private readonly RecognitionEvidence? _evidence;
     private readonly ApStopSignal? _apStopSignal;
+    private readonly SkipExecutionDialogRecognizer? _executionDialog;
     // 同一服务会连续略过多个关卡；模板按需解码一次，正常返回时不加载升级素材。
     private readonly Dictionary<string, TemplateImages> _postSkipTemplates = new();
 
@@ -46,6 +48,7 @@ public sealed class StageSkipService
         _options = options ?? new StageSkipOptions();
         _evidence = evidence;
         _apStopSignal = apStopSignal;
+        _executionDialog = _options.RecoverUnchangedExecutionDialog ? new SkipExecutionDialogRecognizer() : null;
     }
 
     /// <summary>只有完整配置回复 AP 标题与按钮时才允许识别，通用关闭按钮不能提供业务证据。</summary>
@@ -110,15 +113,41 @@ public sealed class StageSkipService
         await _automation.TapAsync(serial, stageSkip.CenterX, stageSkip.CenterY, ct);
         await DelayAsync(_options.SkipDialogWaitMs, ct);
 
-        _log.Info($"点击执行: ({execute.CenterX},{execute.CenterY})");
-        await _automation.TapAsync(serial, execute.CenterX, execute.CenterY, ct);
+        // 原确认页是本次消费的身份依据；两帧稳定后再执行，不能仅凭固定等待盲点。
+        SkipExecutionDialog? originalDialog = null;
+        if (_executionDialog is not null)
+        {
+            var dialogDeadline = Environment.TickCount64 + GameTiming.ShortRecognitionTimeoutMs;
+            while (Environment.TickCount64 < dialogDeadline)
+            {
+                var screen = await _automation.CaptureScreenAsync(serial, ct);
+                var observed = await Task.Run(() => _executionDialog.Recognize(screen, ct), ct);
+                if (observed is not null)
+                {
+                    originalDialog = await ConfirmExecutionDialogAsync(serial, observed, ct);
+                    if (originalDialog is not null) break;
+                }
+                await DelayWithinBudgetAsync(dialogDeadline, GameTiming.ConfirmationIntervalMs, ct);
+            }
+            if (originalDialog is null)
+                return StageSkipResult.Fail(L.Text("未连续确认略过执行弹窗及 AP/次数，未发送执行，请检查当前画面。"));
+        }
+        var executeX = originalDialog?.Execute.CenterX ?? execute.CenterX;
+        var executeY = originalDialog?.Execute.CenterY ?? execute.CenterY;
+        _log.Info($"点击执行: ({executeX},{executeY})");
+        await _automation.TapAsync(serial, executeX, executeY, ct);
 
-        return await CompleteExecutedSkipAsync(serial, stageLayout, ct);
+        return await CompleteExecutedSkipCoreAsync(serial, stageLayout, originalDialog, ct);
     }
 
-    /// <summary>执行已发送后共用结果等待、AP 保护和返回确认；不会再次点击略过或执行。</summary>
-    public async Task<StageSkipResult> CompleteExecutedSkipAsync(
+    /// <summary>外部已经执行的略过没有原弹窗证据，只等待结果，不授权补点消费。</summary>
+    public Task<StageSkipResult> CompleteExecutedSkipAsync(
         string serial, UiLayout stageLayout, CancellationToken ct = default)
+        => CompleteExecutedSkipCoreAsync(serial, stageLayout, null, ct);
+
+    /// <summary>每次略过独立持有补点预算；观察到离开原弹窗后永久撤销补点资格。</summary>
+    private async Task<StageSkipResult> CompleteExecutedSkipCoreAsync(
+        string serial, UiLayout stageLayout, SkipExecutionDialog? originalDialog, CancellationToken ct)
     {
         var skipCancel = RequireAnchor(stageLayout, "skipDialogCancel", "关卡布局缺少 skipDialogCancel 锚点");
         var resultOk = RequireAnchor(stageLayout, "skipResultOk", "关卡布局缺少 skipResultOk 锚点");
@@ -144,6 +173,8 @@ public sealed class StageSkipService
             var resultReady = false;
             var acquisitionContinueCount = 0;
             var recoveringLateResult = false;
+            var executionRetried = false;
+            var executionDialogDeparted = false;
             var deadline = Environment.TickCount64 + Math.Max(0, _options.SkipResultTimeoutMs);
             var nextProgressAt = Environment.TickCount64 + 15000;
             ScreenImage? lastScreen = null;
@@ -158,7 +189,7 @@ public sealed class StageSkipService
                         break;
                     recoveringLateResult = true;
                     deadline = Environment.TickCount64 + _options.LateResultRecoveryTimeoutMs;
-                    _log.Warn($"略过正常等待超时，开始迟到结果恢复（最多 {_options.LateResultRecoveryTimeoutMs}ms，不重复执行略过）。");
+                    _log.Warn($"略过正常等待超时，开始迟到结果恢复（最多 {_options.LateResultRecoveryTimeoutMs}ms）；按当前画面复核恢复动作。");
                 }
 
                 // 同帧比较结果与 AP 弹窗，避免每轮两次 ADB 截图把短暂结果帧只交给 AP 检测而丢掉。
@@ -232,6 +263,7 @@ public sealed class StageSkipService
                     ct.ThrowIfCancellationRequested();
                     if (next is not null)
                     {
+                        executionDialogDeparted = true;
                         _log.Info("略过获得单位展示：已确认 TAP TO NEXT，点击后继续等待 SKIP RESULT。");
                         await _automation.TapAsync(serial, next.CenterX, next.CenterY, ct);
                         // 一次略过最多获得六台机体；每次确认并点击后重新给予完整动画预算。
@@ -241,6 +273,30 @@ public sealed class StageSkipService
                             deadline = Environment.TickCount64 + Math.Max(0, _options.SkipResultTimeoutMs);
                         _log.Info($"奖励继续 {acquisitionContinueCount}/6：继续等待下一台机体或 SKIP RESULT，剩余预算 {Math.Max(0, deadline - Environment.TickCount64)}ms。");
                         await DelayWithinBudgetAsync(deadline, resultPollMs, ct);
+                        continue;
+                    }
+                }
+
+                if (originalDialog is not null && !executionDialogDeparted)
+                {
+                    var dialog = await Task.Run(() => _executionDialog!.Recognize(screen, ct), ct);
+                    if (dialog is null || !await Task.Run(() => _executionDialog!.IsSameSelection(originalDialog, dialog, ct), ct))
+                        executionDialogDeparted = true;
+                    else if (recoveringLateResult && !executionRetried)
+                    {
+                        var fresh = await ConfirmExecutionDialogAsync(serial, originalDialog, ct);
+                        if (fresh is null)
+                        {
+                            // 复核时已离开原弹窗，下一轮优先识别结果/AP；旧坐标失效。
+                            executionDialogDeparted = true;
+                            continue;
+                        }
+                        executionRetried = true;
+                        _log.Info("略过恢复已连续确认原执行弹窗、次数与 AP 未变，补点执行一次并重新等待结果。");
+                        await _automation.TapAsync(serial, fresh.Execute.CenterX, fresh.Execute.CenterY, ct);
+                        // 补点后的请求拥有一次完整结果等待，但不能再次补点或续开迟到恢复。
+                        deadline = Environment.TickCount64 + Math.Max(0, _options.SkipResultTimeoutMs);
+                        await DelayWithinBudgetAsync(deadline, Math.Min(resultPollMs, GameTiming.ConfirmationIntervalMs), ct);
                         continue;
                     }
                 }
@@ -259,6 +315,19 @@ public sealed class StageSkipService
                 if (_evidence is not null && lastScreen is not null)
                     await SaveResultTimeoutEvidenceAsync(serial, lastScreen, resultTitle, apRecoveryClose, ct);
                 ct.ThrowIfCancellationRequested();
+                if (originalDialog is not null && !executionDialogDeparted)
+                {
+                    var unchanged = await ConfirmExecutionDialogAsync(serial, originalDialog, ct);
+                    if (unchanged is not null)
+                    {
+                        _log.Warn("略过执行弹窗仍未退出，已复核原选择并点击取消，停止当前略过；不计为成功。");
+                        await _automation.TapAsync(serial, unchanged.Cancel.CenterX, unchanged.Cancel.CenterY, ct);
+                        await DelayAsync(_options.SkipDialogWaitMs, ct);
+                        return StageSkipResult.Fail(L.Text(executionRetried
+                            ? "略过执行补点一次后仍未生效，已发送取消并停止当前任务。"
+                            : "略过执行未生效，已发送取消并停止当前任务。"));
+                    }
+                }
                 return StageSkipResult.Fail($"等待 SKIP RESULT 超时（正常段 {_options.SkipResultTimeoutMs}ms，迟到恢复 {Math.Max(0, _options.LateResultRecoveryTimeoutMs)}ms，已点击奖励继续 {acquisitionContinueCount}/6 次），未确认略过结果页");
             }
         }
@@ -274,6 +343,20 @@ public sealed class StageSkipService
                 : "未确认返回强化培育关卡，已停止后续操作");
 
         return StageSkipResult.Ok("略过执行完成");
+    }
+
+    /// <summary>动作前使用两张新帧复核原选择；取消令牌与公共截图失败原样传播，不复用超时截图点击。</summary>
+    private async Task<SkipExecutionDialog?> ConfirmExecutionDialogAsync(string serial, SkipExecutionDialog original, CancellationToken ct)
+    {
+        SkipExecutionDialog? current = null;
+        for (var sample = 0; sample < 2; sample++)
+        {
+            if (sample > 0) await DelayAsync(GameTiming.ConfirmationIntervalMs, ct);
+            var screen = await _automation.CaptureScreenAsync(serial, ct);
+            current = await Task.Run(() => _executionDialog!.Recognize(screen, ct), ct);
+            if (current is null || !await Task.Run(() => _executionDialog!.IsSameSelection(original, current, ct), ct)) return null;
+        }
+        return current;
     }
 
     /// <summary>结果 OK 后按任务确认关卡页：强化培育检查专用标题，AP 任务处理升级并确认次数上限。</summary>

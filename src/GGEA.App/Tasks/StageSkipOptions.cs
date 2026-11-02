@@ -4,6 +4,8 @@ namespace GGEA.App.Tasks;
 /// <summary>独立略过服务的运行参数。</summary>
 public sealed class StageSkipOptions
 {
+    /// <summary>标准 HARD 略过确认页：先复核执行，恢复时允许同一选择最多补点一次；其他布局不启用。</summary>
+    public bool RecoverUnchangedExecutionDialog { get; init; }
     /// <summary>强敌获得单位展示：结果页之前允许 OCR 确认完整 TAP TO NEXT 后继续。</summary>
     public bool ContinueUnitAcquisition { get; init; }
 
@@ -30,7 +32,7 @@ public sealed class StageSkipOptions
     /// <summary>等待执行请求、奖励动画及 SKIP RESULT 的单段超时；强敌每次奖励继续后重新计时，最多六次。</summary>
     public int SkipResultTimeoutMs { get; init; } = 60000;
 
-    /// <summary>正常等待耗尽后，仅一次迟到结果恢复预算；不重发消费动作，奖励继续也不能续期。</summary>
+    /// <summary>正常等待耗尽后，仅一次迟到结果恢复预算；同一执行弹窗的补点另有一次正常结果预算。</summary>
     public int LateResultRecoveryTimeoutMs { get; init; } = 30000;
 
     /// <summary>OK 后返回关卡页的独立预算；未指定时沿用结果预算但最多 20 秒，避免延长动画等待连带扩大返回等待。</summary>
