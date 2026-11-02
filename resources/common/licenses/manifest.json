@@ -276,7 +276,7 @@
     },
     {
       "file": "REMIXICON-LICENSE.txt",
-      "component": "Remix Icon (qq-fill)",
+      "component": "Remix Icon (qq-line, earth-line, book-open-line)",
       "version": "4.6.0",
       "source": "https://raw.githubusercontent.com/Remix-Design/RemixIcon/v4.6.0/License",
       "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
