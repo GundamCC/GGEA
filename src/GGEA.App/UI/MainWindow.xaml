@@ -30,10 +30,9 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
-                            <Border x:Name="ButtonBorder" Background="Transparent" CornerRadius="6"
-                                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"/>
+                            <Border x:Name="ButtonBorder" Background="Transparent" CornerRadius="6"/>
                             <Border x:Name="HoverHighlight" Opacity="0" IsHitTestVisible="False" CornerRadius="6"
-                                    Background="{DynamicResource Brush.Selection}" BorderBrush="{DynamicResource Brush.Focus}" BorderThickness="1"/>
+                                    Background="{DynamicResource Brush.Selection}"/>
                             <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>
