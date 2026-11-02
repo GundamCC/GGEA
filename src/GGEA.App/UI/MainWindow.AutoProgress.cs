@@ -201,7 +201,9 @@ public partial class MainWindow
             if (result.Completed) result = result with { Message = L.Format($"自动推图完成：{result.CompletedWorks} 个目标，本次完成 {result.CompletedStages} 场战斗。") };
             AutoProgressStatusText.Text = result.Completed ? result.Message
                 : L.Format($"自动推图已停止：{result.Message} 已完成 {result.CompletedWorks} 个目标、{result.CompletedStages} 场战斗。");
-            if (!result.Completed) _logger.Warn(AutoProgressStatusText.Text);
+            // 队列持有者记录最终汇总，避免最后一条日志停留在单个目标的进度提示。
+            if (result.Completed) _logger.Info(AutoProgressStatusText.Text);
+            else _logger.Warn(AutoProgressStatusText.Text);
             endNotification.Succeeded = result.Completed;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

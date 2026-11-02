@@ -32,7 +32,7 @@ public sealed class FierceEnemyProgressRunner(
             ct.ThrowIfCancellationRequested();
             if (observations.Any(x => x.Difficulty == FierceEnemyDifficulty.EXPERT && x.State == FierceEnemyProgressState.Passed))
             {
-                report(L.Format($"强敌 {name} 已确认 EXPERT 通关，继续下一队列目标。"));
+                report(L.Format($"强敌 {name} 已确认 EXPERT 通关，该目标已完成。"));
                 return new(true, 1, completed, L.Format($"{name} 已确认 EXPERT 通关。"));
             }
             if (last is { } previous && !observations.Any(x => x.Difficulty == previous && x.State == FierceEnemyProgressState.Passed))
