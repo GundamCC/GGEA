@@ -30,3 +30,9 @@ OCR 模型来源与许可见 ../ocr/NOTICE.txt、model.json 及对应许可文�
 
 维护：升级任一 NuGet/native/runtime 依赖时同步核对来源、许可与摘要；
 不能仅修改本文件版本号。旧发行包不会因本次补充而自动得到这些文件。
+
+界面图标：
+- QQ 群按钮使用 Remix Icon v4.6.0 的 qq-fill，作者 Remix Design，Apache-2.0。
+- 原始来源：https://github.com/Remix-Design/RemixIcon/blob/v4.6.0/icons/Logos/qq-fill.svg
+- 原始 SVG 保存在 ../icons/qq-fill.svg；WPF 使用同一条路径，仅调整展示尺寸与主题颜色。
+- 完整许可见 REMIXICON-LICENSE.txt；QQ 商标归其权利人所有。

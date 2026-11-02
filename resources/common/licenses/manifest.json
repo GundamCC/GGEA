@@ -273,6 +273,13 @@
       "version": "4.7.1",
       "source": "https://gitlab.com/libtiff/libtiff/-/raw/v4.7.1/LICENSE.md",
       "sha256": "0e27c2382d7b8147972bbb746e04059a1152c8d0fda9d03ef1399d1a433c4ade"
+    },
+    {
+      "file": "REMIXICON-LICENSE.txt",
+      "component": "Remix Icon (qq-fill)",
+      "version": "4.6.0",
+      "source": "https://raw.githubusercontent.com/Remix-Design/RemixIcon/v4.6.0/License",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
     }
   ]
 }
