@@ -90,7 +90,7 @@ public sealed class ThemeTests
     {
         var button = (Button)window.FindName("DocumentationButton");
         button.ApplyTemplate();
-        var highlight = (Border)button.Template.FindName("HoverHighlight", button);
+        var highlight = (ContentPresenter)button.Template.FindName("IconContent", button);
         var border = (Border)button.Template.FindName("ButtonBorder", button);
         var normalBorder = border.BorderBrush;
         void Enter() => button.RaiseEvent(new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, 0)
@@ -106,19 +106,20 @@ public sealed class ThemeTests
             System.Windows.Threading.Dispatcher.PushFrame(frame);
         }
         Enter();
-        Assert.Equal(0, highlight.Opacity);
+        Assert.Equal(0.65, highlight.Opacity);
         Advance();
         Assert.Equal(1, highlight.Opacity);
+        Assert.Equal(System.Windows.Media.Colors.Transparent, ((SolidColorBrush)border.Background).Color);
         Leave();
         // WPF 在下一动画帧移除时钟；这里只等待一次正常绘制，不再等待悬停延时。
         Advance(40);
-        Assert.Equal(0, highlight.Opacity);
+        Assert.Equal(0.65, highlight.Opacity);
         Assert.Same(normalBorder, border.BorderBrush);
         Enter();
-        Assert.Equal(0, highlight.Opacity);
+        Assert.Equal(0.65, highlight.Opacity);
         Leave();
         Advance();
-        Assert.Equal(0, highlight.Opacity);
+        Assert.Equal(0.65, highlight.Opacity);
         Assert.NotNull(button.FocusVisualStyle);
     }
 
