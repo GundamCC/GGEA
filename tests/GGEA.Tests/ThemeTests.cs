@@ -165,7 +165,12 @@ public sealed class ThemeTests
         {
             GGEA.App.Localization.L.Initialize("ja");
             var window = new MainWindow();
-            Assert.Equal("設定", ((Button)window.FindName("SettingsButton")).Content);
+            // 图标按钮以提示和辅助功能名称承载文案，避免去掉文字后丢失可访问性。
+            var settingsButton = (Button)window.FindName("SettingsButton");
+            Assert.IsType<Viewbox>(settingsButton.Content);
+            Assert.Equal("設定", settingsButton.ToolTip);
+            Assert.Equal("設定", System.Windows.Automation.AutomationProperties.GetName(settingsButton));
+            Assert.Equal(((Button)window.FindName("DocumentationButton")).Width, settingsButton.Width);
             Assert.Equal("Yu Gothic UI", window.FontFamily.Source);
             var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
             var start = (Task)typeof(MainWindow).GetMethod("StartBallFactoryAsync", flags)!.Invoke(window, null)!;
@@ -195,7 +200,10 @@ public sealed class ThemeTests
             app.SetTheme(true);
             GGEA.App.Localization.L.Initialize("zh-CN");
             var restarted = new MainWindow();
-            Assert.Equal("设置", ((Button)restarted.FindName("SettingsButton")).Content);
+            var restartedSettingsButton = (Button)restarted.FindName("SettingsButton");
+            Assert.IsType<Viewbox>(restartedSettingsButton.Content);
+            Assert.Equal("设置", restartedSettingsButton.ToolTip);
+            Assert.Equal("设置", System.Windows.Automation.AutomationProperties.GetName(restartedSettingsButton));
             Assert.Equal("Microsoft YaHei UI", restarted.FontFamily.Source);
             RenderLocalizationPreview(restarted, 1280, 780, "main-zh-offscreen");
         }

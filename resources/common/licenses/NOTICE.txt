@@ -32,10 +32,11 @@ OCR 模型来源与许可见 ../ocr/NOTICE.txt、model.json 及对应许可文�
 不能仅修改本文件版本号。旧发行包不会因本次补充而自动得到这些文件。
 
 界面图标：
-- QQ 群、官网和使用文档按钮使用 Remix Icon v4.6.0 的 qq-line、earth-line 和 book-open-line，作者 Remix Design，Apache-2.0。
+- QQ 群、官网、使用文档和设置按钮使用 Remix Icon v4.6.0 的 qq-line、earth-line、book-open-line 和 settings-3-line，作者 Remix Design，Apache-2.0。
 - 原始来源：
   https://github.com/Remix-Design/RemixIcon/blob/v4.6.0/icons/Logos/qq-line.svg
   https://github.com/Remix-Design/RemixIcon/blob/v4.6.0/icons/Map/earth-line.svg
   https://github.com/Remix-Design/RemixIcon/blob/v4.6.0/icons/Document/book-open-line.svg
+  https://github.com/Remix-Design/RemixIcon/blob/v4.6.0/icons/System/settings-3-line.svg
 - 原始 SVG 保存在 ../icons/；WPF 保留原始路径与非零填充规则，仅调整展示尺寸与主题颜色。
 - 完整许可见 REMIXICON-LICENSE.txt；QQ 商标归其权利人所有。
