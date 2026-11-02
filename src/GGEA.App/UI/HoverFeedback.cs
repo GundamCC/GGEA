@@ -9,7 +9,7 @@ namespace GGEA.App.UI;
 /// <summary>统一鼠标悬停的延迟状态；离开、禁用和卸载时取消，避免列表复用后出现迟到提示。</summary>
 public static class HoverFeedback
 {
-    public static readonly TimeSpan Delay = TimeSpan.FromMilliseconds(300);
+    public static readonly TimeSpan Delay = TimeSpan.FromMilliseconds(150);
     private static readonly DependencyPropertyKey IsActivePropertyKey = DependencyProperty.RegisterAttachedReadOnly(
         "IsActive", typeof(bool), typeof(HoverFeedback), new FrameworkPropertyMetadata(false));
     public static readonly DependencyProperty IsActiveProperty = IsActivePropertyKey.DependencyProperty;
@@ -19,7 +19,7 @@ public static class HoverFeedback
     static HoverFeedback()
     {
         // 原生 ToolTip 也遵循相同延迟；禁用快速串联，防止相邻提示立即弹出。
-        ToolTipService.InitialShowDelayProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(300));
+        ToolTipService.InitialShowDelayProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(150));
         ToolTipService.BetweenShowDelayProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(0));
         EventManager.RegisterClassHandler(typeof(FrameworkElement), Mouse.MouseEnterEvent, new MouseEventHandler(OnEnter), true);
         EventManager.RegisterClassHandler(typeof(FrameworkElement), Mouse.MouseLeaveEvent, new MouseEventHandler(OnLeave), true);

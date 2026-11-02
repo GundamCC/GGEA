@@ -322,7 +322,7 @@
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                                            <Button Grid.Column="2" Width="22" Height="20" MinHeight="20" Padding="0"
+                                            <Button Grid.Column="2" Width="22" Height="22" MinHeight="22" Padding="0"
                                                     Margin="9,0,5,0" VerticalAlignment="Center"
                                                     ToolTip="{loc:Text Source='打开对应设置页'}"
                                                     AutomationProperties.Name="{loc:Text Source='打开对应设置页'}"
@@ -337,7 +337,7 @@
                                                         </Style.Triggers>
                                                     </Style>
                                                 </Button.Style>
-                                                <Viewbox Width="16" Height="16">
+                                                <Viewbox Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                     <Canvas Width="24" Height="24">
                                                         <Path Data="{StaticResource SettingsIconGeometry}" Fill="{DynamicResource Brush.Text}"/>
                                                     </Canvas>

@@ -105,13 +105,13 @@ public sealed class ThemeTests
             timer.Start();
             System.Windows.Threading.Dispatcher.PushFrame(frame);
         }
-        // 先排空首次模板初始化，避免布局耗时挤占用于验证 300ms 阈值的计时窗口。
+        // 先排空首次模板初始化，避免布局耗时挤占用于验证 150ms 阈值的计时窗口。
         Advance(400);
-        Assert.Equal(300, ToolTipService.GetInitialShowDelay(button));
+        Assert.Equal(150, ToolTipService.GetInitialShowDelay(button));
         Assert.Equal(0, ToolTipService.GetBetweenShowDelay(button));
         Enter();
         Assert.Equal(0.65, highlight.Opacity);
-        Advance(180);
+        Advance(60);
         Assert.False(HoverFeedback.GetIsActive(button));
         Assert.Equal(0.65, highlight.Opacity);
         Advance(180);
@@ -138,7 +138,7 @@ public sealed class ThemeTests
         foreach (var target in targets)
             target.RaiseEvent(new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, 0)
                 { RoutedEvent = System.Windows.Input.Mouse.MouseEnterEvent });
-        Advance(180);
+        Advance(60);
         Assert.All(targets, target => Assert.False(HoverFeedback.GetIsActive(target)));
         Advance(180);
         Assert.All(targets, target => Assert.True(HoverFeedback.GetIsActive(target)));
