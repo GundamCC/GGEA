@@ -16,7 +16,6 @@ public enum RewardTaskKind
 public sealed class RewardTaskItem : INotifyPropertyChanged
 {
     private bool _isChecked;
-    private bool _isHelpOpen;
 
     /// <summary>奖励类型，决定执行哪段领取流程。</summary>
     public RewardTaskKind Kind { get; init; }
@@ -40,22 +39,6 @@ public sealed class RewardTaskItem : INotifyPropertyChanged
 
             _isChecked = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsChecked)));
-        }
-    }
-
-    /// <summary>问号提示框是否显示；鼠标悬停时立即打开，离开时关闭。</summary>
-    public bool IsHelpOpen
-    {
-        get => _isHelpOpen;
-        set
-        {
-            if (_isHelpOpen == value)
-            {
-                return;
-            }
-
-            _isHelpOpen = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsHelpOpen)));
         }
     }
 

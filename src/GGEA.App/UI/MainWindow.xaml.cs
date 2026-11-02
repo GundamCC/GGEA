@@ -2935,24 +2935,6 @@ public partial class MainWindow : Window
         if (_dailyTasks.Any(task => task.Kind == DailyTaskKind.FierceEnemySkip)) SaveFierceEnemyDailyTask();
     }
 
-    /// <summary>鼠标悬停问号时立即打开提示框。</summary>
-    private void MissionHelpMark_MouseEnter(object sender, MouseEventArgs e)
-    {
-        if ((sender as FrameworkElement)?.DataContext is RewardTaskItem item)
-        {
-            item.IsHelpOpen = true;
-        }
-    }
-
-    /// <summary>鼠标离开问号时关闭提示框。</summary>
-    private void MissionHelpMark_MouseLeave(object sender, MouseEventArgs e)
-    {
-        if ((sender as FrameworkElement)?.DataContext is RewardTaskItem item)
-        {
-            item.IsHelpOpen = false;
-        }
-    }
-
     /// <summary>点击任务名称时，带设置页的任务跳转到对应 Tab。</summary>
     private void DailyTaskName_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
@@ -2969,7 +2951,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>点击齿轮图标时，跳转到对应任务的设置 Tab。</summary>
-    private void DailyTaskGearButton_Click(object sender, MouseButtonEventArgs e)
+    private void DailyTaskGearButton_Click(object sender, RoutedEventArgs e)
     {
         if (_dailyDragMoved)
         {

@@ -13,6 +13,9 @@ namespace GGEA.App;
 /// </summary>
 public partial class App : Application
 {
+    /// <summary>先注册悬停与提示延迟，再由 WPF 创建资源和窗口。</summary>
+    public App() => UI.HoverFeedback.Initialize();
+
     /// <summary>启动时读取一次配置，语言与主窗口使用同一份快照。</summary>
     internal Config.AppConfig StartupConfig { get; private set; } = new();
     /// <summary>主题由应用持有，未保存偏好时默认夜间模式，所有窗口共用同一配色。</summary>

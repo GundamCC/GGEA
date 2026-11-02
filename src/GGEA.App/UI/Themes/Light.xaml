@@ -7,6 +7,7 @@
     <SolidColorBrush x:Key="Brush.Card" Color="#F4F3EE"/>
     <SolidColorBrush x:Key="Brush.CardAlt" Color="#EAE8E0"/>
     <SolidColorBrush x:Key="Brush.Border" Color="#C9C8BE"/>
+    <SolidColorBrush x:Key="Brush.CheckBorder" Color="#C9C8BE"/>
     <SolidColorBrush x:Key="Brush.Text" Color="#242720"/>
     <SolidColorBrush x:Key="Brush.TextDim" Color="#65675E"/>
     <SolidColorBrush x:Key="Brush.Accent" Color="#9B6937"/>

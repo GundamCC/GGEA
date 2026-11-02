@@ -105,21 +105,49 @@ public sealed class ThemeTests
             timer.Start();
             System.Windows.Threading.Dispatcher.PushFrame(frame);
         }
+        // 先排空首次模板初始化，避免布局耗时挤占用于验证 300ms 阈值的计时窗口。
+        Advance(400);
+        Assert.Equal(300, ToolTipService.GetInitialShowDelay(button));
+        Assert.Equal(0, ToolTipService.GetBetweenShowDelay(button));
         Enter();
         Assert.Equal(0.65, highlight.Opacity);
-        Advance();
+        Advance(180);
+        Assert.False(HoverFeedback.GetIsActive(button));
+        Assert.Equal(0.65, highlight.Opacity);
+        Advance(180);
+        Assert.True(HoverFeedback.GetIsActive(button));
+        Assert.InRange(highlight.Opacity, 0.65, 1);
+        Advance(180);
         Assert.Equal(1, highlight.Opacity);
         Assert.Equal(System.Windows.Media.Colors.Transparent, ((SolidColorBrush)border.Background).Color);
         Leave();
-        // WPF 在下一动画帧移除时钟；这里只等待一次正常绘制，不再等待悬停延时。
+        Assert.False(HoverFeedback.GetIsActive(button));
         Advance(40);
+        Assert.InRange(highlight.Opacity, 0.66, 0.99);
+        Advance(180);
         Assert.Equal(0.65, highlight.Opacity);
         Assert.Same(normalBorder, border.BorderBrush);
         Enter();
-        Assert.Equal(0.65, highlight.Opacity);
         Leave();
-        Advance();
+        Advance(400);
+        Assert.False(HoverFeedback.GetIsActive(button));
         Assert.Equal(0.65, highlight.Opacity);
+        // 共用状态覆盖按钮、下拉项、滚动条、选择框和帮助标记；禁用/卸载不得留下迟到高亮。
+        FrameworkElement[] targets = { new Button(), new ComboBoxItem(), new System.Windows.Controls.Primitives.Thumb(),
+            new CheckBox(), new TextBlock(), new System.Windows.Shapes.Path() };
+        foreach (var target in targets)
+            target.RaiseEvent(new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, 0)
+                { RoutedEvent = System.Windows.Input.Mouse.MouseEnterEvent });
+        Advance(180);
+        Assert.All(targets, target => Assert.False(HoverFeedback.GetIsActive(target)));
+        Advance(180);
+        Assert.All(targets, target => Assert.True(HoverFeedback.GetIsActive(target)));
+        foreach (var target in targets) target.IsEnabled = false;
+        Assert.All(targets, target => Assert.False(HoverFeedback.GetIsActive(target)));
+        Enter();
+        button.RaiseEvent(new RoutedEventArgs(FrameworkElement.UnloadedEvent));
+        Advance(400);
+        Assert.False(HoverFeedback.GetIsActive(button));
         Assert.NotNull(button.FocusVisualStyle);
     }
 
