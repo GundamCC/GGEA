@@ -184,9 +184,14 @@ public partial class MainWindow
                 {
                     if (!await EnsureMainScreenAsync(serial, ct))
                         throw new InvalidOperationException(L.Text("未确认主界面，停止强敌导航。"));
+                    // 强敌返回后以页首“选择关卡”交接；单位、难度与通关状态由强敌流程随后重新读取。
+                    // 正常返回和两分钟恢复共用此判断，不要求强敌页面出现主线节点或出击准备入口。
+                    var enemyReturnTitle = new SelectStageTitleRecognizer(progressTemplates.SelectStageTitle);
+                    var enemyBattle = CreateBattle(progressTemplates, false, enemyReturnTitle.Recognize);
+                    enemyBattle.Validate(settings);
                     current = await new FierceEnemyProgressService(automation, _logger, GetTextOcr())
                         .RunAsync(serial, _mainLayout, target.Enemy!,
-                            token => battle.RunAsync(serial, settings, WorkStageKind.Unknown, Report, token,
+                            token => enemyBattle.RunAsync(serial, settings, WorkStageKind.Unknown, Report, token,
                                 preparationAlreadyOpened: true), Report, ct);
                 }
                 result = new(current.Completed, result.CompletedWorks + current.CompletedWorks,
