@@ -174,6 +174,27 @@ public partial class MainWindow : Window
         System.Windows.Automation.AutomationProperties.SetName(ThemeToggleButton, label);
     }
 
+    private void QqGroupButton_Click(object sender, RoutedEventArgs e)
+        => OpenCommunityPage("https://qm.qq.com/q/zkxGhEiVQQ");
+
+    private void WebsiteButton_Click(object sender, RoutedEventArgs e)
+        => OpenCommunityPage(L.Language == "ja" ? "https://www.gundamc.com/ggea/ja/" : "https://www.gundamc.com/ggea/");
+
+    private void DocumentationButton_Click(object sender, RoutedEventArgs e)
+        => OpenCommunityPage(L.Language == "ja" ? "https://www.gundamc.com/ggea/docs/ja/guide/install/" : "https://www.gundamc.com/ggea/docs/guide/install/");
+
+    /// <summary>仅打开代码内固定的官方入口；浏览器启动失败时给出可手动访问的地址。</summary>
+    private void OpenCommunityPage(string url)
+    {
+        try { using var process = Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
+        catch (Exception ex)
+        {
+            _logger?.Warn(L.Format($"打开网页失败: {ex.GetType().Name}"));
+            MessageBox.Show(this, L.Format($"无法打开浏览器，请手动访问：\n{url}"), L.Text("打开网页失败"),
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
     public MainWindow()
     {
         InitializeComponent();
