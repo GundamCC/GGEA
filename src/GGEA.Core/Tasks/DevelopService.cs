@@ -1,4 +1,5 @@
 using GGEA.App.Automation;
+using GGEA.App.IO;
 using System.IO;
 using GGEA.App.Config;
 using GGEA.App.Logging;
@@ -330,8 +331,8 @@ public sealed class DevelopService : IDevelopService
         var prototype = ConfigService.ResolvePath("resources/templates/develop/dev_unit/ogk_g0070u00100.png");
         var ball = ConfigService.ResolvePath("resources/templates/develop/dev_unit/ogk_g0010u00700.png");
         var resolved = Path.GetFullPath(ConfigService.ResolvePath(target));
-        if (string.Equals(resolved, Path.GetFullPath(prototype), StringComparison.OrdinalIgnoreCase)) return (ball, -850);
-        if (string.Equals(resolved, Path.GetFullPath(ball), StringComparison.OrdinalIgnoreCase)) return (prototype, 850);
+        if (string.Equals(resolved, Path.GetFullPath(prototype), FileSystemPaths.Comparison)) return (ball, -850);
+        if (string.Equals(resolved, Path.GetFullPath(ball), FileSystemPaths.Comparison)) return (prototype, 850);
         return null;
     }
 
@@ -525,7 +526,9 @@ public sealed class DevelopService : IDevelopService
                 }
             }
 
-            await Task.Delay(checkWait.PollIntervalMs, ct);
+            // 已发现灰色候选后按确认间隔复核新帧；不能再等待五秒而耗尽短阶段预算。
+            // 未命中仍保持普通轮询，连续两帧、总超时及用户取消条件不变。
+            await Task.Delay(disabledStreak > 0 ? GameTiming.ConfirmationIntervalMs : checkWait.PollIntervalMs, ct);
         }
 
         if (!developAllReady)

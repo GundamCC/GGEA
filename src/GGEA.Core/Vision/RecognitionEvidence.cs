@@ -1,4 +1,5 @@
 using System.IO;
+using GGEA.App.IO;
 using System.IO.Compression;
 using System.Text.Json;
 using GGEA.App.Logging;
@@ -18,7 +19,7 @@ public sealed class RecognitionEvidence
     private readonly IGgeaLog _log;
     // 同一进程同一目录必须共享锁、限频和轮转状态，导航器重建不能从槽位一覆盖别的流程。
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, EvidenceState> States =
-        new(StringComparer.OrdinalIgnoreCase);
+        new(FileSystemPaths.Comparer);
     private readonly EvidenceState _state;
 
     /// <summary>目录拥有轮转状态，实例只负责提交证据。</summary>
@@ -66,9 +67,10 @@ public sealed class RecognitionEvidence
                     Write(zip, "frame.png", png);
                     for (var index = 0; index < candidates.Length; index++)
                         Write(zip, $"template-{index}.png", candidates[index].Png);
+                    // 核心程序集有独立身份；诊断记录启动宿主的产品版本，不能误报为核心库版本。
                     var metadata = new
                     {
-                        utc = now, kind, serial, version = typeof(RecognitionEvidence).Assembly.GetName().Version?.ToString(),
+                        utc = now, kind, serial, version = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
                         width = screen.Width, height = screen.Height,
                         note = "流程超时前的原始观察帧；小区域精确搜索，大区域未达阈值时执行原图复查。低分候选仅为已评估位置中的最佳结果，不保证全局最优，不用于点击；空候选表示无有效搜索结果。",
                         candidates = candidates.Select((c, i) => new { c.Name, templateFile = $"template-{i}.png", c.Width, c.Height, configuredRoi = c.Roi, c.Threshold, best = c.Best,

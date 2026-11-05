@@ -1,4 +1,5 @@
 using System.IO;
+using GGEA.App.IO;
 
 namespace GGEA.App.Config;
 
@@ -17,14 +18,23 @@ public sealed class ResourceResolver
         Language = GameProfiles.Languages.Any(l => l.Id == language) ? language : "zh-CN";
     }
 
+    /// <summary>仅规范化包内相对资源路径；导入 Windows 配置时识别反斜杠，外部自定义路径遵循本机文件系统。</summary>
+    private string FullPath(string path)
+    {
+        var portable = path.Replace('\\', '/');
+        if (!Path.IsPathRooted(path) && portable.StartsWith("resources/", FileSystemPaths.Comparison))
+            path = portable;
+        return Path.GetFullPath(path, _baseDirectory);
+    }
+
     /// <summary>兼容旧 resources 路径及解析后继续拼接的物理路径，不访问其他语言作为回退。</summary>
     private string? RelativeResource(string path)
     {
-        var full = Path.GetFullPath(path, _baseDirectory);
-        if (!full.StartsWith(_root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return null;
+        var full = FullPath(path);
+        if (!full.StartsWith(_root + Path.DirectorySeparatorChar, FileSystemPaths.Comparison)) return null;
         var relative = Path.GetRelativePath(_root, full);
         var parts = relative.Split(Path.DirectorySeparatorChar, 2);
-        if (parts[0].Equals("common", StringComparison.OrdinalIgnoreCase) || GameProfiles.Languages.Any(l => l.Id.Equals(parts[0], StringComparison.OrdinalIgnoreCase)))
+        if (parts[0].Equals("common", FileSystemPaths.Comparison) || GameProfiles.Languages.Any(l => l.Id.Equals(parts[0], FileSystemPaths.Comparison)))
             return parts.Length == 2 ? parts[1] : "";
         return relative;
     }
@@ -34,7 +44,7 @@ public sealed class ResourceResolver
     {
         if (string.IsNullOrWhiteSpace(path)) return path;
         var relative = RelativeResource(path);
-        if (relative is null) return Path.GetFullPath(path, _baseDirectory);
+        if (relative is null) return FullPath(path);
         // 更新器保留旧版用户维护的作品坐标；不能用新版随包默认值遮蔽这份数据。
         var legacyPositions = Path.Combine(_root, "stage_work_positions.json");
         if (relative == "stage_work_positions.json" && File.Exists(legacyPositions)) return legacyPositions;
@@ -50,7 +60,7 @@ public sealed class ResourceResolver
         var relative = RelativeResource(path);
         if (relative is null) yield break;
         var common = Path.Combine(_root, "common", relative);
-        if (!primary.Equals(common, StringComparison.OrdinalIgnoreCase) && File.Exists(common))
+        if (!primary.Equals(common, FileSystemPaths.Comparison) && File.Exists(common))
             yield return common;
     }
 
@@ -59,8 +69,8 @@ public sealed class ResourceResolver
     {
         var relative = RelativeResource(companionPath);
         var commonRoot = Path.Combine(_root, "common") + Path.DirectorySeparatorChar;
-        return relative is not null && Path.GetFullPath(templatePath, _baseDirectory)
-            .StartsWith(commonRoot, StringComparison.OrdinalIgnoreCase)
+        return relative is not null && FullPath(templatePath)
+            .StartsWith(commonRoot, FileSystemPaths.Comparison)
             ? Path.Combine(_root, "common", relative) : Resolve(companionPath);
     }
 
@@ -68,14 +78,14 @@ public sealed class ResourceResolver
     public string ResolveWritePath(string path)
     {
         var relative = RelativeResource(path);
-        return relative is null ? Path.GetFullPath(path, _baseDirectory) : Path.Combine(_root, Language, relative);
+        return relative is null ? FullPath(path) : Path.Combine(_root, Language, relative);
     }
 
     /// <summary>语言独有目录也属于有效资源目录。</summary>
     public bool DirectoryExists(string path)
     {
         var relative = RelativeResource(path);
-        return relative is null ? Directory.Exists(Path.GetFullPath(path, _baseDirectory)) :
+        return relative is null ? Directory.Exists(FullPath(path)) :
             Directory.Exists(Path.Combine(_root, Language, relative)) || Directory.Exists(Path.Combine(_root, "common", relative));
     }
 
@@ -83,8 +93,8 @@ public sealed class ResourceResolver
     public string[] GetFiles(string path, string pattern, SearchOption search = SearchOption.TopDirectoryOnly)
     {
         var relative = RelativeResource(path);
-        if (relative is null) return Directory.GetFiles(Path.GetFullPath(path, _baseDirectory), pattern, search);
-        var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (relative is null) return Directory.GetFiles(FullPath(path), pattern, search);
+        var files = new Dictionary<string, string>(FileSystemPaths.Comparer);
         foreach (var category in new[] { "common", Language })
         {
             var directory = Path.Combine(_root, category, relative);
@@ -92,6 +102,6 @@ public sealed class ResourceResolver
             foreach (var file in Directory.GetFiles(directory, pattern, search))
                 files[Path.GetRelativePath(directory, file)] = file;
         }
-        return files.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase).Select(p => p.Value).ToArray();
+        return files.OrderBy(p => p.Key, FileSystemPaths.Comparer).Select(p => p.Value).ToArray();
     }
 }

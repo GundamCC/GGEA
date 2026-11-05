@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.Versioning;
+using System.Runtime.InteropServices;
 using GGEA.App.Automation;
 using GGEA.App.Config;
 using GGEA.App.Localization;
@@ -18,8 +19,25 @@ public sealed class CoreBoundaryTests
         var assembly = typeof(AutomationService).Assembly;
         Assert.Equal("GGEA.Core", assembly.GetName().Name);
         Assert.Equal(".NETCoreApp,Version=v8.0", assembly.GetCustomAttribute<TargetFrameworkAttribute>()!.FrameworkName);
-        var forbidden = new[] { "GGEA", "GGEA.Updater", "GGEA.Plugin.Abstractions", "PresentationCore", "PresentationFramework", "WindowsBase", "System.Windows.Forms" };
-        Assert.DoesNotContain(assembly.GetReferencedAssemblies(), reference => forbidden.Contains(reference.Name));
+        var forbidden = new[] { "GGEA", "GGEA.Updater", "GGEA.Plugin.Abstractions", "PresentationCore", "PresentationFramework", "WindowsBase", "System.Windows.Forms", "System.Drawing.Common", "Microsoft.Win32.Registry" };
+        var visited = new HashSet<string>();
+        var pending = new Queue<Assembly>();
+        pending.Enqueue(assembly);
+        while (pending.TryDequeue(out var current))
+        {
+            if (!visited.Add(current.FullName!)) continue;
+            // 递归检查产品及第三方包；共享 .NET 运行时自身的平台实现由对应运行时提供。
+            if (Path.GetDirectoryName(current.Location) == Path.GetDirectoryName(typeof(object).Assembly.Location)) continue;
+            foreach (var reference in current.GetReferencedAssemblies())
+            {
+                Assert.DoesNotContain(reference.Name, forbidden);
+                pending.Enqueue(Assembly.Load(reference));
+            }
+        }
+        // 核心只调用托管跨平台包；系统原生入口应放在宿主适配层。
+        Assert.DoesNotContain(assembly.GetTypes().SelectMany(type => type.GetMethods(
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)),
+            method => method.GetCustomAttribute<DllImportAttribute>() is not null);
         Assert.Same(assembly, typeof(DailyQueueRunner).Assembly);
         Assert.Same(assembly, typeof(ConfigService).Assembly);
         Assert.All(typeof(ScreenImage).GetProperties(), property =>

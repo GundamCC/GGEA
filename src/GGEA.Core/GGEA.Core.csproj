@@ -3,6 +3,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- 平台专用 API 必须经过平台判断，不能悄悄把 Windows 调用带入核心。 -->
+    <WarningsAsErrors>$(WarningsAsErrors);CA1416</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <!-- 保留既有类型命名空间，核心程序集不引用 Windows 宿主、WPF 或插件界面协议。 -->

@@ -40,6 +40,10 @@ pwsh -File tools/test.ps1 -NoBuild -Filter 'FullyQualifiedName~ConfigServiceTest
 dotnet test tests/GGEA.Core.Tests/GGEA.Core.Tests.csproj
 ```
 
+核心将平台专用 API 的 `CA1416` 诊断作为编译错误，独立测试同时检查产品与第三方程序集的传递引用及核心原生入口。路径身份在 Windows 上保持忽略大小写，在其他平台上保留大小写；包内相对资源路径兼容旧配置的反斜杠。识别证据记录启动宿主的版本，核心程序集版本不作为产品版本。
+
+正式包的 EXE 启动自检会读取核心内嵌的日文资源，并解码模板、加载 OCR 模型，验证单文件发布后的真实依赖链。
+
 当前用户程序仍为 Windows 版本；macOS 界面、设备实现、原生依赖打包及实机验收另行接入。
 
 ## 开发版打包（支持多开）

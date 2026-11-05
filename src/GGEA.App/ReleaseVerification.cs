@@ -28,6 +28,9 @@ internal static class ReleaseVerification
                 .SingleOrDefault(attribute => attribute.Key == "GgeaReleaseCommit")?.Value;
             if (string.IsNullOrEmpty(commit) || commit != info.RootElement.GetProperty("commit").GetString())
                 throw new InvalidDataException("程序构建提交与 build-info 不一致。");
+            // 语言资源已迁入核心程序集；单文件产物必须能通过真实核心类型读取嵌入资源。
+            if (Localization.L.Translate("设置", "ja") != "設定")
+                throw new InvalidDataException("发布包的核心日文资源缺失或不一致。");
             foreach (var directory in new[] { "config", "resources" })
             {
                 foreach (var file in Directory.EnumerateFiles(Path.Combine(root, directory), "*.json", SearchOption.AllDirectories))

@@ -30,6 +30,10 @@ public class RecognitionEvidenceTests
             using var zip = ZipFile.OpenRead(path);
             using var stream = zip.GetEntry("diagnostic.json")!.Open();
             using var json = JsonDocument.Parse(stream);
+            Assert.Equal(System.Reflection.Assembly.GetEntryAssembly()!.GetName().Version!.ToString(),
+                json.RootElement.GetProperty("version").GetString());
+            Assert.NotEqual(typeof(RecognitionEvidence).Assembly.GetName().Version!.ToString(),
+                json.RootElement.GetProperty("version").GetString());
             return json.RootElement.GetProperty("kind").GetString();
         }).ToArray();
         foreach (var i in Enumerable.Range(0, 4)) Assert.Contains("next" + i, kinds);

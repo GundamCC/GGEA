@@ -713,8 +713,11 @@ public class DevelopServiceTests
     }
 
     /// <summary>通过共享接口验证真实开发操作序列及明确结果，防止重构改变点击和失败边界。</summary>
-    [Fact]
-    public async Task ExecuteAsync_DisabledDevelopAll_SkipsAndReturnsHome()
+    [Theory]
+    [InlineData("stable")]
+    [InlineData("transient")]
+    [InlineData("cancel")]
+    public async Task ExecuteAsync_DisabledDevelopAll_SkipsAndReturnsHome(string state)
     {
         // 机体详情页中“全部开发”按钮为灰色禁用状态（今日已开发或无可用开发）
         var screen = TestImageFactory.CreateBgra(1920, 1080, 20);
@@ -741,7 +744,20 @@ public class DevelopServiceTests
         var automation = new AutomationService(fakeAdb, new TemplateMatcher(), new TestLog(), textOcr: TapToNextOcrSamples.SharedOcr);
         IDevelopService service = new DevelopService(automation, new TestLog());
 
-        var result = await service.ExecuteAsync("serial", new DevelopRequest
+        using var cancellation = new CancellationTokenSource();
+        var missing = (byte[])screen.Clone();
+        TestImageFactory.PasteBlock(missing, 1920, 190, 70, 1640, 940, 20);
+        var missingPng = ImageCodec.EncodePng(missing, 1920, 1080);
+        var disabledPng = ImageCodec.EncodePng(screen, 1920, 1080);
+        var detailFrames = 0;
+        fakeAdb.ScreenshotProvider = () =>
+        {
+            if (fakeAdb.Taps.Count < 3 || ++detailFrames <= 2) return disabledPng;
+            // 第一轮亮色/灰色检查后改变新帧；不能把瞬时灰色或取消判为安全完成。
+            if (state == "cancel") cancellation.Cancel();
+            return state == "transient" ? missingPng : disabledPng;
+        };
+        var request = new DevelopRequest
         {
             MainLayout = CreateMainLayout(),
             DevelopLayout = CreateDevelopLayout(),
@@ -761,11 +777,19 @@ public class DevelopServiceTests
             StepDelayMs = 10,
             DevelopWaitTimeoutMs = 3000,
             NetworkSettleDelayMs = 10,
-        });
-
-        Assert.Equal(DevelopResult.Unavailable, result);
+        };
+        if (state == "cancel")
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.ExecuteAsync("serial", request, cancellation.Token));
+            Assert.Equal(new[] { (714, 977), (629, 339), (550, 650) }, fakeAdb.Taps);
+            return;
+        }
+        var result = await service.ExecuteAsync("serial", request, cancellation.Token);
+        Assert.Equal(state == "stable" ? DevelopResult.Unavailable : DevelopResult.Failed, result);
         // 只进入开发页、点击路线图、点击机体并返回主界面，不点击全部开发 / 执行开发
-        Assert.Equal(new[] { (714, 977), (629, 339), (550, 650), (184, 977) }, fakeAdb.Taps);
+        Assert.Equal(state == "stable"
+            ? new[] { (714, 977), (629, 339), (550, 650), (184, 977) }
+            : new[] { (714, 977), (629, 339), (550, 650) }, fakeAdb.Taps);
         Assert.Empty(fakeAdb.Swipes);
     }
 

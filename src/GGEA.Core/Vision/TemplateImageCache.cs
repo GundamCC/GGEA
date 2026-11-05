@@ -1,4 +1,5 @@
 using System.IO;
+using GGEA.App.IO;
 
 namespace GGEA.App.Vision;
 
@@ -6,7 +7,7 @@ namespace GGEA.App.Vision;
 internal sealed class TemplateImageCache
 {
     private readonly Dictionary<string, (long Length, DateTime Modified, ScreenImage Image)> _images
-        = new(StringComparer.OrdinalIgnoreCase);
+        = new(FileSystemPaths.Comparer);
 
     /// <summary>只读复用未变化的解码像素；调用方不得修改返回数组，加载异常仍交给原错误处理路径。</summary>
     internal ScreenImage Load(string path)
