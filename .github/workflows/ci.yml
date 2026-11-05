@@ -1,0 +1,81 @@
+name: Dual-platform CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  windows-package:
+    name: Windows build and package
+    runs-on: windows-2022
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: 8.0.x
+      # PR 使用 checkout 的合并提交；release 内部固定 HEAD 并导出源码快照。
+      # 沿用核心和 Windows 冒烟范围，同时完整执行打包与启动验证。
+      - name: Build, test and verify Windows package
+        run: ./tools/release.ps1 -Commit HEAD
+      - name: Upload verified CI package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-ci-package-${{ github.sha }}
+          path: |
+            artifacts/dist/*.zip
+            artifacts/dist/*.zip.sha256
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+      - name: Upload Windows test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-test-results-${{ github.sha }}
+          path: build/release-work-*/source/test-results/*.trx
+          if-no-files-found: warn
+          retention-days: 7
+
+  macos-core:
+    name: macOS shared core
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: 8.0.x
+      # 仅构建核心测试项目及其依赖，不恢复包含 WPF 宿主的解决方案。
+      - name: Build shared core tests
+        run: dotnet build tests/GGEA.Core.Tests/GGEA.Core.Tests.csproj -c Release
+      - name: Test shared core
+        run: dotnet test tests/GGEA.Core.Tests/GGEA.Core.Tests.csproj -c Release --no-build --logger trx --results-directory test-results
+      - name: Upload macOS test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-core-test-results-${{ github.sha }}
+          path: test-results/*.trx
+          if-no-files-found: warn
+          retention-days: 7

@@ -123,3 +123,18 @@ GGEA/
 ## 本机目录管理
 
 `artifacts/` 只保存发布目录和分发包；本机依赖、运行组件、构建缓存及历史资料分别存放于 `dependencies/`、`runtime/`、`build/`、`research/` 等根目录。目录用途、清理条件和旧布局迁移方法见 [本机目录约定](local-directories.md)。
+
+## 双平台持续集成
+
+[Dual-platform CI](../.github/workflows/ci.yml) 在 PR 创建或更新、推送到 `main` 及手动触发时运行。所有 PR 都执行两个独立作业，核心变化不会漏掉任一平台；同一分支的新运行会取消旧运行。
+
+- `Windows build and package`：在 Windows 2022 上调用 `tools/release.ps1 -Commit HEAD`，从固定提交完整构建解决方案，运行独立核心测试和 Windows 冒烟测试，再验证自包含单文件包、防混用检查、ZIP 解压清单及 EXE 启动。PR 验证的是 checkout 默认取得的合并提交。
+- `macOS shared core`：在 macOS 14 上使用 .NET 8 构建 `tests/GGEA.Core.Tests/GGEA.Core.Tests.csproj` 并执行全部核心测试，不构建 Windows 解决方案。当前覆盖托管核心边界、配置、资源、路径和设备/图像接口；尚未接入 Mac UI、原生识别库加载、设备实机流程及 Mac 安装包。
+
+成功的 Windows ZIP 和 SHA-256 文件作为 CI artifact 保存 7 天；两端 TRX 测试结果在失败时也尝试保留。构建失败详情见 Actions 步骤日志。CI 包用于验证当前提交，不创建 Tag、GitHub Release 或部署，也不更新网站下载信息。
+
+工作流使用只读仓库权限、不保留 checkout 凭证、不引用发布 Secrets，可用于 fork PR。首次外部贡献的运行可能需要仓库维护者在 GitHub 批准。
+
+工作流推送并首次运行后，在主分支保护规则中将 `Windows build and package` 与 `macOS shared core` 都设为必需检查，才能强制两端通过后合并。仓库中的 YAML 不会自动修改远程分支保护规则。
+
+收到 Mac 源码后，新增 Mac 界面构建、平台测试与打包作业，继续引用同一核心及产品版本来源；签名、公证与正式发行授权另行配置。模拟器和游戏长流程仍按平台实机验收。
