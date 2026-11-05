@@ -23,6 +23,11 @@ $scope = if ($Full) { 'Full regression (explicit request)' }
     else { 'Quick smoke checks' }
 Write-Host "Testing: $scope; configuration: $Configuration"
 $timer = [Diagnostics.Stopwatch]::StartNew()
+$coreArguments = @('test', (Join-Path $root 'tests/GGEA.Core.Tests/GGEA.Core.Tests.csproj'), '-c', $Configuration,
+    '--logger', 'trx', '--results-directory', (Join-Path $root 'test-results'))
+if ($NoBuild) { $coreArguments += '--no-build' }
+& dotnet @coreArguments
+if ($LASTEXITCODE -ne 0) { throw "Core tests failed, exit code: $LASTEXITCODE" }
 & dotnet @arguments
 if ($LASTEXITCODE -ne 0) { throw "Tests failed ($scope), exit code: $LASTEXITCODE" }
 Write-Host ('Test command completed in {0:N1}s. Emulator experience requires user validation.' -f $timer.Elapsed.TotalSeconds)

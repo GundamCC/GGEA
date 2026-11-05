@@ -73,7 +73,7 @@ public sealed class ProgressTemplateMatcherTests(ITestOutputHelper output)
             (Path: ConfigService.ResolvePath("resources/templates/stage/series_complete_title.png"), Area: new Roi(536, 100, 850, 150)) };
         var images = cases.Select(item => ImageCodec.DecodePng(File.ReadAllBytes(item.Path))).ToArray();
         var frames = Enumerable.Range(0, 3).Select(_ => new ScreenImage {
-            Bitmap = original.Bitmap, Bgra = (byte[])original.Bgra.Clone(), Width = original.Width, Height = original.Height }).ToArray();
+            Bgra = (byte[])original.Bgra.Clone(), Width = original.Width, Height = original.Height }).ToArray();
         var reference = new TemplateMatcher();
         using var accelerated = new ProgressTemplateMatcher();
         // 预热排除首次 DLL 装载，实际计时仍为每张新帧重新转换灰度，而不是复用上一帧结果。

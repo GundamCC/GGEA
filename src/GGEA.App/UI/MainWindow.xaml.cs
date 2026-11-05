@@ -1251,7 +1251,7 @@ public partial class MainWindow : Window
             var png = await _adb!.ScreenshotAsync(serial, _windowTasks.Token);
             _currentScreen = await Task.Run(() => ImageCodec.DecodePng(png));
 
-            ScreenImage.Source = _currentScreen.Bitmap;
+            ScreenImage.Source = WpfImageCodec.ToBitmap(_currentScreen);
             OverlayCanvas.Width = _currentScreen.Width;
             OverlayCanvas.Height = _currentScreen.Height;
             ClearSelection();
@@ -1412,8 +1412,8 @@ public partial class MainWindow : Window
             Directory.CreateDirectory(directory);
             var path = Path.Combine(directory, safeName + ".png");
 
-            var cropped = ImageCodec.Crop(_currentScreen.Bitmap, roi);
-            ImageCodec.SavePng(cropped, path);
+            var cropped = WpfImageCodec.Crop(WpfImageCodec.ToBitmap(_currentScreen), roi);
+            WpfImageCodec.SavePng(cropped, path);
             _logger!.Info(L.Format($"模板已保存: {path}"));
 
             RefreshTemplateList();

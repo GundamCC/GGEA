@@ -9,7 +9,7 @@ dotnet build GGEA.sln
 pwsh -File tools/test.ps1 -NoBuild
 ```
 
-默认仅执行核心冒烟检查；直接运行 `dotnet test GGEA.sln` 也使用同一快速范围。核心集验证配置回退、画面规格、识别/点击边界、钻石安全锁及取消/设备互斥，不代表所有模拟器或游戏流程已经实测。
+默认执行独立 `net8.0` 核心测试与 Windows 核心冒烟检查；直接运行 `dotnet test GGEA.sln` 也使用同一快速范围。核心集验证配置回退、画面规格、识别/点击边界、钻石安全锁及取消/设备互斥，不代表所有模拟器或游戏流程已经实测。
 
 本次修改有相关用例时，合并执行少量定向回归（类名可换成具体方法名）：
 
@@ -20,6 +20,27 @@ pwsh -File tools/test.ps1 -NoBuild -Filter 'FullyQualifiedName~ConfigServiceTest
 已有测试全部保留。显式需要全量回归时运行 `pwsh -File tools/test.ps1 -Full`，或 `dotnet test GGEA.sln --settings tests/full.runsettings`。日常不默认跑双配置、覆盖率、完整每日流程或多模拟器矩阵；测试失败仍会阻止提交/打包。只有代码修正或检查失败后才重跑受影响的检查。
 
 不同模拟器的安装、连接、截图、识别和任务体验主要由用户亲自使用并反馈。反馈请提供模拟器名称/版本、画面分辨率、所执行的单项任务、预期与实际表现，以及问题附近的脱敏日志；需要识别排查时再提供对应截图。AI 根据具体反馈做定向修复，自动化测试通过不能替代实机验收。
+
+## 核心与平台边界
+
+`GGEA.Core` 面向 `net8.0`，包含 Config、Automation、Tasks、Vision、通用日志、语言资源、游戏画面布局和设备操作接口。它不引用 Windows 主程序、WPF、更新器或插件协议。为保持调用方迁移稳定，本次保留原有 `GGEA.App.*` 类型命名空间；`GameLayout` 目录下的 `UiLayout` 描述游戏截图锚点，不是桌面窗口。
+
+`GGEA.App` 继续负责 Windows WPF 界面、模拟器发现与原生通道、运行库检查、插件宿主、系统通知及安装更新。插件仍只引用 `GGEA.Plugin.Abstractions`，不能引用核心内部实现；协议版本和配置格式未变。
+
+平台宿主接入核心时：
+
+1. 在创建识别或任务服务前，通过 `ImageCodec.Initialize(IImageCodec)` 注册进程级编解码器。后端必须输出非预乘、紧凑排列的 BGRA32，损坏图像必须抛出异常；注册后不能切换后端。Windows 使用原有 WPF/STA 实现 `WpfImageCodec`，由 `App` 构造函数注册。
+2. 实现 `IAdbService` 并注入自动化服务。平台负责设备发现、截图与输入传输，核心负责取证、识别、流程、取消和安全判断。
+3. 由宿主持有任务、设备互斥及识别服务生命周期。`ScreenImage` 仅包含像素和尺寸，显示对象在平台层创建；Windows 预览使用 `WpfImageCodec.ToBitmap`。
+4. 随平台安装包提供匹配架构的 OpenCV、ONNX Runtime 原生依赖及现有资源目录。核心能够独立编译不代表 macOS 设备适配和安装包已经完成。
+
+只验证公共核心时，无需 Windows Desktop SDK：
+
+```powershell
+dotnet test tests/GGEA.Core.Tests/GGEA.Core.Tests.csproj
+```
+
+当前用户程序仍为 Windows 版本；macOS 界面、设备实现、原生依赖打包及实机验收另行接入。
 
 ## 开发版打包（支持多开）
 
@@ -86,11 +107,13 @@ GGEA/
 ├── README.md
 ├── 使用说明.txt           发布包根目录的最终用户说明
 ├── GGEA.sln
-├── src/GGEA.App/       WPF 主程序
+├── src/GGEA.Core/      平台无关的任务、配置、识别与设备接口
+├── src/GGEA.App/       WPF 主程序与 Windows 平台实现
 ├── resources/common/templates/ 识别模板
 ├── config/             运行配置
 ├── tools/              开发 / 发布脚本
-└── tests/GGEA.Tests/   单元测试
+├── tests/GGEA.Core.Tests/  不依赖 Windows 桌面框架的核心测试
+└── tests/GGEA.Tests/   Windows 接入与识别回归测试
 ```
 
 ## 本机目录管理

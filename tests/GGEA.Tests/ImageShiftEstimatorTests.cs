@@ -53,7 +53,6 @@ public class ImageShiftEstimatorTests
 
         return new ScreenImage
         {
-            Bitmap = ImageCodec.FromBgra(bgra, width, height),
             Bgra = bgra,
             Width = width,
             Height = height,

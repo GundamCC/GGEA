@@ -9,6 +9,18 @@ namespace GGEA.Tests;
 /// <summary>验证真实 DLL 接入与设备生命周期；全部使用临时目录，不加载用户插件或连接设备。</summary>
 public sealed class PluginManagerTests
 {
+    /// <summary>拆分程序集后，插件仍不能借默认加载上下文访问宿主核心。</summary>
+    [Theory]
+    [InlineData("GGEA")]
+    [InlineData("GGEA.Core")]
+    [InlineData("GGEA.Updater")]
+    public void HostImplementationAssemblies_AreRejected(string name)
+    {
+        using var files = new Package();
+        var context = new PluginLoadContext(Path.Combine(files.Directory, "GGEA.SamplePlugin.dll"));
+        Assert.Throws<FileLoadException>(() => context.LoadFromAssemblyName(new System.Reflection.AssemblyName(name)));
+    }
+
     [Fact]
     public async Task DisabledPackage_IsNotExecuted_AndRealDllLoadsOnlyAfterRestart()
     {

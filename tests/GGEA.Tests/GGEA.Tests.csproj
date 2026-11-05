@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\GGEA.Core.Tests\GGEA.Core.Tests.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\src\GGEA.App\GGEA.App.csproj" />
     <!-- 发布器作为独立工具构建，测试本机配置边界，不进入普通版引用链。 -->
     <ProjectReference Include="..\..\src\GGEA.ReleaseManager\GGEA.ReleaseManager.csproj" />

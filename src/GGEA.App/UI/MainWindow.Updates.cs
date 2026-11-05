@@ -58,7 +58,7 @@ public partial class MainWindow
     /// <summary>磁盘保存成功后同步主窗口配置，后续其他配置保存不会恢复旧的更新选项。</summary>
     private void SaveUpdatePreference(bool enabled)
     {
-        new ConfigService(_logger!).SaveAutoInstallUpdates(enabled,
+        UpdatePreferences.SaveAutoInstallUpdates(enabled,
             Path.Combine(AppContext.BaseDirectory, "config", "ggea.config.json"));
         _config.AutoInstallUpdates = enabled;
     }

@@ -45,7 +45,7 @@ public partial class SettingsWindow : Window
         {
             // 仅更新软件更新偏好；其他编辑仍由底部“保存”负责，取消窗口也不会回滚即时偏好。
             if (saveUpdatePreference is not null) saveUpdatePreference(enabled);
-            else new ConfigService(_log).SaveAutoInstallUpdates(enabled,
+            else UpdatePreferences.SaveAutoInstallUpdates(enabled,
                 Path.Combine(AppContext.BaseDirectory, "config", "ggea.config.json"));
             _config.AutoInstallUpdates = enabled;
         });

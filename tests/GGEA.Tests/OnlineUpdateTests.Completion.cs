@@ -15,15 +15,15 @@ public sealed partial class OnlineUpdateTests
         File.WriteAllText(path, """{"adbPath":"custom-adb","extension":{"value":42}}""");
         var service = new ConfigService(new TestLog());
         Assert.True(service.Load(path).AutoInstallUpdates);
-        service.SaveAutoInstallUpdates(false, path);
+        UpdatePreferences.SaveAutoInstallUpdates(false, path);
         Assert.False(service.Load(path).AutoInstallUpdates);
         using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
         Assert.Equal(42, json.RootElement.GetProperty("extension").GetProperty("value").GetInt32());
         Assert.Equal("custom-adb", service.Load(path).AdbPath);
-        service.SaveAutoInstallUpdates(true, path);
+        UpdatePreferences.SaveAutoInstallUpdates(true, path);
         Assert.True(service.Load(path).AutoInstallUpdates);
         File.WriteAllText(path, "{broken");
-        Assert.ThrowsAny<System.Text.Json.JsonException>(() => service.SaveAutoInstallUpdates(false, path));
+        Assert.ThrowsAny<System.Text.Json.JsonException>(() => UpdatePreferences.SaveAutoInstallUpdates(false, path));
         Assert.Equal("{broken", File.ReadAllText(path));
     }
 

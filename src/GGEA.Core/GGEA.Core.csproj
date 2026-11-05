@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 保留既有类型命名空间，核心程序集不引用 Windows 宿主、WPF 或插件界面协议。 -->
+    <EmbeddedResource Include="Localization/ja.json" LogicalName="GGEA.App.Localization.ja.json" />
+    <InternalsVisibleTo Include="GGEA" />
+    <InternalsVisibleTo Include="GGEA.Tests" />
+    <InternalsVisibleTo Include="GGEA.Core.Tests" />
+    <PackageReference Include="OpenCvSharp4" Version="4.13.0.20260627" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.23.2" />
+  </ItemGroup>
+</Project>

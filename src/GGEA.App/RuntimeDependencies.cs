@@ -9,8 +9,8 @@ namespace GGEA.App;
 /// <summary>在创建识别服务前探测原生依赖；只加载本包文件，不初始化 OCR 的托管静态状态。</summary>
 internal static class RuntimeDependencies
 {
-    internal const string SetupFileName = "DependencySetup_依赖库安装.bat";
-    internal const string DownloadUrl = "https://aka.ms/vc14/vc_redist.x64.exe";
+    internal const string SetupFileName = Vision.OnnxRuntimeDiagnostics.RuntimeSetupFileName;
+    internal const string DownloadUrl = Vision.OnnxRuntimeDiagnostics.RuntimeDownloadUrl;
     internal enum FailureKind { MissingFile, InvalidImage, LoadFailed }
     internal sealed record Failure(string Library, FailureKind Kind, string Detail);
 

@@ -9,8 +9,19 @@ namespace GGEA.App.Vision;
 /// 图像编解码辅助：PNG 字节 <-> ScreenImage、裁剪、保存。
 /// WPF 图像对象与线程关联，解码统一放在进程共享的 STA 线程上执行以保证可靠。
 /// </summary>
-public static class ImageCodec
+public sealed class WpfImageCodec : IImageCodec
 {
+    private static readonly WpfImageCodec Instance = new();
+
+    /// <summary>由 Windows 组合根在创建任务前注册；重复调用复用同一实例，不切换运行中的编解码器。</summary>
+    public static void Initialize() => ImageCodec.Initialize(Instance);
+
+    ScreenImage IImageCodec.DecodePng(byte[] pngBytes) => DecodePng(pngBytes);
+    byte[] IImageCodec.EncodePng(byte[] bgra, int width, int height) => EncodePng(bgra, width, height);
+
+    /// <summary>显示对象由 Windows 层创建，不进入任务与识别模型。</summary>
+    public static BitmapSource ToBitmap(ScreenImage image) => FromBgra(image.Bgra, image.Width, image.Height);
+
     /// <summary>PNG 文件头。</summary>
     private static ReadOnlySpan<byte> PngSignature => new byte[] { 0x89, 0x50, 0x4E, 0x47 };
 
@@ -47,7 +58,6 @@ public static class ImageCodec
                 normalized.CopyPixels(pixels, checked(width * 4), 0);
                 return new ScreenImage
                 {
-                    Bitmap = normalized,
                     Bgra = pixels,
                     Width = width,
                     Height = height,

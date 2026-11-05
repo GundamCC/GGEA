@@ -30,7 +30,7 @@ public sealed class ImageCodecTests
         await Task.WhenAll(Enumerable.Range(0, 64).Select(index => Task.Run(() =>
         {
             byte[] pixels = [(byte)index, 30, 90, 255];
-            var bitmap = ImageCodec.FromBgra(pixels, 1, 1);
+            var bitmap = WpfImageCodec.FromBgra(pixels, 1, 1);
             byte[] copied = new byte[4];
             bitmap.CopyPixels(copied, 4, 0);
             Assert.Equal(pixels, copied);
@@ -38,7 +38,7 @@ public sealed class ImageCodecTests
             Assert.Throws<InvalidOperationException>(() => ImageCodec.EncodePng([], 1, 1));
             var image = ImageCodec.DecodePng(ImageCodec.EncodePng(pixels, 1, 1));
             Assert.Equal(pixels, image.Bgra);
-            Assert.True(image.Bitmap.IsFrozen);
+            Assert.True(WpfImageCodec.ToBitmap(image).IsFrozen);
         })));
     }
 
@@ -50,8 +50,8 @@ public sealed class ImageCodecTests
         var image = ImageCodec.DecodePng(File.ReadAllBytes(path));
         Assert.Equal(366, image.Width);
         Assert.Equal(133, image.Height);
-        Assert.Equal(PixelFormats.Bgra32, image.Bitmap.Format);
-        Assert.True(image.Bitmap.IsFrozen);
+        Assert.Equal(PixelFormats.Bgra32, WpfImageCodec.ToBitmap(image).Format);
+        Assert.True(WpfImageCodec.ToBitmap(image).IsFrozen);
         Assert.Equal(image.Width * image.Height * 4, image.Bgra.Length);
     }
 
@@ -87,7 +87,7 @@ public sealed class ImageCodecTests
             Assert.Throws<InvalidOperationException>(() => ImageCodec.EncodePng([], 2, 1));
             var decoded = ImageCodec.DecodePng(ImageCodec.EncodePng(expected, 2, 1));
             var copied = new byte[expected.Length];
-            decoded.Bitmap.CopyPixels(copied, 8, 0);
+            WpfImageCodec.ToBitmap(decoded).CopyPixels(copied, 8, 0);
             Assert.Equal(expected, decoded.Bgra);
             Assert.Equal(expected, copied);
         }

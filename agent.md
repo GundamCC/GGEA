@@ -9,7 +9,7 @@ GGEA 是 Windows 10/11 x64 桌面助手，通过 ADB 和受支持的设备截图
 ## 技术栈与职责
 
 - 主程序为 C#、.NET 8、WPF。现有 OpenCvSharp/OpenCV 用于图像解码与模板匹配，Microsoft.ML.OnnxRuntime CPU 用于离线 OCR；这些已经是正式依赖，不再适用“禁止 OpenCV、深度学习”的原型约束。
-- `src/GGEA.App` 包含 UI、Config、Device、Vision、Automation、Tasks、Plugins、Updates、Localization 与 Logging。复用现有职责边界，业务状态不得复制到表现层。
+- `src/GGEA.Core` 面向 `net8.0`，持有 Config、Vision、Automation、Tasks、游戏布局、通用日志与语言资源及设备接口；不得引用 Windows 宿主或 WPF。`src/GGEA.App` 保留 WPF UI、Windows Device 实现、Plugins、Updates、环境诊断与 WPF 编解码。平台通过 `IAdbService` 和 `IImageCodec` 接入，业务状态不得复制到表现层。
 - `src/GGEA.Plugin.Abstractions` 是公共插件协议；可选扩展在独立 GGEA-Extensions 仓库维护。接口变化必须核对兼容性，不能无意把可选扩展依赖带回主程序。
 - `src/GGEA.Updater` 是独立更新进程；保留安装锁、文件校验、回滚与用户目录保护。`src/GGEA.ReleaseManager` 是开发发布工具，不进入用户包。
 - 新依赖和抽象需要当前任务的具体收益。不要为假想需求引入新服务、工作流框架或模型，也不要为了少量 Diff 省略必要的失败处理与资源释放。

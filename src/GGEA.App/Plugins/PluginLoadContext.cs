@@ -20,7 +20,7 @@ internal sealed class PluginLoadContext(string entryPath) : AssemblyLoadContext(
             if (name.Version != contract.GetName().Version) throw new FileLoadException("插件协议程序集版本不兼容。");
             return contract;
         }
-        if (name.Name is "GGEA" or "GGEA.Updater")
+        if (name.Name is "GGEA" or "GGEA.Core" or "GGEA.Updater")
             throw new FileLoadException("插件只能引用公开协议，不能引用宿主内部程序集。");
         if (name.Name?.StartsWith("GGEA", StringComparison.OrdinalIgnoreCase) == true)
         {
