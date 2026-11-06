@@ -189,7 +189,7 @@ public partial class MainWindow
                     var enemyReturnTitle = new SelectStageTitleRecognizer(progressTemplates.SelectStageTitle);
                     var enemyBattle = CreateBattle(progressTemplates, false, enemyReturnTitle.Recognize);
                     enemyBattle.Validate(settings);
-                    current = await new FierceEnemyProgressService(automation, _logger, GetTextOcr())
+                    current = await new FierceEnemyProgressService(automation, _logger, GetTextOcr(), GetRecognitionEvidence())
                         .RunAsync(serial, _mainLayout, target.Enemy!,
                             token => enemyBattle.RunAsync(serial, settings, WorkStageKind.Unknown, Report, token,
                                 preparationAlreadyOpened: true), Report, ct);

@@ -2204,6 +2204,20 @@ public partial class MainWindow : Window
         AccountStatusText.Text = L.Text("开始执行每日任务…");
         var elapsed = Stopwatch.StartNew();
         var summary = new TaskQueueSummary(dailyPlan.Count);
+        DailyTaskItem? activeDailyTask = null;
+        var activeResultRecorded = false;
+        string? finalizationStatus = null;
+        // 中断原因属于队列，不借用会被收尾步骤覆盖的状态栏作为唯一存储。
+        DailyQueueOutcome StopDailyQueue(DailyTaskItem task, string reason, DailyQueueOutcome outcome)
+        {
+            if (!activeResultRecorded) summary.Record(task.Name, false, reason);
+            activeResultRecorded = true;
+            summary.SetInterruption(task.Name, reason);
+            var message = summary.GetInterruptionMessage()!;
+            AccountStatusText.Text = message;
+            _logger!.Error(message);
+            return outcome;
+        }
         // AP 只在独立执行时发送专属提醒；组合每日队列仍由原有队列汇总统一提醒。
         var endNotification = dailyPlan.Count == 1 && hasApTask
             ? BeginTaskEndNotification(L.Text("AP 消耗"))
@@ -2221,6 +2235,8 @@ public partial class MainWindow : Window
                 var allowInitialAnnouncement = true;
                 foreach (var task in dailyPlan.Where(task => task.Kind != DailyTaskKind.ClaimMissionReward))
                 {
+                    activeDailyTask = task;
+                    activeResultRecorded = false;
                     ct.ThrowIfCancellationRequested();
 
                     // 每个任务前都重新确认主界面，避免在上一任务的子页面直接操作下一任务。
@@ -2230,9 +2246,9 @@ public partial class MainWindow : Window
                         if (await AbortTaskChainIfConnectionErrorAsync(serial, L.Text("每日"), ct))
                         {
                             AccountStatusText.Text = L.Text("检测到网络错误或游戏数据更新，每日任务链已中止");
-                            return DailyQueueOutcome.Unsafe;
+                            return StopDailyQueue(task, AccountStatusText.Text, DailyQueueOutcome.Unsafe);
                         }
-                        return DailyQueueOutcome.Interrupted;
+                        return StopDailyQueue(task, AccountStatusText.Text, DailyQueueOutcome.Interrupted);
                     }
 
                     AccountStatusText.Text = L.Format($"执行：{task.Name}…");
@@ -2280,15 +2296,16 @@ public partial class MainWindow : Window
                             {
                                 // 商店可能仍停在购买弹窗；禁止交给通用导航空等或继续其他任务。
                                 summary.Record(task.Name, false, L.Text("商店未安全完成"));
+                                activeResultRecorded = true;
                                 // 仅失败后做只读弹窗诊断；网络/日期更新都不能授权购买或导航。
                                 if (await AbortTaskChainIfConnectionErrorAsync(serial, L.Text("每日"), ct))
                                 {
                                     AccountStatusText.Text = L.Text("检测到网络错误或游戏数据更新，每日任务链已中止");
-                                    return DailyQueueOutcome.Unsafe;
+                                    return StopDailyQueue(task, AccountStatusText.Text, DailyQueueOutcome.Unsafe);
                                 }
                                 AccountStatusText.Text = L.Text("商店未完成，每日任务链已停止；请检查并手动关闭当前弹窗后重新开始");
                                 _logger!.Warn(AccountStatusText.Text);
-                                return DailyQueueOutcome.Unsafe;
+                                return StopDailyQueue(task, AccountStatusText.Text, DailyQueueOutcome.Unsafe);
                             }
                             _logger!.Info(L.Text("商店购物: 完成或已安全略过"));
                             taskSucceeded = shopOk;
@@ -2362,7 +2379,7 @@ public partial class MainWindow : Window
                                 {
                                     AccountStatusText.Text = L.Format($"{shortageReason}，取消或主界面恢复未完成，每日任务已停止。");
                                     _logger!.Error(AccountStatusText.Text);
-                                    return DailyQueueOutcome.Unsafe;
+                                    return StopDailyQueue(task, AccountStatusText.Text, DailyQueueOutcome.Unsafe);
                                 }
                                 failedSubtasks.Add(L.Format($"{shortageReason}，已停止本项并继续后续任务"));
                                 _logger!.Warn(L.Format($"{shortageReason}，停止开发&强化一次，继续后续每日任务"));
@@ -2388,9 +2405,9 @@ public partial class MainWindow : Window
                                 if (await AbortTaskChainIfConnectionErrorAsync(serial, L.Text("每日"), ct))
                                 {
                                     AccountStatusText.Text = L.Text("检测到网络错误或游戏数据更新，每日任务链已中止");
-                                    return DailyQueueOutcome.Unsafe;
+                                    return StopDailyQueue(task, AccountStatusText.Text, DailyQueueOutcome.Unsafe);
                                 }
-                                return DailyQueueOutcome.Interrupted;
+                                return StopDailyQueue(task, AccountStatusText.Text, DailyQueueOutcome.Interrupted);
                             }
 
                             _logger!.Info(L.Text("强化培育关卡完成"));
@@ -2403,9 +2420,9 @@ public partial class MainWindow : Window
                             var selection = task.FierceEnemySelection ?? throw new InvalidOperationException(L.Text("强敌任务缺少选择"));
                             AccountStatusText.Text = L.Format($"强敌来袭略过：{selection.Unit.Name} / {selection.Difficulty}…");
                             var result = await new FierceEnemySkipService(_automation!, _logger!, GetTextOcr(),
-                                confirm => CreateStageSkipService(false, confirm)).ExecuteAsync(serial, _mainLayout,
+                                confirm => CreateStageSkipService(false, confirm), GetRecognitionEvidence()).ExecuteAsync(serial, _mainLayout,
                                     _stageLayout, selection, ct);
-                            _logger!.Info(result.Message);
+                            if (result.Success || result.IsUnavailable) _logger!.Info(result.Message);
                             if (result.IsUnavailable)
                             {
                                 AccountStatusText.Text = result.Message;
@@ -2415,7 +2432,7 @@ public partial class MainWindow : Window
                             if (!result.Success)
                             {
                                 AccountStatusText.Text = result.Message;
-                                return DailyQueueOutcome.Interrupted;
+                                return StopDailyQueue(task, AccountStatusText.Text, DailyQueueOutcome.Interrupted);
                             }
                             taskSucceeded = true;
                             break;
@@ -2441,13 +2458,13 @@ public partial class MainWindow : Window
                                 if (await AbortTaskChainIfConnectionErrorAsync(serial, L.Text("每日"), ct))
                                 {
                                     AccountStatusText.Text = L.Text("检测到网络错误或游戏数据更新，每日任务链已中止");
-                                    return DailyQueueOutcome.Unsafe;
+                                    return StopDailyQueue(task, AccountStatusText.Text, DailyQueueOutcome.Unsafe);
                                 }
                                 if (!dailyPlan.Any(item => item.Kind == DailyTaskKind.ClaimMissionReward))
                                 {
                                     await EnsureMainScreenAsync(serial, ct);
                                 }
-                                return DailyQueueOutcome.Interrupted;
+                                return StopDailyQueue(task, AccountStatusText.Text, DailyQueueOutcome.Interrupted);
                             }
 
                             AccountStatusText.Text = apResult.Success
@@ -2462,10 +2479,11 @@ public partial class MainWindow : Window
                             break;
                     }
                     summary.Record(task.Name, taskSucceeded, string.Join("、", failedSubtasks));
+                    activeResultRecorded = true;
                     if (!taskSucceeded && !developmentResourcesInsufficient && await AbortTaskChainIfConnectionErrorAsync(serial, L.Text("每日"), ct))
                     {
                         AccountStatusText.Text = L.Text("检测到网络错误或游戏数据更新，每日任务链已中止");
-                        return DailyQueueOutcome.Unsafe;
+                        return StopDailyQueue(task, AccountStatusText.Text, DailyQueueOutcome.Unsafe);
                     }
                 }
 
@@ -2474,6 +2492,8 @@ public partial class MainWindow : Window
             {
                 var finalTask = dailyPlan.LastOrDefault(task => task.Kind == DailyTaskKind.ClaimMissionReward);
                 if (finalTask is null) return;
+                activeDailyTask = finalTask;
+                activeResultRecorded = false;
 
                 var previousStatus = AccountStatusText.Text;
                 AccountStatusText.Text = L.Text("收尾：领取每日使命奖励…");
@@ -2488,15 +2508,19 @@ public partial class MainWindow : Window
                         ConfigService.ResolvePath(_config.MissionClaimResultOkTemplate),
                         ct: ct);
                 summary.Record(finalTask.Name, missionOk);
+                activeResultRecorded = true;
                 var finalStatus = L.Format($"收尾领取每日使命奖励：{(missionOk ? L.Text("完成") : L.Text("未完成"))}");
+                finalizationStatus = finalStatus;
                 _logger!.Info(finalStatus);
                 AccountStatusText.Text = $"{previousStatus}；{finalStatus}";
                 if (!missionOk && await AbortTaskChainIfConnectionErrorAsync(serial, L.Text("每日"), ct))
                 {
                     AccountStatusText.Text = L.Text("检测到网络错误或游戏数据更新，每日任务链已中止");
+                    summary.SetInterruption(finalTask.Name, AccountStatusText.Text);
+                    finalizationStatus = $"{finalStatus}；{AccountStatusText.Text}";
                 }
             }, ct);
-            if (queueOutcome != DailyQueueOutcome.Completed) return;
+            if (queueOutcome != DailyQueueOutcome.Completed || summary.GetInterruptionMessage() is not null) return;
 
             ct.ThrowIfCancellationRequested();
             elapsed.Stop();
@@ -2523,11 +2547,15 @@ public partial class MainWindow : Window
         catch (OperationCanceledException)
         {
             AccountStatusText.Text = L.Text("任务已中止");
+            summary.SetInterruption(activeDailyTask?.Name ?? L.Text("每日任务"), L.Text("每日任务已被用户中止"));
             _logger!.Warn(L.Text("每日任务已被用户中止"));
         }
         catch (Exception ex)
         {
-            _logger?.Error(L.Format($"每日任务执行失败: {ex.Message}"));
+            var reason = L.Format($"每日任务执行失败: {ex.Message}");
+            if (activeDailyTask is not null && !activeResultRecorded) summary.Record(activeDailyTask.Name, false, reason);
+            summary.SetInterruption(activeDailyTask?.Name ?? L.Text("每日任务"), reason);
+            _logger?.Error(reason);
             // 明确区分捕获失败与业务未命中，且不再启动可能点击遮罩的恢复逻辑。
             if (ex is ScreenshotCaptureException)
             {
@@ -2542,6 +2570,9 @@ public partial class MainWindow : Window
         }
         finally
         {
+            var interruption = summary.GetInterruptionMessage();
+            if (interruption is not null)
+                AccountStatusText.Text = finalizationStatus is null ? interruption : $"{interruption}；{finalizationStatus}";
             if (apTaskChain is not null)
             {
                 var apSummary = apTaskChain.GetExecutionSummary();
@@ -2553,6 +2584,8 @@ public partial class MainWindow : Window
                 }
             }
 
+            // 最后一条日志保留每日中断及收尾状态，不能仅剩“AP 成功0、失败0”。
+            if (interruption is not null) _logger?.Warn(AccountStatusText.Text);
             _dailyRunning = false;
             _dailyCts?.Dispose();
             _dailyCts = null;

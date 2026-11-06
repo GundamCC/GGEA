@@ -5,6 +5,38 @@ namespace GGEA.Tests;
 /// <summary>验证队列统计、提前退出和耗时边界，不触发真实系统通知。</summary>
 public class TaskQueueSummaryTests
 {
+    /// <summary>强敌中断后收尾仍执行，但 AP 留作未执行；收尾结果不能改写最初原因或生成完成消息。</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Interrupted_FinalizationPreservesCauseAndPendingAp(bool finalSucceeded)
+    {
+        var summary = new TaskQueueSummary(4);
+        summary.Record("领取奖励", true);
+        var apRan = false;
+        var result = await DailyQueueRunner.RunAsync(() =>
+        {
+            summary.Record("强敌来袭略过", false, "未确认 Dark Gundam Jr. 的关卡详情");
+            summary.SetInterruption("强敌来袭略过", "未确认 Dark Gundam Jr. 的关卡详情");
+            return Task.FromResult(DailyQueueOutcome.Interrupted);
+        }, () =>
+        {
+            summary.Record("收尾领取每日使命奖励", finalSucceeded);
+            if (!finalSucceeded) summary.SetInterruption("收尾领取每日使命奖励", "网络错误");
+            return Task.CompletedTask;
+        }, default);
+        if (result == DailyQueueOutcome.Completed) apRan = true;
+        Assert.False(apRan);
+        Assert.Equal(1, summary.PendingCount);
+        Assert.Equal(finalSucceeded ? 1 : 2, summary.FailureCount);
+        var message = summary.GetInterruptionMessage();
+        Assert.Contains("强敌来袭略过", message);
+        Assert.Contains("Dark Gundam Jr.", message);
+        Assert.Contains("未执行 1", message);
+        Assert.DoesNotContain("原因：网络错误", message);
+        Assert.Null(summary.GetCompletionMessage(TimeSpan.Zero));
+    }
+
     /// <summary>混合结果正确统计，耗时使用累计分钟并舍去不足一秒的部分。</summary>
     [Theory]
     [InlineData(0, "0分0秒")]

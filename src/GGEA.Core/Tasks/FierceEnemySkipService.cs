@@ -9,8 +9,10 @@ namespace GGEA.App.Tasks;
 
 /// <summary>强敌略过编排：素材选单位、详情复核、OCR 难度、按钮复核，最后复用公共略过流程。</summary>
 public sealed class FierceEnemySkipService(AutomationService automation, IGgeaLog log,
-    OnnxTextRecognizer ocr, Func<Func<ScreenImage, CancellationToken, bool>, StageSkipService> createSkip)
+    OnnxTextRecognizer ocr, Func<Func<ScreenImage, CancellationToken, bool>, StageSkipService> createSkip,
+    RecognitionEvidence? evidence = null)
 {
+    private readonly FierceEnemyNavigationService _navigation = new(automation, log, ocr, evidence);
     public const string SelectStageTemplate = FierceEnemyNavigationService.SelectStageTemplate;
     public const string SkipTemplate = "resources/templates/stage/event/button_skip.png";
     public const string DarkSkipTemplate = "resources/templates/stage/event/button_skip_disabled.png";
@@ -93,11 +95,11 @@ public sealed class FierceEnemySkipService(AutomationService automation, IGgeaLo
 
     /// <summary>两种任务共用单位定位，防止历史列表与详情判定发生分叉。</summary>
     internal Task<bool> NavigateAsync(string serial, FierceEnemyUnitRecognizer? unit, CancellationToken ct)
-        => new FierceEnemyNavigationService(automation, log, ocr).NavigateAsync(serial, unit, ct);
+        => _navigation.NavigateAsync(serial, unit, ct);
 
     /// <summary>略过返回确认沿用同一详情证据。</summary>
     internal bool IsDetail(ScreenImage screen, FierceEnemyUnitRecognizer? unit, CancellationToken ct)
-        => new FierceEnemyNavigationService(automation, log, ocr).IsDetail(screen, unit, ct);
+        => _navigation.IsDetail(screen, unit, ct);
 
     /// <summary>仅替换当前调用的按钮锚点，不改动 AP 任务共享布局。</summary>
     public static UiLayout WithSkipAnchor(UiLayout original, TemplateMatchResult button)

@@ -139,7 +139,7 @@ public partial class MainWindow
             if (!await EnsureMainScreenAsync(serial, ct))
             { FierceEnemyAssaultStatusText.Text = L.Text("未确认主界面，已停止略过。"); return; }
             var result = await new FierceEnemySkipService(_automation, _logger, GetTextOcr(),
-                confirm => CreateStageSkipService(false, confirm)).ExecuteAsync(serial, _mainLayout,
+                confirm => CreateStageSkipService(false, confirm), GetRecognitionEvidence()).ExecuteAsync(serial, _mainLayout,
                     _stageLayout, selection, ct);
             FierceEnemyAssaultStatusText.Text = result.Message;
             if (result.Success || result.IsUnavailable) _logger.Info(result.Message);

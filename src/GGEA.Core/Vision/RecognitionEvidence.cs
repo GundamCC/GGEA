@@ -12,6 +12,9 @@ internal sealed record RecognitionCandidate(string Name, byte[] Png, int Width, 
 /// <summary>纯观察携带的原始帧与候选；由等待流程在真正超时后决定是否保存，不含执行副作用。</summary>
 internal sealed record RecognitionFrame(string Serial, byte[] Png, ScreenImage Screen, RecognitionCandidate[] Candidates);
 
+/// <summary>识别流程提供的固定名称附件；只写入本地诊断包，不接受外部路径。</summary>
+internal sealed record RecognitionAttachment(string Name, byte[] Bytes);
+
 /// <summary>将识别失败证据保存为本地 ZIP；每类一分钟一次，最多五个固定槽位，不上传画面。</summary>
 public sealed class RecognitionEvidence
 {
@@ -46,8 +49,15 @@ public sealed class RecognitionEvidence
     internal Task SaveAsync(string kind, string serial, byte[] png, ScreenImage screen, params RecognitionCandidate[] candidates)
         => Task.Run(() => Save(kind, serial, png, screen, candidates));
 
+    /// <summary>特征识别保留自己的计数与阶段，不把 SIFT 内点数伪装成模板置信度。</summary>
+    internal Task SaveContextAsync(string kind, string serial, ScreenImage screen, object context,
+        params RecognitionAttachment[] attachments)
+        => Task.Run(() => Save(kind, serial, ImageCodec.EncodePng(screen.Bgra, screen.Width, screen.Height),
+            screen, [], context, attachments));
+
     /// <summary>先在临时文件完成 ZIP，再替换自己的固定槽位，避免暴露半写入诊断包。</summary>
-    private void Save(string kind, string serial, byte[] png, ScreenImage screen, RecognitionCandidate[] candidates)
+    private void Save(string kind, string serial, byte[] png, ScreenImage screen, RecognitionCandidate[] candidates,
+        object? context = null, RecognitionAttachment[]? attachments = null)
     {
         lock (_state.Gate)
         {
@@ -67,12 +77,25 @@ public sealed class RecognitionEvidence
                     Write(zip, "frame.png", png);
                     for (var index = 0; index < candidates.Length; index++)
                         Write(zip, $"template-{index}.png", candidates[index].Png);
+                    var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "frame.png", "diagnostic.json" };
+                    for (var index = 0; index < candidates.Length; index++) names.Add($"template-{index}.png");
+                    foreach (var attachment in attachments ?? [])
+                    {
+                        if (Path.GetFileName(attachment.Name) != attachment.Name ||
+                            attachment.Name.Contains('\\') || attachment.Name.Contains('/') ||
+                            !names.Add(attachment.Name))
+                            throw new InvalidDataException("Invalid evidence attachment name");
+                        Write(zip, attachment.Name, attachment.Bytes);
+                    }
                     // 核心程序集有独立身份；诊断记录启动宿主的产品版本，不能误报为核心库版本。
                     var metadata = new
                     {
                         utc = now, kind, serial, version = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString(),
                         width = screen.Width, height = screen.Height,
-                        note = "流程超时前的原始观察帧；小区域精确搜索，大区域未达阈值时执行原图复查。低分候选仅为已评估位置中的最佳结果，不保证全局最优，不用于点击；空候选表示无有效搜索结果。",
+                        note = context is null
+                            ? "流程超时前的原始观察帧；小区域精确搜索，大区域未达阈值时执行原图复查。低分候选仅为已评估位置中的最佳结果，不保证全局最优，不用于点击；空候选表示无有效搜索结果。"
+                            : "失败阶段最后一次实际观察帧；context 记录阶段、目标及特征判定，附件保留首页观察帧和实际使用的单位素材。诊断内容不授权点击。",
+                        context,
                         candidates = candidates.Select((c, i) => new { c.Name, templateFile = $"template-{i}.png", c.Width, c.Height, configuredRoi = c.Roi, c.Threshold, best = c.Best,
                             accepted = c.Best is not null && c.Best.Confidence >= c.Threshold })
                     };

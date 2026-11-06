@@ -5,6 +5,13 @@ using OpenCvSharp.Features2D;
 
 namespace GGEA.App.Vision;
 
+/// <summary>单区域特征判定的诊断快照；失败原因与计数只解释本帧，不单独授权点击。</summary>
+internal sealed record FierceEnemyUnitCandidate(string Template, Roi Region, bool Circular,
+    int Features, int RatioMatches, int Inliers, string Decision, Roi? Match);
+
+/// <summary>同一次首页或列表搜索的全部候选，避免诊断误用随后截图的识别状态。</summary>
+internal sealed record FierceEnemyUnitObservation(Roi? Match, IReadOnlyList<FierceEnemyUnitCandidate> Candidates);
+
 /// <summary>用单位素材内部特征识别缩放及裁切立绘；位置不能独立构成单位命中证据。</summary>
 public sealed class FierceEnemyUnitRecognizer : IDisposable
 {
@@ -12,6 +19,9 @@ public sealed class FierceEnemyUnitRecognizer : IDisposable
     private readonly Mat _descriptors = new();
     private readonly KeyPoint[] _points;
     private readonly Lazy<FierceEnemyUnitRecognizer>? _fallback;
+    private readonly string _templateName;
+    private readonly byte[] _templatePng;
+    internal string TemplateName => _templateName;
 
     /// <summary>透明边缘不参与匹配，避免把轮廓与页面背景拼接处当作机体特征。</summary>
     public FierceEnemyUnitRecognizer(string path) : this(ConfigService.Resources.TemplateCandidates(path).ToArray()) { }
@@ -25,10 +35,12 @@ public sealed class FierceEnemyUnitRecognizer : IDisposable
     /// <summary>物理素材构造不再次做语言解析。</summary>
     private FierceEnemyUnitRecognizer(string path, bool physical)
     {
+        _templateName = Path.GetFileName(path);
         try
         {
             using var source = Cv2.ImDecode(File.ReadAllBytes(path), ImreadModes.Unchanged);
             if (source.Empty() || source.Channels() != 4) throw new InvalidDataException("单位素材必须带透明通道。");
+            _templatePng = source.ToBytes(".png");
             using var gray = new Mat(); using var mask = new Mat();
             Cv2.CvtColor(source, gray, ColorConversionCodes.BGRA2GRAY);
             Cv2.ExtractChannel(source, mask, 3);
@@ -48,29 +60,39 @@ public sealed class FierceEnemyUnitRecognizer : IDisposable
 
     /// <summary>首页只在四个内圆独立识别；中央大图和圆外像素不能参与匹配，唯一命中后点击圆心。</summary>
     public Roi? FindHomeSelection(ScreenImage screen, CancellationToken ct = default)
+        => ObserveHomeSelection(screen, ct).Match;
+
+    internal FierceEnemyUnitObservation ObserveHomeSelection(ScreenImage screen, CancellationToken ct)
     {
+        var candidates = new List<FierceEnemyUnitCandidate>();
         Roi? selected = null;
+        var ambiguous = false;
         foreach (var circle in HomeCircles)
         {
-            if (FindCore(screen, circle, true, ct) is null) continue;
-            if (selected is not null) return null;
+            if (FindCore(screen, circle, true, ct, candidates) is null) continue;
+            if (selected is not null) ambiguous = true;
             selected = circle;
         }
-        return selected;
+        return new(ambiguous ? null : selected, candidates);
     }
 
     /// <summary>历史页按两列立绘分别提取特征，避免整页文字和其他卡片耗尽特征点预算。</summary>
     public Roi? FindHistorySelection(ScreenImage screen, CancellationToken ct = default)
+        => ObserveHistorySelection(screen, ct).Match;
+
+    internal FierceEnemyUnitObservation ObserveHistorySelection(ScreenImage screen, CancellationToken ct)
     {
+        var candidates = new List<FierceEnemyUnitCandidate>();
         Roi? selected = null;
+        var ambiguous = false;
         foreach (var column in new[] { new Roi(140, 170, 250, 780), new Roi(1030, 170, 260, 780) })
         {
-            var match = Find(screen, column, ct);
+            var match = FindCore(screen, column, false, ct, candidates);
             if (match is null) continue;
-            if (selected is not null) return null;
+            if (selected is not null) ambiguous = true;
             selected = match;
         }
-        return selected;
+        return new(ambiguous ? null : selected, candidates);
     }
 
     /// <summary>双邻近比率过滤后，仅接受至少十二个分散且满足同一缩放/平移的特征，不允许旋转或透视猜测。</summary>
@@ -78,11 +100,13 @@ public sealed class FierceEnemyUnitRecognizer : IDisposable
         => FindCore(screen, region, false, ct);
 
     /// <summary>圆形搜索同时屏蔽检测点和描述子采样背景，矩形搜索供历史卡片与详情立绘沿用。</summary>
-    private Roi? FindCore(ScreenImage screen, Roi region, bool circular, CancellationToken ct)
-        => FindSingle(screen, region, circular, ct) ?? _fallback?.Value.FindSingle(screen, region, circular, ct);
+    private Roi? FindCore(ScreenImage screen, Roi region, bool circular, CancellationToken ct,
+        List<FierceEnemyUnitCandidate>? candidates = null)
+        => FindSingle(screen, region, circular, ct, candidates) ?? _fallback?.Value.FindSingle(screen, region, circular, ct, candidates);
 
     /// <summary>全部特征及一致性判定来自同一素材，回退不混用特征点。</summary>
-    private Roi? FindSingle(ScreenImage screen, Roi region, bool circular, CancellationToken ct)
+    private Roi? FindSingle(ScreenImage screen, Roi region, bool circular, CancellationToken ct,
+        List<FierceEnemyUnitCandidate>? candidates)
     {
         ct.ThrowIfCancellationRequested();
         using var full = Mat.FromPixelData(screen.Height, screen.Width, MatType.CV_8UC4, screen.Bgra);
@@ -100,12 +124,20 @@ public sealed class FierceEnemyUnitRecognizer : IDisposable
             gray.SetTo(Scalar.All(0), outside);
         }
         _sift.DetectAndCompute(gray, mask, out var points, descriptors);
-        if (descriptors.Rows < 2) return null;
+        var pairCount = 0;
+        var inlierCount = 0;
+        Roi? Finish(Roi? result, string decision)
+        {
+            candidates?.Add(new(_templateName, region, circular, points.Length, pairCount, inlierCount, decision, result));
+            return result;
+        }
+        if (descriptors.Rows < 2) return Finish(null, "insufficient-features");
         using var matcher = new BFMatcher(NormTypes.L2);
         var pairs = matcher.KnnMatch(_descriptors, descriptors, 2)
             .Where(m => m.Length == 2 && m[0].Distance < .65 * m[1].Distance)
             .Select(m => m[0]).OrderBy(m => m.Distance).DistinctBy(m => m.TrainIdx).Take(100).ToArray();
-        if (pairs.Length < 12) return null;
+        pairCount = pairs.Length;
+        if (pairs.Length < 12) return Finish(null, "insufficient-ratio-matches");
         var hypotheses = new List<(double Scale, double X, double Y, DMatch[] Inliers)>();
         for (var i = 0; i < pairs.Length; i++)
         for (var j = i + 1; j < pairs.Length; j++)
@@ -127,15 +159,27 @@ public sealed class FierceEnemyUnitRecognizer : IDisposable
             if (inliers.Length >= 12) hypotheses.Add((scale, tx, ty, inliers));
         }
         var best = hypotheses.OrderByDescending(h => h.Inliers.Length).FirstOrDefault();
-        if (best.Inliers is null || best.Inliers.Length < pairs.Length * .45) return null;
-        // 两处同样可信的立绘视为歧义，不任意选择其中一个。
+        inlierCount = best.Inliers?.Length ?? 0;
+        if (best.Inliers is null || best.Inliers.Length < pairs.Length * .45) return Finish(null, "inconsistent-geometry");
+        // 裁切立绘的外推原点会随缩放拟合波动。共享大多数内点的假设属于同一目标，
+        // 只有另有至少一半独立画面特征支持的位置才算歧义；保留原内点数、比例与空间门禁。
         if (hypotheses.Any(h => h.Inliers.Length >= best.Inliers.Length * .8 &&
-            (Math.Abs(h.X - best.X) > 30 || Math.Abs(h.Y - best.Y) > 30))) return null;
+            (Math.Abs(h.X - best.X) > 30 || Math.Abs(h.Y - best.Y) > 30) &&
+            h.Inliers.Count(m => !best.Inliers.Any(b => b.TrainIdx == m.TrainIdx)) >= h.Inliers.Length * .5))
+            return Finish(null, "ambiguous-independent-matches");
         var matched = best.Inliers.Select(m => points[m.TrainIdx].Pt).ToArray();
         var x = (int)matched.Min(p => p.X); var y = (int)matched.Min(p => p.Y);
         var width = (int)matched.Max(p => p.X) - x; var height = (int)matched.Max(p => p.Y) - y;
-        if (width < 35 || height < 35) return null;
-        return new Roi(region.X + x, region.Y + y, width, height);
+        if (width < 35 || height < 35) return Finish(null, "insufficient-spread");
+        return Finish(new Roi(region.X + x, region.Y + y, width, height), "matched");
+    }
+
+    /// <summary>仅取证时导出本实例实际加载的模板，包含已经参与搜索的语言回退素材。</summary>
+    internal IReadOnlyList<RecognitionAttachment> EvidenceTemplates()
+    {
+        var files = new List<RecognitionAttachment> { new("unit-primary.png", _templatePng) };
+        if (_fallback?.IsValueCreated == true) files.Add(new("unit-fallback.png", _fallback.Value._templatePng));
+        return files;
     }
 
     /// <summary>单位任务结束时释放原生特征缓存。</summary>

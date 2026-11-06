@@ -8,7 +8,8 @@ using GGEA.App.Vision;
 namespace GGEA.App.Tasks;
 
 /// <summary>强敌自动推图适配：共享入口与单位导航，独立识别难度，不依赖略过次数。</summary>
-public sealed class FierceEnemyProgressService(AutomationService automation, IGgeaLog log, OnnxTextRecognizer ocr)
+public sealed class FierceEnemyProgressService(AutomationService automation, IGgeaLog log, OnnxTextRecognizer ocr,
+    RecognitionEvidence? evidence = null)
 {
     private readonly FierceEnemyProgressRecognizer _recognizer = new(ocr);
 
@@ -18,7 +19,7 @@ public sealed class FierceEnemyProgressService(AutomationService automation, IGg
     {
         _recognizer.Validate();
         using var unit = target.IsLatest ? null : new FierceEnemyUnitRecognizer(target.TemplatePath);
-        var navigation = new FierceEnemyNavigationService(automation, log, ocr);
+        var navigation = new FierceEnemyNavigationService(automation, log, ocr, evidence);
         var opened = await new FierceEnemyAssaultService(automation, log).OpenFromHomeAsync(serial, mainLayout, ct: ct);
         if (!opened.Success) return new(false, 0, 0, opened.Message);
         var entry = new FierceEnemyAssaultEntryService(automation, log, new FierceEnemyAssaultSkipCountRecognizer(ocr));
