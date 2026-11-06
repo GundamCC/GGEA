@@ -9,6 +9,27 @@ namespace GGEA.Tests;
 /// <summary>真实事件左栏回放及标题、区域、取消门禁，不连接模拟器。</summary>
 public sealed class FierceEnemyAssaultServiceTests
 {
+    /// <summary>演出仅允许一次继续点击；随后必须重新确认标题，持续演出不能循环点击。</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SelectFromEvent_OverlayRecovery_RechecksTitle(bool dismisses)
+    {
+        var overlay = SortieTapToNextSamples.CreateFrame();
+        var ready = Frame();
+        var adb = new FakeAdbService(overlay);
+        adb.ScreenshotProvider = () => dismisses && adb.Taps.Count > 0 ? ready : overlay;
+        var log = new TestLog();
+        using var automation = new AutomationService(adb, new TemplateMatcher(), log,
+            textOcr: TapToNextOcrSamples.SharedOcr);
+        var result = await new FierceEnemyAssaultService(automation, log,
+            timeoutMs: 1000, pollIntervalMs: 10).SelectFromEventAsync("serial");
+        Assert.Equal(dismisses, result.Success);
+        Assert.Equal(dismisses ? 2 : 1, adb.Taps.Count);
+        Assert.InRange(adb.Taps[0].Y, 940, 1079);
+        if (dismisses) Assert.InRange(adb.Taps[1].Y, 320, 410);
+    }
+
     /// <summary>真实截图裁剪保留原像素，回放主界面到活动的完整点击顺序。</summary>
     [Fact]
     public async Task OpenFromHome_RealEvent_ClicksOnlyExpectedEntries()

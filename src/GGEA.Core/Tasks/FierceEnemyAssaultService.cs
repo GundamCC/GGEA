@@ -64,7 +64,13 @@ public sealed class FierceEnemyAssaultService
         var options = new WaitOptions { Region = RecognitionRegion.PageTitle, Threshold = .85,
             TimeoutMs = _timeoutMs, PollIntervalMs = _pollIntervalMs, AllowGlobalContinuation = false };
         if (await _automation.WaitForImageAsync(serial, _titlePath, options, ct) is null)
-            return Fail(L.Text("未识别到事件标题，已停止强敌来袭导航。"));
+        {
+            // 新活动演出可能遮住标题；只检测一次继续提示，不点击略过或未知画面。
+            // 无论是否发送点击，都重新等待标题，动作本身不能作为进入事件页的证据。
+            await _automation.HandleTapToNextAsync(serial, ct);
+            if (await _automation.WaitForImageAsync(serial, _titlePath, options, ct) is null)
+                return Fail(L.Text("未识别到事件标题，已停止强敌来袭导航。"));
+        }
         var entry = await _automation.WaitForImageAsync(serial, _entryPath, options, ct,
             async (screen, token) =>
             {
