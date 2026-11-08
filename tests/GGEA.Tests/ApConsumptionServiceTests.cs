@@ -472,7 +472,7 @@ public class ApConsumptionServiceTests
 
     /// <summary>AP 不足时应关闭回复AP弹窗、取消略过窗口并结束消耗AP任务。</summary>
     [Fact]
-    public async Task ExecuteAsync_ApInsufficient_StopsAndReturnsFailure()
+    public async Task ExecuteAsync_ApInsufficient_CompletesWithoutInterruptingQueue()
     {
         using var temp = new TempDirectory();
         var recoveryPath = Path.Combine(temp.Path, "ap_recovery_close.png");
@@ -532,9 +532,10 @@ public class ApConsumptionServiceTests
             CreatePositions((7, 1000, 400)),
             CreateWorks((7, "F91", 5, 3, "f91.png")));
 
-        Assert.False(result.Success);
+        Assert.True(result.Success);
         Assert.Contains("AP不足", result.Message);
-        Assert.True(result.IsInterrupted);
+        Assert.Contains("成功 0，失败 0，未执行 1", result.Message);
+        Assert.False(result.IsInterrupted);
         Assert.Contains((790, 730), adb.Taps);
         Assert.Contains((770, 850), adb.Taps);
         Assert.DoesNotContain((415, 780), adb.Taps);

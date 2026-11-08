@@ -3512,7 +3512,8 @@ public partial class MainWindow : Window
                 ApRecoveryCloseTemplatePath = forUpgradeStages ? "" : ConfigService.ResolvePath(_config.ApRecoveryCloseTemplate),
                 SkipResultThreshold = Math.Clamp(_config.DefaultMatchThreshold, 0.5, 1.0),
                 SkipCountLimitThreshold = Math.Clamp(_config.DefaultMatchThreshold, 0.5, 1.0),
-            }, evidence: GetRecognitionEvidence(), apStopSignal: forUpgradeStages ? null : new ApStopSignal(ReportApInsufficient,
+            }, evidence: GetRecognitionEvidence(), // AP 消耗按队列完成统一通知；强敌略过仍即时报告 AP 不足。
+                apStopSignal: postSkipConfirmation is null || forUpgradeStages ? null : new ApStopSignal(ReportApInsufficient,
                 _logger ?? throw new InvalidOperationException(L.Text("日志服务尚未初始化"))));
     }
 

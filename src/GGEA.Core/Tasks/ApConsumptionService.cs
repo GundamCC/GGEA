@@ -194,8 +194,8 @@ public sealed class ApConsumptionService
                 {
                     if (skipResult.IsApInsufficient)
                     {
-                        return Interrupt(
-                            L.Format($"{item.Work} AP不足，消耗AP任务结束"));
+                        chain.CompleteForInsufficientAp(L.Format($"{item.Work} AP不足，消耗AP任务结束"));
+                        break;
                     }
 
                     if (skipResult.IsUnavailable)

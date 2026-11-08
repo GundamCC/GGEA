@@ -101,7 +101,12 @@ public sealed class ApConsumptionTaskChain
     public ApConsumptionWorkItem? CurrentItem => IsCompleted ? null : _items[CurrentIndex];
 
     /// <summary>是否已经处理完任务链中的全部作品。</summary>
-    public bool IsCompleted => CurrentIndex >= _items.Count;
+    public bool IsCompleted => CurrentIndex >= _items.Count || ApExhaustionReason is not null;
+
+    /// <summary>AP 耗尽时结束本轮计划，保留游标以准确统计未执行作品。</summary>
+    public string? ApExhaustionReason { get; private set; }
+
+    public void CompleteForInsufficientAp(string reason) => ApExhaustionReason = reason;
 
     /// <summary>本次任务链中已经确认失败的作品数。</summary>
     public int FailureCount => _failedWorks.Count;
@@ -169,6 +174,8 @@ public sealed class ApConsumptionTaskChain
             summary += $"；{GetLockedSummary()}";
         if (_failedWorks.Count > 0)
             summary += L.Format($"；失败作品：{string.Join("、", _failedWorks)}");
+        if (ApExhaustionReason is not null)
+            summary += $"；{ApExhaustionReason}";
         return InterruptionReason is null ? summary : L.Format($"{summary}；已中断：{InterruptionReason}");
     }
 
