@@ -43,6 +43,7 @@ jobs:
           path: |
             artifacts/dist/*.zip
             artifacts/dist/*.zip.sha256
+            artifacts/dist/*.zip.index.json
           if-no-files-found: error
           retention-days: 7
           compression-level: 0

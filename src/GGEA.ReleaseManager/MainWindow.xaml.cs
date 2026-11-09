@@ -69,6 +69,7 @@ public partial class MainWindow : Window
             string dist = Path.Combine(SourceRoot, "artifacts", "dist");
             bool artifactExists = File.Exists(Path.Combine(dist, stem + ".zip")) &&
                               File.Exists(Path.Combine(dist, stem + ".zip.sha256")) &&
+                              File.Exists(Path.Combine(dist, stem + ".zip.index.json")) &&
                               Directory.Exists(Path.Combine(dist, stem + "-verified"));
             VersionText.Text = $"v{_version}";
             CommitText.Text = _commit[..12];

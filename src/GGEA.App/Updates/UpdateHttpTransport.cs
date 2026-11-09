@@ -40,7 +40,7 @@ internal sealed class UpdateHttpTransport : IDisposable
     }
 
     /// <summary>逐跳校验 HTTPS 与来源授权的域名；响应错误不输出可能含临时签名的 URL。</summary>
-    public async Task<HttpResponseMessage> GetAsync(Uri uri, IReadOnlyCollection<string> hosts, CancellationToken cancellationToken)
+    public async Task<HttpResponseMessage> GetAsync(Uri uri, IReadOnlyCollection<string> hosts, CancellationToken cancellationToken, System.Net.Http.Headers.RangeHeaderValue? range = null)
     {
         for (var redirects = 0; redirects < 6; redirects++)
         {
@@ -49,6 +49,7 @@ internal sealed class UpdateHttpTransport : IDisposable
             using var headersTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             headersTimeout.CancelAfter(TimeSpan.FromSeconds(30));
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            request.Headers.Range = range;
             if (uri.Host == "api.github.com")
             {
                 request.Headers.Accept.ParseAdd("application/vnd.github+json");

@@ -44,7 +44,19 @@ public sealed class GitHubUpdateClient : IDisposable
         if (notes.Length > 12000) notes = notes[..12000] + L.Text("\n…更多内容请查看 GitHub 发布页。");
         return new UpdateRelease(version, notes, name, AssetUri(zip, tag, name), size,
             AssetUri(checksum, tag, name + ".sha256"), ReadDigest(zip))
-        { Delta = ReadDelta(assets, tag, version, current, size) };
+        { Delta = ReadDelta(assets, tag, version, current, size), Index = ReadIndex(assets, tag, name) };
+    }
+
+    // GitHub API 的附件摘要认证索引，索引中的 ZIP 摘要再绑定已核对的完整包。
+    private static UpdateRangeIndex? ReadIndex(JsonElement[] assets, string tag, string packageName)
+    {
+        var name = packageName + ".index.json";
+        var asset = assets.SingleOrDefault(a => a.GetProperty("name").GetString() == name &&
+            a.GetProperty("state").GetString() == "uploaded");
+        if (asset.ValueKind == JsonValueKind.Undefined || ReadDigest(asset) is not { } hash) return null;
+        var size = asset.GetProperty("size").GetInt64();
+        if (size is <= 0 or > 16 * 1024 * 1024) throw new InvalidDataException("更新索引大小无效。");
+        return new(AssetUri(asset, tag, name), hash, (int)size);
     }
 
     /// <summary>差异附件尚未发布完整或不比全量包小则直接使用全量包；已发布的附件仍须通过地址和摘要校验。</summary>

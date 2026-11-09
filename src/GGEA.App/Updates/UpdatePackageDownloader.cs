@@ -34,6 +34,19 @@ public sealed class UpdatePackageDownloader
     /// <summary>下载完整包并验证服务端摘要及逐文件清单；失败时不留下可误用的半成品。</summary>
     public async Task<string> DownloadAsync(UpdateRelease update, string installation, IProgress<double> progress, CancellationToken cancellationToken)
     {
+        if (update.Index is { } index && File.Exists(UpdateFiles.SafePath(installation, "build-info.json")))
+        {
+            try
+            {
+                _report?.Invoke(new(L.Text("正在复用本机文件，按需下载更新。")));
+                return await Task.Run(() => RangePackageDownload.PrepareAsync(_http, update, index, installation, progress, cancellationToken), cancellationToken);
+            }
+            catch (Exception error) when (!cancellationToken.IsCancellationRequested &&
+                error is HttpRequestException or OperationCanceledException)
+            {
+                progress.Report(0);
+            }
+        }
         if (update.Delta is { } delta && File.Exists(UpdateFiles.SafePath(installation, "build-info.json")))
         {
             var differential = update with

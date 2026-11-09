@@ -69,6 +69,7 @@ try {
             (Get-FileHash -LiteralPath (Join-Path $acceptance 'build-info.json') -Algorithm SHA256).Hash) {
             throw "Existing release acceptance mismatch: $acceptance"
         }
+        & (Join-Path $PSScriptRoot 'package-range-index.ps1') $zip $verified $hash "$zip.index.json"
         Write-Host "Verified existing ZIP: $zip"
         Write-Host "SHA-256: $hash"
         Write-Host "Acceptance directory (extracted from ZIP): $acceptance"
@@ -94,6 +95,7 @@ try {
     Move-Item -LiteralPath (Join-Path $work 'checksum.txt') -Destination "$zip.sha256"
     try { Move-Item -LiteralPath $candidate -Destination $zip }
     catch { Remove-Item -LiteralPath "$zip.sha256" -Force; throw }
+    & (Join-Path $PSScriptRoot 'package-range-index.ps1') $zip $acceptance $hash "$zip.index.json"
     Write-Host "Verified ZIP: $zip"
     Write-Host "SHA-256: $hash"
     Write-Host "Acceptance directory (extracted from ZIP): $acceptance"
