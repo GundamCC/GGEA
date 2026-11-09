@@ -30,6 +30,8 @@ try {
     if ($signature -ne 0x02014b50 -or $entries.Count -ne @($info.files.PSObject.Properties).Count) { throw 'ZIP index inventory mismatch' }
 } finally { $reader.Dispose() }
 $index = [ordered]@{schema=1; archiveHash=$ArchiveHash; manifest=[Convert]::ToBase64String($manifest); entries=$entries}
+. (Join-Path $PSScriptRoot 'exe-blocks.ps1')
+$index.exeBlocks = Write-ExeBlocks (Join-Path $VerifiedDirectory 'GGEA.exe') "$Archive.blocks"
 $json = $index | ConvertTo-Json -Depth 5 -Compress
 $temp = "$OutputPath.$([guid]::NewGuid().ToString('N')).tmp"
 try {

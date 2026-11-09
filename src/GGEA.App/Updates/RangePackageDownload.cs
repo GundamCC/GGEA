@@ -77,6 +77,15 @@ internal static class RangePackageDownload
             foreach (var file in pending)
             {
                 using var output = File.Create(UpdateFiles.SafePath(package, file.Path));
+                if (file.Path == "GGEA.exe" && update.Blocks is { } blocks &&
+                    root.TryGetProperty("exeBlocks", out var blockMap) &&
+                    await ExeBlockDownload.TryPrepareAsync(http, update, blocks, blockMap, installation, output,
+                        file.Size, file.Compressed, token))
+                {
+                    written += file.Size;
+                    progress.Report(100.0 * written / Math.Max(1, total));
+                    continue;
+                }
                 if (file.Compressed == 0 && file.Size == 0) continue;
                 var last = file.Offset + file.Compressed - 1;
                 using var response = await http.GetAsync(update.PackageUrl, update.AllowedHosts, token, new(file.Offset, last));
@@ -112,7 +121,7 @@ internal static class RangePackageDownload
     }
 
     // 单次等待有界。只转换网络读取异常，内容校验和磁盘错误保留原原因。
-    private static async Task<int> ReadNetworkAsync(Stream stream, Memory<byte> buffer, CancellationToken token)
+    internal static async Task<int> ReadNetworkAsync(Stream stream, Memory<byte> buffer, CancellationToken token)
     {
         using var stall = CancellationTokenSource.CreateLinkedTokenSource(token);
         stall.CancelAfter(TimeSpan.FromSeconds(45));

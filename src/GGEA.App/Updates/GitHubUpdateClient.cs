@@ -44,7 +44,18 @@ public sealed class GitHubUpdateClient : IDisposable
         if (notes.Length > 12000) notes = notes[..12000] + L.Text("\n…更多内容请查看 GitHub 发布页。");
         return new UpdateRelease(version, notes, name, AssetUri(zip, tag, name), size,
             AssetUri(checksum, tag, name + ".sha256"), ReadDigest(zip))
-        { Delta = ReadDelta(assets, tag, version, current, size), Index = ReadIndex(assets, tag, name) };
+        { Delta = ReadDelta(assets, tag, version, current, size), Index = ReadIndex(assets, tag, name), Blocks = ReadBlocks(assets, tag, name) };
+    }
+
+    private static UpdateBlockAsset? ReadBlocks(JsonElement[] assets, string tag, string packageName)
+    {
+        var name = packageName + ".blocks";
+        var asset = assets.SingleOrDefault(a => a.GetProperty("name").GetString() == name &&
+            a.GetProperty("state").GetString() == "uploaded");
+        if (asset.ValueKind == JsonValueKind.Undefined) return null;
+        var size = asset.GetProperty("size").GetInt64();
+        if (size <= 0 || size > UpdatePackage.MaximumPackageBytes) throw new InvalidDataException("主程序块附件大小无效。");
+        return new(AssetUri(asset, tag, name), size);
     }
 
     // GitHub API 的附件摘要认证索引，索引中的 ZIP 摘要再绑定已核对的完整包。
