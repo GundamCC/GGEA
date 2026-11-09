@@ -77,9 +77,15 @@ internal static class RangePackageDownload
             foreach (var file in pending)
             {
                 using var output = File.Create(UpdateFiles.SafePath(package, file.Path));
-                if (file.Path == "GGEA.exe" && update.Blocks is { } blocks &&
-                    root.TryGetProperty("exeBlocks", out var blockMap) &&
-                    await ExeBlockDownload.TryPrepareAsync(http, update, blocks, blockMap, installation, output,
+                // 旧索引只有 exeBlocks。两个附件独立选择，一项缺失时只回退对应文件。
+                var (blocks, mapName) = file.Path switch
+                {
+                    "GGEA.exe" => (update.Blocks, "exeBlocks"),
+                    "GGEA.Updater.exe" => (update.UpdaterBlocks, "updaterBlocks"),
+                    _ => (null, "")
+                };
+                if (blocks is not null && root.TryGetProperty(mapName, out var blockMap) &&
+                    await ExeBlockDownload.TryPrepareAsync(http, update, blocks, blockMap, installation, file.Path, output,
                         file.Size, file.Compressed, token))
                 {
                     written += file.Size;

@@ -16,6 +16,7 @@ public sealed record UpdateRelease(Version Version, string Notes, string Package
     public string SourceId { get; init; } = "github";
     public string SourceName { get; init; } = "GitHub";
     public IReadOnlyCollection<string> AllowedHosts { get; init; } = UpdateHttpTransport.GitHubHosts;
+    public UpdateBlockAsset? UpdaterBlocks { get; init; }
     public UpdateBlockAsset? Blocks { get; init; }
     public UpdateRangeIndex? Index { get; init; }
     public UpdateDeltaRelease? Delta { get; init; }

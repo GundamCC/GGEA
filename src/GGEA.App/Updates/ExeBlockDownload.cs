@@ -14,14 +14,14 @@ internal static class ExeBlockDownload
     private sealed record Block(long Offset, int Compressed, int Size, string Hash, long? LocalOffset);
 
     public static async Task<bool> TryPrepareAsync(UpdateHttpTransport http, UpdateRelease update, UpdateBlockAsset asset,
-        JsonElement map, string installation, FileStream output, long targetSize, long wholeFileCost, CancellationToken token)
+        JsonElement map, string installation, string relativePath, FileStream output, long targetSize, long wholeFileCost, CancellationToken token)
     {
         if (map.GetProperty("algorithm").GetString() != "gear-v1") return false;
         FileStream source;
         Dictionary<string, ExeChunker.Chunk> local = new(StringComparer.Ordinal);
         try
         {
-            source = File.OpenRead(UpdateFiles.SafePath(installation, "GGEA.exe"));
+            source = File.OpenRead(UpdateFiles.SafePath(installation, relativePath));
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return false; }
         using (source)
@@ -46,14 +46,14 @@ internal static class ExeBlockDownload
                 if (size is <= 0 or > ExeChunker.Maximum || compressed is <= 0 or > ExeChunker.Maximum + 1024 ||
                     hash is null || !UpdateSourceCatalog.IsHash(hash) || packed + compressed > asset.Size ||
                     expanded + size > targetSize || plan.Count > 65536)
-                    throw new InvalidDataException("主程序块索引无效。");
+                    throw new InvalidDataException("可执行文件块索引无效。");
                 long? offset = local.TryGetValue(hash!, out var found) && found.Size == size ? found.Offset : null;
                 if (!offset.HasValue) remoteCost += compressed;
                 plan.Add(new(packed, compressed, size, hash!, offset));
                 packed += compressed;
                 expanded += size;
             }
-            if (expanded != targetSize || packed != asset.Size) throw new InvalidDataException("主程序块索引不完整。");
+            if (expanded != targetSize || packed != asset.Size) throw new InvalidDataException("可执行文件块索引不完整。");
             if (remoteCost >= wholeFileCost) return false;
 
             var buffer = new byte[ExeChunker.Maximum];
@@ -91,7 +91,7 @@ internal static class ExeBlockDownload
                     using var slice = new MemoryStream(data, (int)(next.Offset - block.Offset), next.Compressed, false);
                     using var decoder = new DeflateStream(slice, CompressionMode.Decompress);
                     decoder.ReadExactly(buffer, 0, next.Size);
-                    if (decoder.ReadByte() >= 0) throw new InvalidDataException("主程序块超过声明大小。");
+                    if (decoder.ReadByte() >= 0) throw new InvalidDataException("可执行文件块超过声明大小。");
                     await WriteVerifiedAsync(output, buffer, next, token);
                 }
             }
@@ -115,25 +115,25 @@ internal static class ExeBlockDownload
         var range = response.Content.Headers.ContentRange;
         if (response.StatusCode != HttpStatusCode.PartialContent || range?.Unit != "bytes" ||
             range.From != offset || range.To != last || range.Length != asset.Size)
-            throw new InvalidDataException("主程序块响应范围不匹配。");
+            throw new InvalidDataException("可执行文件块响应范围不匹配。");
         using var stream = await response.Content.ReadAsStreamAsync(token);
         var bytes = new byte[count];
         int received = 0;
         while (received < count)
         {
             var read = await RangePackageDownload.ReadNetworkAsync(stream, bytes.AsMemory(received), token);
-            if (read == 0) throw new HttpRequestException("主程序块下载中断。");
+            if (read == 0) throw new HttpRequestException("可执行文件块下载中断。");
             received += read;
         }
         if (await RangePackageDownload.ReadNetworkAsync(stream, new byte[1], token) != 0)
-            throw new InvalidDataException("主程序块响应过长。");
+            throw new InvalidDataException("可执行文件块响应过长。");
         return bytes;
     }
 
     private static async Task WriteVerifiedAsync(FileStream output, byte[] buffer, Block block, CancellationToken token)
     {
         if (!Convert.ToHexString(SHA256.HashData(buffer.AsSpan(0, block.Size))).Equals(block.Hash, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("主程序块校验失败。");
+            throw new InvalidDataException("可执行文件块校验失败。");
         await output.WriteAsync(buffer.AsMemory(0, block.Size), token);
     }
 }

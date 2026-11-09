@@ -32,6 +32,7 @@ try {
 $index = [ordered]@{schema=1; archiveHash=$ArchiveHash; manifest=[Convert]::ToBase64String($manifest); entries=$entries}
 . (Join-Path $PSScriptRoot 'exe-blocks.ps1')
 $index.exeBlocks = Write-ExeBlocks (Join-Path $VerifiedDirectory 'GGEA.exe') "$Archive.blocks"
+$index.updaterBlocks = Write-ExeBlocks (Join-Path $VerifiedDirectory 'GGEA.Updater.exe') "$Archive.updater.blocks"
 $json = $index | ConvertTo-Json -Depth 5 -Compress
 $temp = "$OutputPath.$([guid]::NewGuid().ToString('N')).tmp"
 try {

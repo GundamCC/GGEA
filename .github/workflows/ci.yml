@@ -45,6 +45,7 @@ jobs:
             artifacts/dist/*.zip.sha256
             artifacts/dist/*.zip.index.json
             artifacts/dist/*.zip.blocks
+            artifacts/dist/*.zip.updater.blocks
           if-no-files-found: error
           retention-days: 7
           compression-level: 0

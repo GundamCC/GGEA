@@ -71,6 +71,7 @@ public partial class MainWindow : Window
                               File.Exists(Path.Combine(dist, stem + ".zip.sha256")) &&
                               File.Exists(Path.Combine(dist, stem + ".zip.index.json")) &&
                               File.Exists(Path.Combine(dist, stem + ".zip.blocks")) &&
+                              File.Exists(Path.Combine(dist, stem + ".zip.updater.blocks")) &&
                               Directory.Exists(Path.Combine(dist, stem + "-verified"));
             VersionText.Text = $"v{_version}";
             CommitText.Text = _commit[..12];
