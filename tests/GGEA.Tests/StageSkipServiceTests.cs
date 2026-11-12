@@ -487,6 +487,38 @@ public partial class StageSkipServiceTests
         Assert.Equal(expectedSuccess, adb.Taps.Contains((1676, 988)));
     }
 
+    [Theory]
+    [InlineData(1, 2, true)]
+    [InlineData(5, 2, false)]
+    public async Task UnitAcquisition_AfterResult_SharesLimitAndRequiresStage(int before, int after, bool expected)
+    {
+        var pixels = TestImageFactory.CreateBgra(1920, 1080, 20);
+        TapToNextOcrSamples.Paste(pixels, 1920, 400, 70, 760, 930);
+        var reward = ImageCodec.EncodePng(pixels, 1920, 1080);
+        var resultFrame = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory,
+            "Fixtures", "Sortie", "skip-result-narrative-mumu5556.png"));
+        var stage = ImageCodec.EncodePng(TestImageFactory.CreateBgra(1920, 1080, 200), 1920, 1080);
+        var adb = new FakeAdbService(reward);
+        adb.ScreenshotProvider = () => adb.Taps.Count switch
+        {
+            var taps when taps == before => resultFrame,
+            var taps when taps > before + after => stage,
+            _ => reward,
+        };
+        var log = new TestLog();
+        using var automation = new AutomationService(adb, new TemplateMatcher(), log, textOcr: TapToNextOcrSamples.SharedOcr);
+        var service = new StageSkipService(automation, log, new StageSkipOptions
+        {
+            ContinueUnitAcquisition = true, SettleAfterOkMs = 0, SkipResultTimeoutMs = 3000,
+            SkipResultTemplatePath = ConfigService.ResolvePath("resources/templates/stage/skip/skip_result.png"),
+            PostSkipConfirmation = (screen, _) => screen.Bgra[0] == 200,
+        });
+        var result = await service.CompleteExecutedSkipAsync("serial", CreateLayout());
+        Assert.Equal(expected, result.Success);
+        Assert.Equal((1676, 988), adb.Taps[before]);
+        Assert.Equal(1 + Math.Min(6, before + after), adb.Taps.Count);
+    }
+
     private static StageSkipService CreateService(
         FakeAdbService adb,
         TestLog log,

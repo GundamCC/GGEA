@@ -6,7 +6,7 @@ public sealed class StageSkipOptions
 {
     /// <summary>标准 HARD 略过确认页：先复核执行，恢复时允许同一选择最多补点一次；其他布局不启用。</summary>
     public bool RecoverUnchangedExecutionDialog { get; init; }
-    /// <summary>强敌获得单位展示：结果页之前允许 OCR 确认完整 TAP TO NEXT 后继续。</summary>
+    /// <summary>强敌获得单位展示：结果 OK 前后共用六次点击额度，允许 OCR 确认完整 TAP TO NEXT 后继续。</summary>
     public bool ContinueUnitAcquisition { get; init; }
 
     /// <summary>活动关卡的返回证据；借用当前帧，仍由公共循环处理玩家升级。</summary>
