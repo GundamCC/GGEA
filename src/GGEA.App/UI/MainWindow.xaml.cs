@@ -1046,7 +1046,7 @@ public partial class MainWindow : Window
             // 端口探测、去重与品牌归属都由当前适配器处理，UI 只消费标准设备列表。
             var previousSerial = _preferredDeviceSerial ??
                                  (DeviceCombo.SelectedItem as AdbDevice)?.Serial;
-            var devices = (await _emulatorAdapter.DiscoverDevicesAsync(EmulatorScanMaxInstances, ct))
+            var devices = (await _emulatorAdapter.DiscoverDevicesAsync(EmulatorScanMaxInstances, ct, previousSerial))
                 .ToList();
             AdbDevice? selected;
             _refreshingDeviceSelection = true;

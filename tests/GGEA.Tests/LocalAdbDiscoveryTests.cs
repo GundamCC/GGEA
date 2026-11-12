@@ -6,6 +6,31 @@ namespace GGEA.Tests;
 /// <summary>覆盖多品牌共用端口、蓝叠伪装型号以及设备身份保护。</summary>
 public sealed class LocalAdbDiscoveryTests
 {
+    [Theory]
+    [InlineData("127.0.0.1:5555", 1)]
+    [InlineData("emulator-5554", 0)]
+    [InlineData(null, 0)]
+    public async Task EnumerationTimeout_RetriesOnceAndConnectsOnlyKnownEndpoint(string? serial, int expectedConnections)
+    {
+        var adb = new FakeAdbService([]);
+        int lists = 0, connections = 0;
+        adb.ListDevicesOverride = _ => ++lists == 1
+            ? throw new AdbException("timeout", new TimeoutException())
+            : Task.FromResult<IReadOnlyList<AdbDevice>>([new("127.0.0.1:5555", "offline", "")]);
+        adb.ConnectOverride = (host, port, _) =>
+        {
+            Assert.Equal(serial, $"{host}:{port}");
+            connections++;
+            return Task.FromResult("connected");
+        };
+        var adapter = new GenericEmulatorAdapter(EmulatorTypes.GetProfile(EmulatorTypes.Custom), adb, new TestLog(), (_, _) => { })
+        { ReadShadowedAdbPorts = _ => [], ReadMuMuSerials = _ => Task.FromResult<IReadOnlySet<string>>(new HashSet<string>()) };
+        var devices = await adapter.DiscoverDevicesAsync(maxInstances: 0, preferredSerial: serial);
+        Assert.True(Assert.Single(devices).IsOffline);
+        Assert.Equal(2, lists);
+        Assert.Equal(expectedConnections, connections);
+    }
+
     /// <summary>备用连接失败或超时不清空原设备；调用方取消必须传播。</summary>
     [Fact]
     public async Task ConnectionFailure_PreservesDevicesAndPropagatesCallerCancellation()

@@ -21,7 +21,8 @@ public interface IEmulatorAdapter
     /// <summary>准备模拟器连接并返回去重、带品牌信息的设备列表。</summary>
     Task<IReadOnlyList<AdbDevice>> DiscoverDevicesAsync(
         int maxInstances = 3,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        string? preferredSerial = null);
 
     /// <summary>启动目标模拟器、确定唯一设备并打开游戏。</summary>
     Task<EmulatorStartResult> StartAndOpenGameAsync(
@@ -120,9 +121,27 @@ public class GenericEmulatorAdapter : IEmulatorAdapter
     /// <summary>通用设备发现不猜测端口，只信任所选 ADB 客户端实际返回的设备。</summary>
     public virtual async Task<IReadOnlyList<AdbDevice>> DiscoverDevicesAsync(
         int maxInstances = 3,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? preferredSerial = null)
     {
-        var devices = await Adb.ListDevicesAsync(ct);
+        IReadOnlyList<AdbDevice> devices;
+        try
+        {
+            devices = await Adb.ListDevicesAsync(ct);
+        }
+        catch (AdbException ex) when (ex.InnerException is TimeoutException)
+        {
+            ct.ThrowIfCancellationRequested();
+            // 只恢复枚举；已选 TCP 端点才允许定向连接，设备身份仍由后续枚举和选择逻辑确认。
+            if (preferredSerial is not null && System.Net.IPEndPoint.TryParse(preferredSerial, out var endpoint) && endpoint.Port > 0)
+            {
+                Log.Warn($"ADB 设备枚举超时，尝试连接原地址 {preferredSerial}");
+                var target = endpoint.ToString();
+                await Adb.ConnectAsync(target[..target.LastIndexOf(':')], endpoint.Port, ct);
+            }
+            Log.Warn("ADB 设备枚举超时，重新读取一次设备列表");
+            devices = await Adb.ListDevicesAsync(ct);
+        }
         IReadOnlyList<int> ports;
         try { ports = ReadShadowedAdbPorts(maxInstances); }
         catch (Exception ex) when (ex is System.Net.NetworkInformation.NetworkInformationException or System.Net.Sockets.SocketException)

@@ -562,7 +562,7 @@ public sealed class AdbService : IAdbService
         catch (OperationCanceledException)
         {
             if (ct.IsCancellationRequested) throw new OperationCanceledException(ct);
-            throw new AdbException($"ADB 命令超时（{timeoutMs} ms）");
+            throw new AdbException($"ADB 命令超时（{timeoutMs} ms）", new TimeoutException());
         }
         finally
         {

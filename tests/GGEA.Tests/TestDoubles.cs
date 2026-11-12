@@ -76,8 +76,10 @@ public sealed class FakeAdbService : IAdbService
         }
     }
 
+    public Func<CancellationToken, Task<IReadOnlyList<AdbDevice>>>? ListDevicesOverride { get; set; }
+
     public Task<IReadOnlyList<AdbDevice>> ListDevicesAsync(CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<AdbDevice>>(
+        => ListDevicesOverride?.Invoke(ct) ?? Task.FromResult<IReadOnlyList<AdbDevice>>(
             _serials.Select(s => new AdbDevice(s, "device", string.Empty)).ToList());
 
     public async Task<byte[]> ScreenshotAsync(string serial, CancellationToken ct = default)
