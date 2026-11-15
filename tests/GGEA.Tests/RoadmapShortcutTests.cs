@@ -172,8 +172,15 @@ public sealed class RoadmapShortcutTests
         {
             var custom = Path.Combine(directory.FullName, target + ".png");
             File.Copy(Template(target), custom);
-            var first = Frame((other, 1.3, 800));
-            var next = Frame((target, .832, 800));
+            // 共享节点随归位手势向下移动，不能用整幅画面更换单位模拟位移。
+            static byte[] WithNode(byte[] png, int top)
+            {
+                using var frame = Cv2.ImDecode(png, ImreadModes.Color);
+                Cv2.Rectangle(frame, new Rect(1300, top, 140, 140), Scalar.All(140), -1);
+                return frame.ToBytes(".png");
+            }
+            var first = WithNode(Frame((other, 1.3, 800)), 340);
+            var next = WithNode(Frame((target, .832, 800)), 590);
             async Task<int> Search(string path)
             {
                 var adb = new FakeAdbService(first);

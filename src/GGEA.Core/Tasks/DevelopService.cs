@@ -233,9 +233,10 @@ public sealed class DevelopService : IDevelopService
                 await _automation.DragAsync(serial, sx, sy, sx + dx, sy + dy, dragDurationMs, token);
                 await Task.Delay(GameTiming.RecognitionIntervalMs, token);
                 await CaptureAsync();
-                if (!IsNearlySame(before, previous!))
+                var displacement = RoadmapMotion.Measure(before, previous!, dx, dy);
+                if (displacement != 0)
                 {
-                    _log.Info($"路线图拖动后已观察到画布位移（第 {attempt + 1} 次手势）");
+                    _log.Info($"路线图拖动后已观察到画布位移 {displacement}px（第 {attempt + 1} 次手势）");
                     return (true, false);
                 }
                 // 稀疏节点、加载或粒子容差可能掩盖真实变化；本帧必须识别后才能继续拖动。
@@ -823,58 +824,4 @@ public sealed class DevelopService : IDevelopService
         return true;
     }
 
-    /// <summary>回弹判定采样步长。</summary>
-    private const int BounceSampleStep = 8;
-
-    /// <summary>回弹判定单像素 RGB 通道差阈值，避免等亮度彩色内容位移被灰度比较忽略。</summary>
-    private const int BounceChannelThreshold = 40;
-
-    /// <summary>回弹判定允许的差异像素比例（粒子特效下画面并非逐像素一致）。</summary>
-    private const double BounceMaxDiffRatio = 0.08;
-
-    /// <summary>
-    /// 比较两张截图是否“几乎相同”（用于判断回弹）。
-    /// 路线图画面带机体粒子特效，因此允许 8% 以内的局部差异；
-    /// 此结果只表示未观察到明显位移；稀疏节点可能仍变化，调用方必须先检索目标并有限复核。
-    /// </summary>
-    internal static bool IsNearlySame(byte[] pngA, byte[] pngB)
-    {
-        var imageA = ImageCodec.DecodePng(pngA);
-        var imageB = ImageCodec.DecodePng(pngB);
-        if (imageA.Width != imageB.Width || imageA.Height != imageB.Height)
-        {
-            return false;
-        }
-
-        var diffCount = 0;
-        var total = 0;
-        // 190×175 的旧网格会把 100px 小机体的变化摊薄到阈值以下；80px 网格保留局部位移证据。
-        const int tileSize = 80;
-        const int tileColumns = 19;
-        const int tileRows = 9;
-        var tileDiff = new int[tileColumns * tileRows];
-        var tileTotal = new int[tileDiff.Length];
-        for (var y = 240; y < Math.Min(940, imageA.Height); y += BounceSampleStep)
-        {
-            for (var x = 360; x < Math.Min(1880, imageA.Width); x += BounceSampleStep)
-            {
-                var offset = (y * imageA.Width + x) * 4;
-                var tile = (y - 240) / tileSize * tileColumns + (x - 360) / tileSize;
-                tileTotal[tile]++;
-                if (Math.Abs(imageA.Bgra[offset] - imageB.Bgra[offset]) > BounceChannelThreshold ||
-                    Math.Abs(imageA.Bgra[offset + 1] - imageB.Bgra[offset + 1]) > BounceChannelThreshold ||
-                    Math.Abs(imageA.Bgra[offset + 2] - imageB.Bgra[offset + 2]) > BounceChannelThreshold)
-                {
-                    diffCount++;
-                    tileDiff[tile]++;
-                }
-
-                total++;
-            }
-        }
-
-        // 大画布可能只有一个节点移动；检查局部网格，避免其变化被全屏空白稀释。
-        return total > 0 && (double)diffCount / total < BounceMaxDiffRatio &&
-            !Enumerable.Range(0, tileDiff.Length).Any(i => tileTotal[i] > 0 && (double)tileDiff[i] / tileTotal[i] > 0.25);
-    }
 }

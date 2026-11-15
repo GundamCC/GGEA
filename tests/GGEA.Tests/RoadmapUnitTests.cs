@@ -279,7 +279,9 @@ public sealed class RoadmapUnitTests
                 x = Math.Clamp(x + Math.Sign(swipe.X1 - swipe.X2), 0, 2);
                 y = Math.Clamp(y + Math.Sign(swipe.Y1 - swipe.Y2), 0, 2);
             }
-            var pixels = TestImageFactory.CreateBgra(1920, 1080, (byte)((x + y) % 2 * 80));
+            var pixels = TestImageFactory.CreateBgra(1920, 1080, 20);
+            // 视口向右/下时，屏内的同一节点向左/上移动。
+            TestImageFactory.PasteBlock(pixels, 1920, 140, 140, 1450 - x * 220, 720 - y * 160, 110);
             if (x == 1 && y == 1) TestImageFactory.PasteBlock(pixels, 1920, 100, 100, 900, 450, 200);
             return ImageCodec.EncodePng(pixels, 1920, 1080);
         };
@@ -324,8 +326,8 @@ public sealed class RoadmapUnitTests
         var after = (byte[])before.Clone();
         TestImageFactory.PasteBlock(before, 1920, 140, 140, 600, 450, 220);
         TestImageFactory.PasteBlock(after, 1920, 140, 140, 1200, 450, 220);
-        Assert.False(DevelopService.IsNearlySame(ImageCodec.EncodePng(before, 1920, 1080),
-            ImageCodec.EncodePng(after, 1920, 1080)));
+        Assert.InRange(RoadmapMotion.Measure(ImageCodec.EncodePng(before, 1920, 1080),
+            ImageCodec.EncodePng(after, 1920, 1080), 850, 0), 596, 604);
     }
 
     /// <summary>最后一次允许的拖动出现目标时必须识别，不能先耗尽循环再退出。</summary>
@@ -377,7 +379,7 @@ public sealed class RoadmapUnitTests
         {
             var (x, y) = Position();
             var pixels = TestImageFactory.CreateBgra(1920, 1080, 20);
-            TestImageFactory.PasteBlock(pixels, 1920, 190, 170, 500 + x * 250, 350 + y * 150, 100);
+            TestImageFactory.PasteBlock(pixels, 1920, 190, 170, 1200 - x * 250, 690 - y * 150, 100);
             TestImageFactory.PasteBlock(pixels, 1920, 40, 30, 230, 30, 200);
             return ImageCodec.EncodePng(pixels, 1920, 1080);
         };
@@ -393,6 +395,55 @@ public sealed class RoadmapUnitTests
         Assert.Equal(fake.Swipes.Count + 1, fake.ScreenshotCount);
         Assert.Empty(fake.Taps);
         Assert.Empty(fake.PinchInDurations);
+    }
+
+    /// <summary>按实际手势驱动画布，边界处持续闪光。目标只在换行反向搜索后出现。</summary>
+    [Theory]
+    [InlineData(1280, 720)]
+    [InlineData(1600, 900)]
+    [InlineData(1920, 1080)]
+    [InlineData(2560, 1440)]
+    public async Task AnimatedBoundary_ReversesAndConfirmsUnit(int width, int height)
+    {
+        using var temp = new TempDirectory();
+        var unit = Path.Combine(temp.Path, "prototype.png");
+        File.WriteAllBytes(unit, Template());
+        var adb = new FakeAdbService([]);
+        using var node = Cv2.ImRead(Path.Combine(AppContext.BaseDirectory, "Fixtures/Roadmap/before.png"));
+        using var target = Cv2.ImRead(Path.Combine(AppContext.BaseDirectory, "Fixtures/Roadmap/mumu_small.png"));
+        var targetFrames = 0;
+        adb.ScreenshotProvider = () =>
+        {
+            var column = 0;
+            var row = 0;
+            foreach (var drag in adb.Swipes)
+            {
+                column = Math.Clamp(column + Math.Sign(drag.X1 - drag.X2), 0, 1);
+                row = Math.Clamp(row + Math.Sign(drag.Y1 - drag.Y2), 0, 1);
+            }
+            using var frame = new Mat(1080, 1920, MatType.CV_8UC3, Scalar.All(20));
+            using var nodeRegion = new Mat(frame, new Rect(1000 - column * 320, 530 - row * 180, node.Width, node.Height));
+            node.CopyTo(nodeRegion);
+            Cv2.Rectangle(frame, new Rect(1600, 520, 144, 144),
+                Scalar.All(adb.Swipes.Count % 2 == 0 ? 20 : 180), -1);
+            if (column == 0 && row == 1)
+            {
+                targetFrames++;
+                using var region = new Mat(frame, new Rect(440, 310, target.Width, target.Height));
+                target.CopyTo(region);
+            }
+            return ResolutionReplay.Png(frame.ToBytes(".png"), width, height);
+        };
+        var log = new TestLog();
+        var service = new DevelopService(new AutomationService(adb, new TemplateMatcher(), log), log, fixedUnitScales: true);
+        var match = await service.FindOnRoadmapAsync("test", unit, "", 3, 100);
+        Assert.NotNull(match);
+        Assert.InRange(match.CenterX, 440, 440 + target.Width);
+        Assert.InRange(match.CenterY, 310, 310 + target.Height);
+        Assert.True(targetFrames >= 2);
+        Assert.Contains(log.Entries, entry => entry.Message.Contains("换至第 2 行"));
+        Assert.True(adb.Swipes.Last().X2 > adb.Swipes.Last().X1);
+        Assert.Empty(adb.Taps);
     }
 
     /// <summary>归位也必须逐帧检查标题；省略单位匹配不能省略页面和取消保护。</summary>
