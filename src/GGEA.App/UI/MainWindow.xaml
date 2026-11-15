@@ -1304,6 +1304,8 @@
                             <Button x:Name="SwipeButton" Content="{loc:Text Source='滑动'}" Margin="8,0,0,0"
                                     Click="SwipeButton_Click"
                                     Style="{StaticResource ButtonSecondary}"/>
+                            <Button x:Name="PreciseDragButton" Content="{loc:Text Source='精确拖动'}" Margin="8,0,0,0"
+                                    Click="SwipeButton_Click" Style="{StaticResource ButtonSecondary}"/>
                             <TextBlock Text="{loc:Text Source='时长(ms)'}" Style="{StaticResource InlineLabel}" Margin="16,0,0,0"/>
                             <TextBox x:Name="SwipeDurationBox" Width="70" Text="500"
                                      Style="{StaticResource TextBoxDark}"/>

@@ -14,6 +14,9 @@ public interface IAdbService
     /// <summary>在指定设备上点击坐标。</summary>
     Task TapAsync(string serial, int x, int y, CancellationToken ct = default);
 
+    /// <summary>以设备逻辑像素为单位精确拖动画布，移动结束后在终点停留再抬起。</summary>
+    Task DragAsync(string serial, int x1, int y1, int x2, int y2, int durationMs, CancellationToken ct = default);
+
     /// <summary>在指定设备上滑动。</summary>
     Task SwipeAsync(string serial, int x1, int y1, int x2, int y2, int durationMs, CancellationToken ct = default);
 

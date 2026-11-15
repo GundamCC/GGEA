@@ -15,6 +15,7 @@ public sealed class AdbService : IAdbService
     private readonly Func<MuMuScreenshotService?> _mumuScreenshot;
     private readonly MuMuScreenshotChannel _mumuScreenshotChannel;
     private readonly MuMuInputService _mumuInput;
+    private readonly PreciseDragChannel _preciseDrag;
     private readonly bool _preferMuMuNativeScreenshot;
     /// <summary>统一设备命令边界；测试仅替换进程 I/O，仍经过生产截图和输入决策。</summary>
     internal Func<IReadOnlyList<string>, int, CancellationToken, Task<string>> DeviceTextAsync { get; set; }
@@ -56,6 +57,7 @@ public sealed class AdbService : IAdbService
         // 所有品牌走相同命令链；仅非默认游戏显示屏需要特殊投递，不读取品牌或管理器身份。
         _mumuInput = new MuMuInputService(gamePackage,
             (args, ct) => DeviceTextAsync(args, args.Contains("dumpsys") ? Math.Min(commandTimeoutMs, 1500) : commandTimeoutMs, ct));
+        _preciseDrag = new PreciseDragChannel(this, _mumuInput, log);
         _diagnostics = diagnostics;
         _emulatorPath = emulatorPath;
         _adbPath = adbPath;
@@ -229,6 +231,14 @@ public sealed class AdbService : IAdbService
             await _mumuInput.ExecuteAsync(serial, input, ct, display);
         else
             await DeviceTextAsync(["-s", serial, "shell", "input", .. input], _commandTimeoutMs, ct);
+        ExecutionObserver?.OnInputCompleted(serial);
+    }
+
+    /// <summary>按设备显示像素执行画布拖动；只有设备确认抬起后才通知执行观察器。</summary>
+    public async Task DragAsync(string serial, int x1, int y1, int x2, int y2, int durationMs, CancellationToken ct = default)
+    {
+        await _preciseDrag.DragAsync(serial, x1, y1, x2, y2, durationMs, ct);
+        _log.Info($"精确拖动: ({x1}, {y1}) → ({x2}, {y2})，移动时长 {durationMs}ms");
         ExecutionObserver?.OnInputCompleted(serial);
     }
 

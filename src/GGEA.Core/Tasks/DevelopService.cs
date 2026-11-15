@@ -221,8 +221,8 @@ public sealed class DevelopService : IDevelopService
                 // 换一个画布内的起点复核同一方向，避开原起点可能覆盖的节点/控件；不改变游戏缩放。
                 var sx = dx == 0 ? 1550 - attempt * 80 : 1140 - dx / 2;
                 var sy = dy == 0 ? 840 - attempt * 50 : 590 - dy / 2;
-                _log.Info($"路线图 ADB 拖动: ({sx},{sy}) → ({sx + dx},{sy + dy})");
-                await _automation.SwipeAsync(serial, sx, sy, sx + dx, sy + dy, dragDurationMs, token);
+                _log.Info($"路线图精确拖动: ({sx},{sy}) → ({sx + dx},{sy + dy})");
+                await _automation.DragAsync(serial, sx, sy, sx + dx, sy + dy, dragDurationMs, token);
                 await Task.Delay(GameTiming.RecognitionIntervalMs, token);
                 await CaptureAsync();
                 if (!IsNearlySame(before, previous!))
@@ -269,7 +269,7 @@ public sealed class DevelopService : IDevelopService
                     var sx = 1140 - direction.Dx / 2;
                     var sy = 840 - attempt * 50;
                     _log.Info($"放大辅助单位已确认，向{(direction.Dx > 0 ? "右" : "左")}快捷拖动（{attempt + 1}/2）并识别目标");
-                    await _automation.SwipeAsync(serial, sx, sy, sx + direction.Dx, sy, dragDurationMs, token);
+                    await _automation.DragAsync(serial, sx, sy, sx + direction.Dx, sy, dragDurationMs, token);
                     await Task.Delay(GameTiming.RecognitionIntervalMs, token);
                     await CaptureAsync();
                     // 每次手势后都识别，即使像素未变也不沿用上一轮未命中结论。

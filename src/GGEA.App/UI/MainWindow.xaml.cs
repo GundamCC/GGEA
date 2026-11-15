@@ -1366,7 +1366,9 @@ public partial class MainWindow : Window
         UpdateBusyState();
         try
         {
-            await _adb.SwipeAsync(
+            Func<string, int, int, int, int, int, CancellationToken, Task> gesture =
+                ReferenceEquals(sender, PreciseDragButton) ? _adb.DragAsync : _adb.SwipeAsync;
+            await gesture(
                 serial,
                 (int)Math.Round(start.X), (int)Math.Round(start.Y),
                 (int)Math.Round(end.X), (int)Math.Round(end.Y),
@@ -3643,6 +3645,7 @@ public partial class MainWindow : Window
         BallFactoryGpBox.IsEnabled = !busy;
         TapButton.IsEnabled = !busy;
         SwipeButton.IsEnabled = !busy;
+        PreciseDragButton.IsEnabled = SwipeButton.IsEnabled;
         SaveTemplateButton.IsEnabled = !busy;
         TestTemplateButton.IsEnabled = !busy;
         StartGameButton.IsEnabled = !_windowTasks.IsStopping && (!busy || (_starting && _startCts?.IsCancellationRequested == false));

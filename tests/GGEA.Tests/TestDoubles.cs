@@ -109,6 +109,9 @@ public sealed class FakeAdbService : IAdbService
         return Task.CompletedTask;
     }
 
+    public Task DragAsync(string serial, int x1, int y1, int x2, int y2, int durationMs, CancellationToken ct = default)
+        => SwipeAsync(serial, x1, y1, x2, y2, durationMs, ct);
+
     public Task SwipeAsync(string serial, int x1, int y1, int x2, int y2, int durationMs, CancellationToken ct = default)
     {
         Swipes.Add((x1, y1, x2, y2, durationMs));
