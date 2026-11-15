@@ -913,65 +913,31 @@ public partial class MainWindow : Window
         return (isMain, humanVerification, dataSyncConfirm, downloadPrompt);
     }
 
-    /// <summary>识别“我们需要确认您是人类”人机验证标题。</summary>
-    private async Task<bool> IsHumanVerificationVisibleAsync(string serial, CancellationToken ct)
+    private Task<bool> IsHumanVerificationVisibleAsync(string serial, CancellationToken ct)
+        => IsEntryDialogVisibleAsync(serial, _config.HumanVerificationTemplate, ct);
+
+    private Task<bool> IsDataSyncConfirmVisibleAsync(string serial, CancellationToken ct)
+        => IsEntryDialogVisibleAsync(serial, _config.DataSyncConfirmTemplate, ct);
+
+    private Task<bool> IsDownloadPromptVisibleAsync(string serial, CancellationToken ct, bool confirmButton = false)
+        => IsEntryDialogVisibleAsync(serial, _config.DownloadPromptTemplate, ct, confirmButton);
+
+    /// <summary>亮色横幅与浅色弹窗的平均灰度相似；同帧复核具体文字笔画后才能报告入口受阻。</summary>
+    private async Task<bool> IsEntryDialogVisibleAsync(string serial, string path, CancellationToken ct, bool confirmButton = false)
     {
-        if (_automation is null)
-        {
-            return false;
-        }
-
-        var wait = new WaitOptions
-        {
-            Threshold = 0.80,
-        };
-        var match = await _automation.FindImageAsync(
-            serial,
-            ConfigService.ResolvePath(_config.HumanVerificationTemplate),
-            wait,
-            ct);
-        return match is not null;
-    }
-
-    /// <summary>识别“确认解除数据同步”弹窗标题。</summary>
-    private async Task<bool> IsDataSyncConfirmVisibleAsync(string serial, CancellationToken ct)
-    {
-        if (_automation is null)
-        {
-            return false;
-        }
-
-        var wait = new WaitOptions
-        {
-            Threshold = 0.80,
-        };
-        var match = await _automation.FindImageAsync(
-            serial,
-            ConfigService.ResolvePath(_config.DataSyncConfirmTemplate),
-            wait,
-            ct);
-        return match is not null;
-    }
-
-    /// <summary>识别“下载”确认弹窗标题。</summary>
-    private async Task<bool> IsDownloadPromptVisibleAsync(string serial, CancellationToken ct, bool confirmButton = false)
-    {
-        if (_automation is null)
-        {
-            return false;
-        }
-
-        var wait = new WaitOptions
-        {
-            Threshold = 0.80,
-        };
+        if (_automation is null || _matcher is null) return false;
         var screen = await _automation.CaptureScreenAsync(serial, ct);
-        var match = await _automation.MatchImageAsync(screen,
-            ConfigService.ResolvePath(_config.DownloadPromptTemplate), wait, ct);
-        if (match is null || !confirmButton) return match is not null;
-        // 游戏标签已显示主页时，活动横幅可能与短标题相似；同帧下载按钮文字用于确认覆盖弹窗。
-        return _downloadDialogService is not null &&
-            (await Task.Run(() => _downloadDialogService.RecognizeForNavigation(screen), ct)).Download is not null;
+        return await Task.Run(() =>
+        {
+            var title = TemplateFallback.Any(ConfigService.ResolvePath(path), candidate =>
+            {
+                var template = ImageCodec.DecodePng(File.ReadAllBytes(candidate));
+                var match = _matcher.Match(screen.Bgra, screen.Width, screen.Height, template.Bgra,
+                    template.Width, template.Height, .80, ct: ct);
+                return match is not null && new AlphaMaskedTemplateMatcher(template).Match(screen, match.Region, .80, ct) is not null;
+            }, ct);
+            return title && (!confirmButton || _downloadDialogService?.RecognizeForNavigation(screen).Download is not null);
+        }, ct);
     }
 
     /// <summary>先停止业务并等待收尾，再释放插件；超时保持关闭闸门，允许再次关窗等待。</summary>
