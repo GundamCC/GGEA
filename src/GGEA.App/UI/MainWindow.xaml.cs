@@ -681,8 +681,8 @@ public partial class MainWindow : Window
                 await SyncDeviceServicesAsync(selectedDevice.Serial, ct: ct);
                 await _adb.LaunchAppAsync(selectedDevice.Serial, _config.GamePackage, ct);
                 _preferredDeviceSerial = selectedDevice.Serial;
-                await OpenGameAndEnterAsync(selectedDevice.Serial, ct);
                 await RefreshDevicesAsync(ct);
+                await OpenGameAndEnterAsync(selectedDevice.Serial, ct);
             }
             catch (OperationCanceledException)
             {
@@ -745,10 +745,10 @@ public partial class MainWindow : Window
             {
                 _preferredDeviceSerial = result.Serial;
                 Guid.TryParse(await _adb.GetBootIdAsync(result.Serial!, launchCt), out _preferredDeviceBootId);
-                await OpenGameAndEnterAsync(result.Serial!, launchCt);
             }
 
             await RefreshDevicesAsync(launchCt);
+            if (result.Success) await OpenGameAndEnterAsync(result.Serial!, launchCt);
         }
         catch (OperationCanceledException)
         {
@@ -824,7 +824,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (await IsDownloadPromptVisibleAsync(serial, ct))
+        if (await IsDownloadPromptVisibleAsync(serial, ct, confirmButton: alreadyHome))
         {
             ConnectionStateText.Text = L.Text("检测到下载确认，请检查当前状况");
             _logger?.Warn(L.Text("检测到下载确认，请检查当前状况"));
@@ -954,7 +954,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>识别“下载”确认弹窗标题。</summary>
-    private async Task<bool> IsDownloadPromptVisibleAsync(string serial, CancellationToken ct)
+    private async Task<bool> IsDownloadPromptVisibleAsync(string serial, CancellationToken ct, bool confirmButton = false)
     {
         if (_automation is null)
         {
@@ -965,12 +965,13 @@ public partial class MainWindow : Window
         {
             Threshold = 0.80,
         };
-        var match = await _automation.FindImageAsync(
-            serial,
-            ConfigService.ResolvePath(_config.DownloadPromptTemplate),
-            wait,
-            ct);
-        return match is not null;
+        var screen = await _automation.CaptureScreenAsync(serial, ct);
+        var match = await _automation.MatchImageAsync(screen,
+            ConfigService.ResolvePath(_config.DownloadPromptTemplate), wait, ct);
+        if (match is null || !confirmButton) return match is not null;
+        // 游戏标签已显示主页时，活动横幅可能与短标题相似；同帧下载按钮文字用于确认覆盖弹窗。
+        return _downloadDialogService is not null &&
+            (await Task.Run(() => _downloadDialogService.RecognizeForNavigation(screen), ct)).Download is not null;
     }
 
     /// <summary>先停止业务并等待收尾，再释放插件；超时保持关闭闸门，允许再次关窗等待。</summary>
