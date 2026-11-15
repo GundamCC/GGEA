@@ -61,17 +61,8 @@ public sealed class ShopConfirmationRecognizer
                 // 每份素材独立通过完整价格区域校验，不借不同候选的局部价格拼出免费证据。
                 if (!TemplateFallback.Any(Path.Combine(directory, anchor.Template), path =>
                 {
-                    bool MatchesAnchor(string candidate)
-                    {
-                        var template = ImageCodec.DecodePng(File.ReadAllBytes(candidate));
-                        return template.Width == anchor.Width && template.Height == anchor.Height &&
-                            MatchesPatch(screen, template, anchor.X, anchor.Y);
-                    }
-
-                    if (MatchesAnchor(path)) return true;
-                    // 低分辨率画面放大后字形边缘不同。只补试随当前语言素材提供的完整区域，沿用相同分块阈值。
-                    var normalized = Path.Combine(Path.GetDirectoryName(path)!, "normalized-720p", Path.GetFileName(path));
-                    return File.Exists(normalized) && MatchesAnchor(normalized);
+                    var template = ImageCodec.DecodePng(File.ReadAllBytes(path));
+                    return TemplateMatcher.MatchesFixedRegion(screen, template, anchor.Roi);
                 }))
                     return Unknown($"最终弹窗证据不匹配：{name}");
             }
@@ -152,28 +143,4 @@ public sealed class ShopConfirmationRecognizer
         return samples > 0 && 1 - Math.Sqrt((double)squaredDifference / samples) / 255 >= ButtonThreshold;
     }
 
-    /// <summary>逐个小块比较颜色，防止价格局部变化被大片相似底色稀释；透明模板不能屏蔽价格。</summary>
-    private static bool MatchesPatch(ScreenImage screen, ScreenImage template, int x, int y)
-    {
-        for (var top = 0; top < template.Height; top += 8)
-        for (var left = 0; left < template.Width; left += 8)
-        {
-            long difference = 0;
-            var samples = 0;
-            for (var row = top; row < Math.Min(top + 8, template.Height); row++)
-            for (var col = left; col < Math.Min(left + 8, template.Width); col++)
-            {
-                var source = ((y + row) * screen.Width + x + col) * 4;
-                var target = (row * template.Width + col) * 4;
-                if (template.Bgra[target + 3] < 255) return false;
-                for (var channel = 0; channel < 3; channel++)
-                {
-                    difference += Math.Abs(screen.Bgra[source + channel] - template.Bgra[target + channel]);
-                    samples++;
-                }
-            }
-            if (difference > samples * 8) return false;
-        }
-        return true;
-    }
 }

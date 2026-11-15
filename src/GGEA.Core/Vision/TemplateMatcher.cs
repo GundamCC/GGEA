@@ -8,7 +8,7 @@ namespace GGEA.App.Vision;
 /// 用于屏蔽“呼吸”红点、动态数字、随语言变化的文字等不稳定区域；
 /// 未显式传入遮罩时，透明模板会自动把 Alpha 小于 128 的背景排除。
 /// </summary>
-public sealed class TemplateMatcher
+public sealed partial class TemplateMatcher
 {
     /// <summary>
     /// 在屏幕 BGRA 图像中查找模板。

@@ -49,6 +49,29 @@ public sealed class ShopConfirmationTests
         Assert.Equal(expected == PurchaseSafety.SafeFree, result.CanConfirm(Environment.TickCount64));
     }
 
+    // 从同一份标准素材生成设备截图，再走生产归一化入口；真实失败帧另由 720p_free 原样回放。
+    [Theory]
+    [InlineData(1280, 720)]
+    [InlineData(1600, 900)]
+    [InlineData(1920, 1080)]
+    [InlineData(2560, 1440)]
+    public void NormalizedConfirmation_RequiresAllEvidence(int width, int height)
+    {
+        foreach (var scenario in new[] { "free", "paid", "price_changed", "statement_changed", "item_changed", "risk_no_icon" })
+        {
+            using var source = OpenCvSharp.Cv2.ImDecode(Frame(scenario), OpenCvSharp.ImreadModes.Color);
+            using var device = new OpenCvSharp.Mat();
+            OpenCvSharp.Cv2.Resize(source, device, new OpenCvSharp.Size(width, height),
+                interpolation: width < source.Width ? OpenCvSharp.InterpolationFlags.Area : OpenCvSharp.InterpolationFlags.Linear);
+            var frame = new GameResolution(width, height).Normalize(device.ToBytes(".png"));
+            var risk = new DiamondSafetyChecker(new FakeAdbService(frame), new TemplateMatcher(), new TestLog());
+            var evidence = new ShopConfirmationRecognizer(risk).Evaluate(frame, Environment.TickCount64,
+                Layout(), Resource("button_confirm_buy.png"), DiamondPath);
+            Assert.True(evidence.CanConfirm(Environment.TickCount64) == (scenario == "free"),
+                $"{width}×{height} {scenario}: {evidence.Safety}, {evidence.Reason}");
+        }
+    }
+
     /// <summary>完整入口回放：前置两帧免费不替代最终授权；最新一帧异常时绝不能点击确认。</summary>
     [Theory]
     [InlineData("720p_free", true)]
