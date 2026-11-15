@@ -11,6 +11,11 @@ public sealed class ShopConfirmationTests
 {
     /// <summary>免费与风险场景直接走生产识别器。</summary>
     [Theory]
+    [InlineData("720p_free", PurchaseSafety.SafeFree)]
+    [InlineData("720p_price_changed", PurchaseSafety.Unknown)]
+    [InlineData("720p_statement_changed", PurchaseSafety.Unknown)]
+    [InlineData("720p_item_changed", PurchaseSafety.Unknown)]
+    [InlineData("720p_risk_no_icon", PurchaseSafety.RiskDetected)]
     [InlineData("free", PurchaseSafety.SafeFree)]
     [InlineData("glow", PurchaseSafety.SafeFree)]
     [InlineData("button_tolerance", PurchaseSafety.SafeFree)]
@@ -46,6 +51,8 @@ public sealed class ShopConfirmationTests
 
     /// <summary>完整入口回放：前置两帧免费不替代最终授权；最新一帧异常时绝不能点击确认。</summary>
     [Theory]
+    [InlineData("720p_free", true)]
+    [InlineData("720p_price_changed", false)]
     [InlineData("free", true)]
     [InlineData("glow", true)]
     [InlineData("button_tolerance", true)]
@@ -216,9 +223,11 @@ public sealed class ShopConfirmationTests
     private static byte[] Frame(string scenario)
     {
         var png = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures/Shop",
+            scenario.StartsWith("720p_", StringComparison.Ordinal) ? "free_confirm_720p.png" :
             scenario.StartsWith("glow", StringComparison.Ordinal) ? "free_confirm_glow.png" :
             scenario == "paid" ? "paid_confirm.png" : "free_confirm.png"));
         // 用户反馈的原始光效帧也作为负向变体基底，避免兼容动画时放松价格与文字保护。
+        if (scenario.StartsWith("720p_", StringComparison.Ordinal)) scenario = scenario[5..];
         if (scenario.StartsWith("glow_", StringComparison.Ordinal)) scenario = scenario[5..];
         var image = ImageCodec.DecodePng(png);
         var pixels = image.Bgra;

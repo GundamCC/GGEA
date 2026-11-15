@@ -61,9 +61,17 @@ public sealed class ShopConfirmationRecognizer
                 // 每份素材独立通过完整价格区域校验，不借不同候选的局部价格拼出免费证据。
                 if (!TemplateFallback.Any(Path.Combine(directory, anchor.Template), path =>
                 {
-                    var template = ImageCodec.DecodePng(File.ReadAllBytes(path));
-                    return template.Width == anchor.Width && template.Height == anchor.Height &&
-                        MatchesPatch(screen, template, anchor.X, anchor.Y);
+                    bool MatchesAnchor(string candidate)
+                    {
+                        var template = ImageCodec.DecodePng(File.ReadAllBytes(candidate));
+                        return template.Width == anchor.Width && template.Height == anchor.Height &&
+                            MatchesPatch(screen, template, anchor.X, anchor.Y);
+                    }
+
+                    if (MatchesAnchor(path)) return true;
+                    // 低分辨率画面放大后字形边缘不同。只补试随当前语言素材提供的完整区域，沿用相同分块阈值。
+                    var normalized = Path.Combine(Path.GetDirectoryName(path)!, "normalized-720p", Path.GetFileName(path));
+                    return File.Exists(normalized) && MatchesAnchor(normalized);
                 }))
                     return Unknown($"最终弹窗证据不匹配：{name}");
             }
