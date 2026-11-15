@@ -792,7 +792,8 @@ public partial class MainWindow : Window
             PollIntervalMs = GameTiming.RecognitionIntervalMs,
             Threshold = _config.DefaultMatchThreshold,
         };
-        var entered = await _gameEntry.EnterGameAsync(
+        var alreadyHome = _mainScreenNavigator is not null && await _mainScreenNavigator.IsMainScreenAsync(serial, ct);
+        var entered = alreadyHome || await _gameEntry.EnterGameAsync(
             serial: serial,
             tapToStartTemplatePath: templatePath,
             splashDelayMs: 0, // 启动画面等待已在兼容性截图前完成，避免重复等待。
@@ -827,6 +828,13 @@ public partial class MainWindow : Window
         {
             ConnectionStateText.Text = L.Text("检测到下载确认，请检查当前状况");
             _logger?.Warn(L.Text("检测到下载确认，请检查当前状况"));
+            return;
+        }
+
+        if (alreadyHome)
+        {
+            _logger?.Info(L.Text("已进入主界面"));
+            ConnectionStateText.Text = L.Text("已进入主界面");
             return;
         }
 

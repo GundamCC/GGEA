@@ -15,14 +15,35 @@ internal sealed class MuMuInputService
     { _package = package; _run = run; }
 
     /// <summary>普通 ADB 不依赖 dumpsys 格式；只有明确发现独立显示屏才切换通道，多目标歧义仍拒绝操作。</summary>
-    internal async Task<int?> TryResolveDisplayAsync(string serial, CancellationToken ct)
+    internal async Task<int?> TryResolveDisplayAsync(string serial, CancellationToken ct, bool allowMissingGame = false)
     {
         ct.ThrowIfCancellationRequested();
         string output;
         try { output = await _run(["-s", serial, "shell", "dumpsys", "activity", "activities"], ct); }
         catch (AdbException) { ct.ThrowIfCancellationRequested(); return null; }
         ct.ThrowIfCancellationRequested();
-        return TryParseDisplay(output, _package);
+        var display = TryParseDisplay(output, _package);
+        if (display is null && !allowMissingGame &&
+            Regex.Matches(output, @"(?m)^Display #\d+ \(activities from top to bottom\):").Count > 1)
+            throw new AdbException("当前有多个显示屏，但未定位到游戏。请使用打开游戏按钮选择目标标签");
+        return display;
+    }
+
+    /// <summary>Android input 使用逻辑编号，screencap -d 使用 SurfaceFlinger 的无符号物理编号。</summary>
+    internal async Task<ulong?> ReadPhysicalDisplayAsync(string serial, int logical, CancellationToken ct)
+    {
+        var dump = await _run(["-s", serial, "shell", "dumpsys", "display"], ct);
+        var ids = new HashSet<ulong>();
+        foreach (var line in dump.Split('\n'))
+        {
+            if (!line.TrimStart().StartsWith("mBaseDisplayInfo=DisplayInfo{", StringComparison.Ordinal)) continue;
+            var match = Regex.Match(line, @"\bdisplayId (?<logical>\d+)""?,.*?\buniqueId ""local:(?<physical>\d+)""");
+            if (match.Success && int.TryParse(match.Groups["logical"].Value, out var id) && id == logical &&
+                ulong.TryParse(match.Groups["physical"].Value, out var physical))
+                ids.Add(physical);
+        }
+        if (ids.Count > 1) throw new AdbException("游戏逻辑显示屏对应多个物理屏幕，已停止截图");
+        return ids.Count == 1 ? ids.Single() : null;
     }
 
     /// <summary>每次输入前重查所选设备，不缓存可能随游戏重启或标签切换变化的显示编号。</summary>

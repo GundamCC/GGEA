@@ -21,6 +21,7 @@ public sealed class AdbService : IAdbService
     internal Func<IReadOnlyList<string>, int, CancellationToken, Task<byte[]>> DeviceBytesAsync { get; set; }
     private readonly BlueStacksShell? _blueStacksShell;
     private int _prefixRecoveryReported;
+    private string? _lastTargetRoute;
     /// <summary>组合根绑定一次，覆盖普通与原生截图以及直接 ADB 调用；设备层不依赖具体异常识别实现。</summary>
     internal IAdbExecutionObserver? ExecutionObserver { get; set; }
     private readonly EnvironmentDiagnostics? _diagnostics;
@@ -137,6 +138,22 @@ public sealed class AdbService : IAdbService
             var display = await _mumuInput.TryResolveDisplayAsync(serial, ct);
             if (display is > 0)
             {
+                // SDK 可能返回尺寸正确的其他标签页。存在 Android 物理映射时直接读取目标屏。
+                var physical = await _mumuInput.ReadPhysicalDisplayAsync(serial, display.Value, ct);
+                if (physical is not null)
+                {
+                    var id = physical.Value.ToString(CultureInfo.InvariantCulture);
+                    command = $"exec-out screencap -d {id} -p";
+                    var frame = await DeviceBytesAsync(["-s", serial, "exec-out", "screencap", "-d", id, "-p"], _screenshotTimeoutMs, ct);
+                    var normalized = AdbScreenshotOutput.Normalize(frame, out _);
+                    if (await _mumuInput.ResolveDisplayAsync(serial, ct) != display ||
+                        await _mumuInput.ReadPhysicalDisplayAsync(serial, display.Value, ct) != physical)
+                        throw new AdbException("截图期间游戏标签或物理屏幕发生变化，本帧已丢弃");
+                    var route = $"serial={serial}，logical={display}，physical={id}";
+                    if (Interlocked.Exchange(ref _lastTargetRoute, route) != route)
+                        _log.Info($"截图通道=ADB 指定游戏标签，{route}");
+                    return normalized;
+                }
                 if (!_preferMuMuNativeScreenshot)
                     throw new AdbException("游戏位于独立显示屏，请启用原生截图；未截取安卓桌面");
                 stage = "MuMu 截图能力探测及安全回退";
@@ -278,6 +295,30 @@ public sealed class AdbService : IAdbService
     public async Task LaunchAppAsync(string serial, string package, CancellationToken ct = default)
     {
         _log.Info($"打开应用: {package} (设备 {serial})");
+        if (!Regex.IsMatch(package, @"\A[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+\z"))
+            throw new AdbException("游戏包名无效");
+        var display = await _mumuInput.TryResolveDisplayAsync(serial, ct, allowMissingGame: true);
+        if (display is > 0)
+        {
+            if (_mumuScreenshot() is not { } mumu || !await mumu.TryActivateTabAsync(serial, package, _commandTimeoutMs, ct))
+            {
+                // 其他模拟器允许 Android 将启动请求交给原有游戏显示屏，保留现有任务栈。
+                var resolved = await DeviceTextAsync(["-s", serial, "shell", "cmd", "package", "resolve-activity",
+                    "--brief", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER", package], _commandTimeoutMs, ct);
+                var component = resolved.Trim().Split('\n')[^1].Trim();
+                if (!Regex.IsMatch(component, @"\A" + Regex.Escape(package) + @"/[A-Za-z0-9_.$]+\z"))
+                    throw new AdbException("无法确认目标游戏的启动 Activity");
+                if (await _mumuInput.ResolveDisplayAsync(serial, ct) != display)
+                    throw new AdbException("打开游戏前显示屏发生变化，请重试");
+                var output = await DeviceTextAsync(["-s", serial, "shell", "am", "start", "--display",
+                    display.Value.ToString(CultureInfo.InvariantCulture), "-a", "android.intent.action.MAIN",
+                    "-c", "android.intent.category.LAUNCHER", "-n", component], _commandTimeoutMs, ct);
+                if (Regex.IsMatch(output, @"(?im)^\s*(?:error|exception|securityexception)"))
+                    throw new AdbException("Android 未能在目标显示屏打开游戏");
+            }
+            ExecutionObserver?.OnInputCompleted(serial);
+            return;
+        }
         await RunTextAsync(
             new[] { "-s", serial, "shell", "monkey", "-p", package, "-c", "android.intent.category.LAUNCHER", "1" },
             _commandTimeoutMs,

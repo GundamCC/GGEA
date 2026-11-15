@@ -103,6 +103,42 @@ public sealed class UnifiedDeviceCommandsTests
         Assert.Equal(new[] { "-s", "selected", "shell", "input", "tap", "3", "4" }, inputs[1]);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MultiTab_CapturesPhysicalDisplayAndTargetsLogicalInput(bool remapped)
+    {
+        var reads = 0;
+        var commands = new List<string>();
+        var adb = new AdbService("missing-adb.exe", new TestLog())
+        {
+            DeviceTextAsync = (args, _, _) =>
+            {
+                if (args.Contains("activities")) return Task.FromResult(Activities(2));
+                if (args.Contains("display"))
+                {
+                    var id = reads++ > 0 && remapped ? "4619827621058019847" : "4619827203584079877";
+                    return Task.FromResult($"    mBaseDisplayInfo=DisplayInfo{{\"HDMI\", displayId 2\", mode 3, uniqueId \"local:{id}\"}}");
+                }
+                commands.Add(string.Join(' ', args));
+                return Task.FromResult("");
+            },
+            DeviceBytesAsync = (args, _, _) =>
+            {
+                commands.Add(string.Join(' ', args));
+                return Task.FromResult(ImageCodec.EncodePng([1, 2, 3, 255], 1, 1));
+            }
+        };
+        if (remapped) await Assert.ThrowsAsync<AdbException>(() => adb.ScreenshotAsync("selected"));
+        else
+        {
+            Assert.NotEmpty(await adb.ScreenshotAsync("selected"));
+            await adb.TapAsync("selected", 4, 5);
+            Assert.Contains("-s selected shell input -d 2 tap 4 5", commands);
+        }
+        Assert.Equal("-s selected exec-out screencap -d 4619827203584079877 -p", commands[0]);
+    }
+
     /// <summary>独立显示屏关闭原生能力、存在多目标或截图中途切屏均不得返回桌面帧。</summary>
     [Theory]
     [InlineData("independent")]

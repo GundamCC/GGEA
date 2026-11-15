@@ -8,6 +8,9 @@ namespace GGEA.App.Automation;
 public sealed class MainScreenNavigator(MainScreenDetector detector, IAdbService adb, IGgeaLog log,
     RecognitionEvidence? evidence = null)
 {
+    /// <summary>打开已有游戏标签后只读确认，避免在主界面等待标题画面。</summary>
+    public Task<bool> IsMainScreenAsync(string serial, CancellationToken ct) => detector.IsMainScreenAsync(serial, ct);
+
     /// <summary>启动或点击后的只读等待；特殊弹窗终止检查优先于主界面成功判定。</summary>
     public Task<bool> WaitForMainScreenAsync(string serial, int timeoutMs = 30000, int pollIntervalMs = GameTiming.ConfirmationIntervalMs,
         CancellationToken ct = default, Func<CancellationToken, Task<bool>>? stopWhen = null)

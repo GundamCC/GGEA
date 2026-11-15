@@ -512,6 +512,8 @@ public class EmulatorServiceTests
             () => "C:/MuMu/MuMuManager.exe",
             (_, _, _) => Task.FromResult(true));
         ((GenericEmulatorAdapter)adapter).ReadShadowedAdbPorts = _ => [];
+        // 实例和别名均来自本用例，不能混入开发机正在监听的额外端口。
+        ((GenericEmulatorAdapter)adapter).ReadMuMuListeningPorts = () => [];
 
         ((GenericEmulatorAdapter)adapter).ReadMuMuSerials = _ => Task.FromResult<IReadOnlySet<string>>(
             new HashSet<string> { "127.0.0.1:16384", "127.0.0.1:16416" });

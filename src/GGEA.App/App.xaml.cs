@@ -45,7 +45,11 @@ public partial class App : Application
     private const string SingleInstanceMutexName = @"Local\GGEA.SingleInstance";
 
     /// <summary>标记持有互斥量的窗口，避免开发版并存时激活错误的窗口。</summary>
-    private const string SingleInstanceWindowProperty = "GGEA.SingleInstanceWindow";
+    private static readonly string InstanceScope = File.Exists(Path.Combine(AppContext.BaseDirectory, "local-build-info.json"))
+        ? "." + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(AppContext.BaseDirectory)).ToUpperInvariant())))
+        : "";
+    private static readonly string SingleInstanceWindowProperty = "GGEA.SingleInstanceWindow" + InstanceScope;
 
     /// <summary>窗口句柄创建后登记单实例窗口；窗口销毁时 Windows 自动清理属性。</summary>
     internal static void RegisterSingleInstanceWindow(IntPtr handle)
@@ -82,9 +86,13 @@ public partial class App : Application
             return;
         }
 
-        if (!TryAcquireSingleInstance())
+        if (!TryAcquireSingleInstance(SingleInstanceMutexName + InstanceScope))
         {
-            ActivateExistingInstance();
+            if (!ActivateExistingInstance())
+            {
+                L.Initialize(null);
+                MessageBox.Show(L.Text("GGEA 已在运行，请切换到已有窗口。"), "GGEA", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
             Shutdown();
             return;
         }
@@ -162,8 +170,7 @@ public partial class App : Application
         // 开发版不占用正式版互斥量，支持两种构建并存。
         return true;
 #else
-        // 本地普通验收包带有独立清单，不占用正式版互斥量，避免启动时只唤醒旧窗口。
-        if (File.Exists(Path.Combine(AppContext.BaseDirectory, "local-build-info.json"))) return true;
+        // 普通验收包按安装目录隔离；同目录重开必须在写启动日志前完成单实例仲裁。
         var mutex = new Mutex(initiallyOwned: true, mutexName, out var createdNew);
 
         if (!createdNew)
@@ -221,7 +228,7 @@ public partial class App : Application
     /// 避免 Process.MainWindowHandle 可能指向隐藏辅助窗口导致激活失效。
     /// 激活失败不影响后续逻辑（新实例直接退出即可）。
     /// </summary>
-    private static void ActivateExistingInstance()
+    private static bool ActivateExistingInstance()
     {
         try
         {
@@ -249,17 +256,14 @@ public partial class App : Application
                 return true;
             }, IntPtr.Zero);
 
-            if (target is null)
-            {
-                return;
-            }
+            if (target is null) return false;
 
-            _ = ShowWindowAsync(target.Value, SwRestore);
-            _ = SetForegroundWindow(target.Value);
+            if (IsIconic(target.Value)) ShowWindowAsync(target.Value, SwRestore);
+            return SetForegroundWindow(target.Value);
         }
         catch
         {
-            // 窗口激活失败不应阻断新实例退出
+            return false;
         }
     }
 
@@ -278,6 +282,9 @@ public partial class App : Application
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hWnd);
 
     [DllImport("user32.dll")]
     private static extern bool IsWindowVisible(IntPtr hWnd);

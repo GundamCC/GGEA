@@ -26,16 +26,7 @@ internal sealed class MuMuScreenshotService
         try
         {
             var token = timeout.Token;
-            var manager = new AdbService(_manager, _log);
-            var json = await MuMuDeviceIdentity.QueryAllAsync(
-                (args, cancellation) => manager.RunTextAsync(args, timeoutMs, cancellation), token);
-            var instance = await ResolveAsync(ParseInstances(json), serial, _adb.GetBootIdAsync, token,
-                async (address, cancellation) =>
-                {
-                    // 属性已识别为 MuMu 时不会经过通道路由的连接分支，截图必须自行准备别名端点。
-                    var separator = address.LastIndexOf(':');
-                    await _adb.ConnectAsync(address[..separator], int.Parse(address[(separator + 1)..]), cancellation);
-                });
+            var instance = await ResolveSelectedAsync(serial, timeoutMs, token);
             var root = Directory.GetParent(Path.GetDirectoryName(Path.GetFullPath(_manager))!)!.FullName;
             var library = await ResolveLibraryAsync(root, instance.AndroidVersion,
                 cancellation => _adb.GetSystemPropertyAsync(serial, "ro.build.version.release", cancellation), token);
@@ -63,6 +54,36 @@ internal sealed class MuMuScreenshotService
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) when (ex is not AdbException)
         { throw new AdbException($"MuMu 原生截图不可用（{ex.GetType().Name}）", ex); }
+    }
+
+    /// <summary>在已确认的实例中激活游戏标签，其他模拟器仍由其自身 ADB 打开游戏。</summary>
+    internal async Task<bool> TryActivateTabAsync(string serial, string package, int timeoutMs, CancellationToken ct)
+    {
+        Instance instance;
+        try { instance = await ResolveSelectedAsync(serial, timeoutMs, ct); }
+        catch (AdbException) { ct.ThrowIfCancellationRequested(); return false; }
+        var manager = new AdbService(_manager, _log);
+        var response = await manager.RunTextAsync(["control", "-v", instance.Index.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            "app", "launch", "-pkg", package], timeoutMs, ct);
+        using var json = MuMuManagerJson.Parse(response);
+        if (!json.RootElement.TryGetProperty("errcode", out var error) || !error.TryGetInt32(out var code) || code != 0)
+            throw new AdbException("MuMu 未确认打开游戏标签，请检查所选实例");
+        _log.Info($"MuMu 已打开游戏标签，instance={instance.Index}，package={package}");
+        return true;
+    }
+
+    private async Task<Instance> ResolveSelectedAsync(string serial, int timeoutMs, CancellationToken token)
+    {
+        var manager = new AdbService(_manager, _log);
+        var json = await MuMuDeviceIdentity.QueryAllAsync(
+            (args, cancellation) => manager.RunTextAsync(args, timeoutMs, cancellation), token);
+        return await ResolveAsync(ParseInstances(json), serial, _adb.GetBootIdAsync, token,
+            async (address, cancellation) =>
+            {
+                // 属性已识别为 MuMu 时不会经过通道路由的连接分支，截图必须自行准备别名端点。
+                var separator = address.LastIndexOf(':');
+                await _adb.ConnectAsync(address[..separator], int.Parse(address[(separator + 1)..]), cancellation);
+            });
     }
 
     /// <summary>实例身份只依赖在线状态、索引和地址；SDK 版本元数据缺失不能让在线实例消失。</summary>
