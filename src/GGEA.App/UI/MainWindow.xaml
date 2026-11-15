@@ -524,9 +524,10 @@
                                                                                     </ControlTemplate.Triggers>
                                                                                 </ControlTemplate>
                                                                             </Button.Template>
-                                                                            <TextBlock Text="🗑"
-                                                                                       FontSize="13"
-                                                                                       Foreground="{DynamicResource Brush.Danger}"/>
+                                                                            <Path Width="14" Height="16" Stretch="Uniform"
+                                                                                  Stroke="{DynamicResource Brush.Danger}" StrokeThickness="1.4"
+                                                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                                                                  Data="M2,4 H14 M5.5,4 V2 H10.5 V4 M3.5,6 L4.2,15 H11.8 L12.5,6 M6.5,7.5 V12.5 M9.5,7.5 V12.5"/>
                                                                         </Button>
                                                                     </Grid>
                                                                 </Border>

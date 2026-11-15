@@ -2757,7 +2757,7 @@ public partial class MainWindow : Window
     {
         if (_busy || _windowTasks.IsStopping) return;
 
-        if (_loadingApProfile || ApProfileCombo.SelectedItem is not ApConsumptionProfile profile)
+        if (_loadingApProfile || _apProfileService is null || ApProfileCombo.SelectedItem is not ApConsumptionProfile profile)
         {
             return;
         }
@@ -2765,7 +2765,16 @@ public partial class MainWindow : Window
         ApConsumptionPlanner.ApplyProfile(profile, _apWorkItems);
         ApProfileNameBox.Text = profile.Name;
         _apProfiles.LastSelectedProfile = profile.Name;
-        ApPlanStatusText.Text = L.Format($"已切换配置：{profile.Name}");
+        try
+        {
+            _apProfileService.Save(_apProfiles, ConfigService.ResolvePath(_config.ApConsumptionProfilesFile));
+            ApPlanStatusText.Text = L.Format($"已切换配置：{profile.Name}");
+        }
+        catch (Exception ex)
+        {
+            _logger?.Warn(L.Format($"保存 AP 消耗配置失败: {ex.Message}"));
+            ApPlanStatusText.Text = L.Format($"保存失败：{ex.Message}");
+        }
     }
 
     /// <summary>保存当前完整作品顺序及 Hard 勾选状态；同名配置直接覆盖。</summary>
