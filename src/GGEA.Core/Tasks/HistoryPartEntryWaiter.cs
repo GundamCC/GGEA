@@ -9,7 +9,7 @@ internal sealed class HistoryPartEntryWaiter(
     Func<CancellationToken, Task<(HistoryStageObservation Page, DownloadDialogService.DownloadDialogButtons Buttons)>> observe,
     Func<int, int, CancellationToken, Task> tap,
     IGgeaLog log,
-    Func<int, CancellationToken, Task> delay)
+    Func<int, CancellationToken, Task> delay, Action? onDownload = null)
 {
     /// <summary>下载只点击一次，沿用下载许可；下载后的最长等待为十分钟，中止始终可取消。</summary>
     public async Task WaitAsync(int workId, bool allowDownload, CancellationToken ct)
@@ -41,6 +41,7 @@ internal sealed class HistoryPartEntryWaiter(
                     else if (!downloadClicked)
                     {
                         await tap(buttons.Download.CenterX, buttons.Download.CenterY, timeout.Token);
+                        onDownload?.Invoke();
                         downloadClicked = true;
                         attempts = 1200;
                         timeout.CancelAfter(TimeSpan.FromMinutes(10));

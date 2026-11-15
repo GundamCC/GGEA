@@ -20,6 +20,7 @@ public sealed partial class MasterLeagueService
         public int Battles;
         public bool StageBoostInfoDismissSent;
         public bool SkipSent;
+        public DownloadCapacityWatch? Capacity;
         public bool DownloadSent;
         public bool ReturnSent;
         public bool SelectionAcknowledged;
@@ -50,6 +51,7 @@ public sealed partial class MasterLeagueService
                     ? await CaptureBattleObservationAsync(serial, vision, state.Phase == LeaguePhase.Preparing, ct, retryOnFailure: false)
                     : null;
                 var screen = observation?.Screen ?? await _automation.CaptureScreenAsync(serial, ct, retryOnFailure: false);
+                if (state.Capacity is not null) await state.Capacity.CheckAsync(serial, screen, ct);
                 if (screen.Width != 1920 || screen.Height != 1080)
                 {
                     state.Idle++;
@@ -144,6 +146,7 @@ public sealed partial class MasterLeagueService
         var battle = observation?.Battle ?? await Task.Run(() => vision.ReadBattle(screen, ct), ct);
         if (battle.ResultVisible)
         {
+            state.Capacity = null;
             state.Phase = LeaguePhase.Returning;
             if (battle.ReturnButton is not null && (!state.ReturnSent || state.Idle >= 5))
             {
@@ -189,6 +192,8 @@ public sealed partial class MasterLeagueService
                 {
                     state.DownloadSent = true;
                     await _automation.TapAsync(serial, buttons.Download.CenterX, buttons.Download.CenterY, ct);
+                    state.Capacity = new DownloadCapacityWatch(_automation, _log);
+                    state.Capacity.Start();
                     return (null, true, "已确认下载，持续等待下载完成及战斗结算…");
                 }
                 return (null, false, "下载尚未完成，持续等待；不重复确认下载。");
@@ -221,6 +226,7 @@ public sealed partial class MasterLeagueService
             {
                 state.Phase = LeaguePhase.Fighting;
                 state.Attempted.Add(state.Target);
+                state.Capacity = null;
                 state.SkipSent = state.DownloadSent = state.ReturnSent = false;
                 state.ContinuePages = 0;
                 await _automation.TapAsync(serial, 1675, 1000, ct);

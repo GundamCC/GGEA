@@ -78,6 +78,7 @@ public sealed class WorkLogoNavigator : IWorkLogoNavigator
         // 只比较截图测得的偏移；边界或吞手势时停止重复拖动，交给有限等待与恢复。
         double? swipeOffset = null;
         var swipeStalled = false;
+        var capacity = new DownloadCapacityWatch(_automation, _log);
         long? downloadStarted = null;
         try
         {
@@ -92,6 +93,7 @@ public sealed class WorkLogoNavigator : IWorkLogoNavigator
                 // 半透明解锁弹层后仍可能识别出 Logo 和按钮；继续提示必须先于所有导航动作。
                 var frame = state.ScreenshotPng ?? await _automation.ScreenshotAsync(serial, token);
                 var screen = ImageCodec.DecodePng(frame);
+                await capacity.CheckAsync(serial, screen, token);
                 var download = _downloadDialog?.RecognizeForNavigation(screen);
                 // 下载弹窗优先于背景作品与全局继续；只点一次，直到真实目标详情出现才恢复导航。
                 if (download?.Download is not null || downloadStarted is not null)
@@ -105,6 +107,7 @@ public sealed class WorkLogoNavigator : IWorkLogoNavigator
                     if (downloadStarted is null)
                     {
                         await _automation.TapAsync(serial, download!.Download!.CenterX, download.Download.CenterY, token);
+                        capacity.Start();
                         downloadStarted = _time.GetTimestamp();
                         timeout.CancelAfter(TimeSpan.FromMinutes(10));
                         _log.Info("主要关卡检测到下载弹窗，已点击下载，最多等待十分钟确认目标作品页面。");

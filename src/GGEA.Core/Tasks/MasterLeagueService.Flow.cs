@@ -38,11 +38,13 @@ public sealed partial class MasterLeagueService
     internal async Task<MasterLeagueResult> WaitForBattleResultAsync(string serial, IMasterLeagueVision vision, CancellationToken ct)
     {
         var skipSent = false;
+        var capacity = new DownloadCapacityWatch(_automation, _log);
         var downloadSent = false;
         for (var poll = 0; poll < BattleObservationRounds; poll++)
         {
             var frame = await CaptureBattleObservationAsync(serial, vision, false, ct);
             var screen = frame.Screen;
+            await capacity.CheckAsync(serial, screen, ct);
             if (screen.Width != 1920 || screen.Height != 1080)
                 throw new InvalidOperationException("大师联盟需要 1920×1080 横屏画面，已停止点击。");
             var observed = frame.Battle;
@@ -63,6 +65,7 @@ public sealed partial class MasterLeagueService
                 if (!downloadSent && buttons.Download is not null)
                 {
                     await _automation.TapAsync(serial, buttons.Download.CenterX, buttons.Download.CenterY, ct);
+                    capacity.Start();
                     downloadSent = true;
                     _log.Info("大师联盟挑战后检测到下载弹窗，已点击下载，继续等待战斗或结算。");
                 }

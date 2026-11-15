@@ -405,6 +405,7 @@ public partial class MainWindow : Window
             ConfigureExecutionMonitoring();
             _automation = new AutomationService(_adb, _matcher, _logger, connectionErrorDetector: _connectionErrorDetector,
                 skipTemplatePath: ConfigService.ResolvePath(_config.LoginRewardSkipTemplate), textOcr: GetTextOcr());
+            _automation.CapacityWarning += ReportCapacityWarning;
             _emulatorAdapter = EmulatorAdapterFactory.Create(_config.EmulatorType, _adb, _logger, mumuPathResolver: () => EmulatorLocator.ResolveMuMuManager(_config.AdbPath, _config.EmulatorPath));
             _emulator = new EmulatorService(_emulatorAdapter);
             _gameEntry = new GameEntryService(_automation, _logger);
@@ -540,6 +541,7 @@ public partial class MainWindow : Window
         ConfigureExecutionMonitoring();
         _automation = new AutomationService(_adb, _matcher, _logger, connectionErrorDetector: _connectionErrorDetector,
                 skipTemplatePath: ConfigService.ResolvePath(_config.LoginRewardSkipTemplate), textOcr: GetTextOcr());
+        _automation.CapacityWarning += ReportCapacityWarning;
         _emulatorAdapter = EmulatorAdapterFactory.Create(_config.EmulatorType, _adb, _logger, mumuPathResolver: () => EmulatorLocator.ResolveMuMuManager(_config.AdbPath, _config.EmulatorPath));
         _emulator = new EmulatorService(_emulatorAdapter);
         _gameEntry = new GameEntryService(_automation, _logger);
@@ -2671,6 +2673,15 @@ public partial class MainWindow : Window
         if (ReferenceEquals(_activeTaskEndNotification, notification)) _activeTaskEndNotification = null;
         notification.Send(message, _config.EnableWindowsNotifications, _windowTasks.IsStopping,
             ShowWindowsNotification);
+    }
+
+    private void ReportCapacityWarning(string message)
+    {
+        if (!Dispatcher.CheckAccess()) { Dispatcher.Invoke(() => ReportCapacityWarning(message)); return; }
+        ConnectionStateText.Text = message;
+        _activeTaskEndNotification?.Suppress();
+        if (_config.EnableWindowsNotifications && !_windowTasks.IsStopping)
+            ShowWindowsNotification(message, L.Text("GGEA · 游戏中断"), true);
     }
 
     /// <summary>所有出击与略过共用 AP 停止出口；UI 线程负责系统通知，不依赖队列正常完成。</summary>

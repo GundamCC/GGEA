@@ -1,4 +1,6 @@
-GGEA v1.3.12.0 使用说明 — 正式发布 / Release
+GGEA v1.3.13.0 使用说明 — 正式发布 / Release
+
+游戏内下载期间，每分钟检查一次简体中文「可用容量不足」提示（错误代码 220）。检测到后停止当前流程，识别到「返回标题」时点击，并提醒用户释放模拟器存储空间。如需 Windows 提醒，请开启系统通知。
 
 官网：https://www.gundamc.com/ggea/
 在线使用文档：https://www.gundamc.com/ggea/docs/guide/install/

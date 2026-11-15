@@ -48,14 +48,16 @@ public sealed class HistoryProgressNavigator(AutomationService automation, Histo
         if (part == HistoryProgressStep.Stage && downloadDialog is not null)
         {
             // 两类识别共用同一帧并在后台并行；每轮全部回收，避免留下仍操作 SIFT 的竞争任务。
+            var capacity = new DownloadCapacityWatch(automation, log);
             var waiter = new HistoryPartEntryWaiter(async token =>
             {
                 var screen = await automation.CaptureScreenAsync(serial, token);
+                await capacity.CheckAsync(serial, screen, token);
                 var pageTask = Task.Run(() => vision.Inspect(screen, work.Id, token), token);
                 var downloadTask = Task.Run(() => downloadDialog.Recognize(screen), token);
                 await Task.WhenAll(pageTask, downloadTask);
                 return (await pageTask, await downloadTask);
-            }, (x, y, token) => automation.TapAsync(serial, x, y, token), log, Task.Delay);
+            }, (x, y, token) => automation.TapAsync(serial, x, y, token), log, Task.Delay, capacity.Start);
             await waiter.WaitAsync(work.Id, allowDownload, ct);
         }
         else

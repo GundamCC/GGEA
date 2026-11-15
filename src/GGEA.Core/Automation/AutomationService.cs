@@ -13,6 +13,11 @@ namespace GGEA.App.Automation;
 /// </summary>
 public sealed partial class AutomationService : IDisposable
 {
+    internal string GameLanguage => _resources.Language;
+    /// <summary>已确认游戏内下载容量错误，交由宿主显示状态与系统提醒。</summary>
+    public event Action<string>? CapacityWarning;
+    internal void ReportCapacityWarning(string message) => CapacityWarning?.Invoke(message);
+
     private readonly IAdbService _adb;
     private readonly TemplateMatcher _matcher;
     private readonly ResourceResolver _resources;

@@ -474,6 +474,8 @@ public sealed partial class SortieFlowService
     {
         var startedAt = Environment.TickCount64;
         var deadline = startedAt + Math.Max(0, timeoutMs);
+        var capacity = new DownloadCapacityWatch(_automation, _log);
+        capacity.Start();
         var nextProgressAt = startedAt;
         TemplateMatchResult? tapToNext = null;
         var battleReady = false;
@@ -485,6 +487,7 @@ public sealed partial class SortieFlowService
             var screen = ImageCodec.DecodePng(await _automation.ScreenshotAsync(serial, ct));
             if (await HandleTerminalStateAsync(serial, screen, ct) is { } terminal) return terminal;
 
+            await capacity.CheckAsync(serial, screen, ct);
             // 专属开场目标由本流程点击；全局恢复不能抢先吃掉文字，绕过 AUTO/速度配置。
             // 首张下载后截图也参与识别，避免丢掉短暂出现的开场帧。
             tapToNext = await MatchTapToNextAsync(screen, ct, recovery.ForAutoProgress);

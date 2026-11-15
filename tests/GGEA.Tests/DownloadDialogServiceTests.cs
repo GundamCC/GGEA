@@ -107,6 +107,48 @@ public class DownloadDialogServiceTests
         Assert.All(log.Entries, entry => Assert.Equal("WARN", entry.Level));
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CapacityWatch_ChecksOnMinuteBoundaryAndRequiresButtonEvidence(bool showButton)
+    {
+        var screen = new ScreenImage { Width = 1920, Height = 1080, Bgra = TestImageFactory.CreateBgra(1920, 1080, 20) };
+        void Paste(string name, int x, int y)
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, "resources", "zh-CN", "templates", "dialog", name + ".png");
+            var template = ImageCodec.DecodePng(File.ReadAllBytes(path));
+            for (int row = 0; row < template.Height; row++)
+                Buffer.BlockCopy(template.Bgra, row * template.Width * 4, screen.Bgra,
+                    ((y + row) * screen.Width + x) * 4, template.Width * 4);
+        }
+        var clock = new ManualProgressTime();
+        var log = new TestLog();
+        var adb = new FakeAdbService(CreateDialogScreen());
+        using var automation = new AutomationService(adb, new TemplateMatcher(), log,
+            resources: new GGEA.App.Config.ResourceResolver(AppContext.BaseDirectory, "zh-CN"));
+        var notifications = new List<string>();
+        automation.CapacityWarning += notifications.Add;
+        var watch = new DownloadCapacityWatch(automation, log, clock);
+        watch.Start();
+        clock.Advance(60);
+        await watch.CheckAsync("serial", screen, default);
+        Paste("capacity_title", 832, 70);
+        if (showButton) Paste("return_title", 884, 971);
+        clock.Advance(59);
+        await watch.CheckAsync("serial", screen, default);
+        Assert.Empty(notifications);
+        Assert.Empty(adb.Taps);
+        clock.Advance(1);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => watch.CheckAsync("serial", screen, default));
+        Assert.Single(notifications);
+        if (showButton)
+        {
+            var tap = Assert.Single(adb.Taps);
+            Assert.Equal((960, 995), (tap.X, tap.Y));
+        }
+        else Assert.Empty(adb.Taps);
+    }
+
     /// <summary>测试用临时目录，自动清理。</summary>
     private sealed class TempDirectory : IDisposable
     {
