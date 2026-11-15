@@ -63,11 +63,8 @@ public sealed class FierceEnemyAssaultRecognizer
             var x = index % scores.Cols;
             var y = index / scores.Cols;
             using var candidate = new Mat(gray, new Rect(x, y, template.Width, template.Height));
-            using var shape = new Mat();
-            Cv2.MatchTemplate(candidate, template, shape, TemplateMatchModes.CCoeffNormed, mask);
-            var shapeScore = shape.At<float>(0, 0);
-            // 单纯白块可能具有高亮度相关性，必须再通过去均值的字形校验。
-            if (!float.IsFinite(shapeScore) || shapeScore < .75f || shapeScore > 1.001f) continue;
+            // 去均值的字形校验继续使用同一位置、同一不透明遮罩。
+            if (!TemplateMatcher.MatchesFixedTexture(candidate, template, .75f, mask)) continue;
             if (best is null || values[index] > best.Confidence)
                 best = new(new Roi(x, y, template.Width, template.Height), Math.Min(1, values[index]));
         }

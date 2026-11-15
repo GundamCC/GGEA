@@ -1,5 +1,4 @@
 using System.IO;
-using OpenCvSharp;
 
 namespace GGEA.App.Vision;
 
@@ -65,14 +64,6 @@ public sealed class ShopFreePurchaseRecognizer
         var match = _matcher.Match(screen.Bgra, screen.Width, screen.Height, template.Bgra,
             template.Width, template.Height, threshold, roi);
         if (match is null) return null;
-        using var source = Mat.FromPixelData(screen.Height, screen.Width, MatType.CV_8UC4, screen.Bgra);
-        using var target = Mat.FromPixelData(template.Height, template.Width, MatType.CV_8UC4, template.Bgra);
-        using var patch = new Mat(source, new Rect(match.X, match.Y, template.Width, template.Height));
-        using var gray = new Mat(); using var targetGray = new Mat(); using var score = new Mat();
-        Cv2.CvtColor(patch, gray, ColorConversionCodes.BGRA2GRAY);
-        Cv2.CvtColor(target, targetGray, ColorConversionCodes.BGRA2GRAY);
-        Cv2.MatchTemplate(gray, targetGray, score, TemplateMatchModes.CCoeffNormed);
-        var correlation = score.At<float>(0, 0);
-        return float.IsFinite(correlation) && correlation >= 0.90 ? match : null;
+        return TemplateMatcher.MatchesFixedTexture(screen, template, match.Region, .90) ? match : null;
     }
 }

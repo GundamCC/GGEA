@@ -35,11 +35,15 @@ public sealed class UpgradeSkipAllTests
     }
 
     /// <summary>真实暗态是不可略过证据；无需旧版布局，也不发送任何点击。</summary>
-    [Fact]
-    public async Task DisabledButton_SkipsWithoutLegacyClicks()
+    [Theory]
+    [InlineData(1280, 720)]
+    [InlineData(1600, 900)]
+    [InlineData(1920, 1080)]
+    [InlineData(2560, 1440)]
+    public async Task DisabledButton_SkipsWithoutLegacyClicks(int width, int height)
     {
-        var adb = new FakeAdbService(Screen((Fixture("title.png"), 0, 0),
-            (Fixture("skip-all-disabled.png"), 1320, 850)));
+        var adb = new FakeAdbService(ResolutionReplay.Png(Screen((Fixture("title.png"), 0, 0),
+            (Fixture("skip-all-disabled.png"), 1320, 850)), width, height));
         var result = await Service(adb).ExecuteDailyAsync("serial", new UiLayout(), 0);
         Assert.True(result.Success);
         Assert.Contains("不可用", result.Message);

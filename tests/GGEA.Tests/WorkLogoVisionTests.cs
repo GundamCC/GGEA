@@ -52,21 +52,29 @@ public sealed class WorkLogoVisionTests
     }
 
     /// <summary>实机 Recollection 标题不可因共用 SEED 主体而被同位置竞争拒绝。</summary>
-    [Fact]
-    public void ActualSeedRecollectionCanvas_RecognizesDistinctWork()
+    [Theory]
+    [InlineData(1280, 720)]
+    [InlineData(1600, 900)]
+    [InlineData(1920, 1080)]
+    [InlineData(2560, 1440)]
+    public void ActualSeedRecollectionCanvas_RecognizesDistinctWork(int width, int height)
     {
         var (vision, works, _) = CreateVision();
         var pixels = TestImageFactory.CreateBgra(1920, 1080, 20);
         Paste(pixels, Fixture("seed_recollection_canvas.png"), 320, 175);
-        var observation = vision.Inspect(ImageCodec.EncodePng(pixels, 1920, 1080), works.Single(w => w.Id == 14), works);
+        var observation = vision.Inspect(ResolutionReplay.Png(ImageCodec.EncodePng(pixels, 1920, 1080), width, height), works.Single(w => w.Id == 14), works);
         Assert.True(observation.Works.Any(w => w.WorkId == 14), observation.Diagnostic);
         Assert.DoesNotContain(observation.Works, w => w.WorkId == 13);
         Assert.False(observation.TargetTitleVisible);
     }
 
     /// <summary>真实画面副标题被遮挡后必须恢复歧义拒绝，不能只靠 SEED 主体点击 Recollection。</summary>
-    [Fact]
-    public void ActualSeedRecollectionCanvas_WithoutSubtitleRejectsRecollection()
+    [Theory]
+    [InlineData(1280, 720)]
+    [InlineData(1600, 900)]
+    [InlineData(1920, 1080)]
+    [InlineData(2560, 1440)]
+    public void ActualSeedRecollectionCanvas_WithoutSubtitleRejectsRecollection(int width, int height)
     {
         var (vision, works, _) = CreateVision();
         var pixels = TestImageFactory.CreateBgra(1920, 1080, 20);
@@ -74,7 +82,7 @@ public sealed class WorkLogoVisionTests
         for (var y = 249; y < 276; y++)
             for (var x = 497; x < 608; x++)
                 for (var channel = 0; channel < 3; channel++) pixels[(y * 1920 + x) * 4 + channel] = 20;
-        var observation = vision.Inspect(ImageCodec.EncodePng(pixels, 1920, 1080), works.Single(w => w.Id == 14), works);
+        var observation = vision.Inspect(ResolutionReplay.Png(ImageCodec.EncodePng(pixels, 1920, 1080), width, height), works.Single(w => w.Id == 14), works);
         Assert.DoesNotContain(observation.Works, w => w.WorkId == 14);
     }
 

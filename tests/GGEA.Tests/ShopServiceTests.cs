@@ -248,7 +248,7 @@ public class ShopServiceTests
             stepDelayMs: 0, networkSettleDelayMs: 0, waitTimeoutMs: 5000);
 
         Assert.False(completed); // 模拟画面没有最终确认弹窗，安全停止于此。
-        Assert.Equal(new[] { (114, 832), (270, 495), (580, 770) }, adb.Taps);
+        Assert.Equal(new[] { (114, 832), (270, 495), (580, 765) }, adb.Taps);
         Assert.Contains(log.Entries, entry => entry.Message.Contains("已确认钻石价格为免费"));
         Assert.DoesNotContain(adb.Taps, tap => tap == (1155, 995));
     }

@@ -33,7 +33,7 @@ public sealed class HistoryProgressVision : IDisposable
     public bool IsOverview(ScreenImage screen, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        return screen.Width == 1920 && screen.Height == 1080 && HasLabel(screen, new(1080, 652, 154, 30));
+        return screen.Width == 1920 && screen.Height == 1080 && HasLabel(screen, new(1080, 652, 154, 30), ct);
     }
 
     /// <summary>调用方必须先确认历史作品身份；缺标签、缺数字、动画或非标准分辨率均不授权推图。</summary>
@@ -42,39 +42,70 @@ public sealed class HistoryProgressVision : IDisposable
         ct.ThrowIfCancellationRequested();
         if (screen.Width != 1920 || screen.Height != 1080)
             return new(HistoryCompletion.Unknown, HistoryCompletion.Unknown);
-        var stage = HasLabel(screen, new(1080, 652, 154, 30)) ? Read(StageRegion, _stage) : HistoryCompletion.Unknown;
-        var boss = _locked.Match(_matcher, screen, .97, new(1638, 400, 40, 42), ct) is not null
+        var stage = HasLabel(screen, new(1080, 652, 154, 30), ct) ? Read(StageRegion, _stage) : HistoryCompletion.Unknown;
+        var boss = HasBossLock(screen, ct)
             ? HistoryCompletion.Locked
-            : HasLabel(screen, new(1490, 552, 154, 30)) ? Read(BossRegion, _boss) : HistoryCompletion.Unknown;
+            : HasLabel(screen, new(1490, 552, 154, 30), ct) ? Read(BossRegion, _boss) : HistoryCompletion.Unknown;
         return new(stage, boss);
 
         HistoryCompletion Read(Roi roi, TemplateImages templates)
         {
-            var actual = Mask(screen, roi);
-            foreach (var template in templates.Candidates)
-            {
-                ct.ThrowIfCancellationRequested();
-                // 模板仅确认完整 100% 字形；未命中不能根据残留百分号或数字列数猜测攻略度。
-                if (MatchesComplete(actual, roi, template))
-                    return HistoryCompletion.Complete;
-            }
+            if (MatchesGlyphRegion(screen, roi, templates, allowNarrow: true, ct))
+                return HistoryCompletion.Complete;
             var binary = OnnxTextRecognizer.CreateWhiteMask(screen, roi, ct);
             if (!binary.Contains((byte)255)) return HistoryCompletion.Unknown;
             return ClassifyPercent(_ocr.Recognize(binary, roi.Width, new(0, 0, roi.Width, roi.Height), ct));
         }
     }
 
-    /// <summary>兼容原 100px 与日服较宽的完整字形，比较整个识别区域，防止只截取部分数字误报 100%。</summary>
-    private static bool MatchesComplete(bool[] actual, Roi roi, ScreenImage template)
+    /// <summary>在同一小范围内核对完整锁图标，统一采样后的候选也必须达到原 97% 门槛。</summary>
+    private bool HasBossLock(ScreenImage screen, CancellationToken ct)
     {
-        if (template.Width > roi.Width || template.Height != roi.Height) return false;
-        var expected = Mask(template, new(0, 0, template.Width, template.Height));
+        var region = new Roi(1638, 400, 40, 42);
+        if (_locked.Match(_matcher, screen, .97, region, ct) is not null) return true;
+        var observed = TemplateMatcher.PrepareFixedRegion(screen, region, reference: false);
+        foreach (var template in _locked.Candidates)
+        {
+            ct.ThrowIfCancellationRequested();
+            // 此处使用不透明锁图标，不能把自定义素材的透明像素卷入背景。
+            if (!TemplateMatcher.IsOpaque(template)) continue;
+            var expected = TemplateMatcher.PrepareFixedRegion(template, new(0, 0, template.Width, template.Height), reference: true);
+            if (_matcher.Match(observed.Bgra, observed.Width, observed.Height, expected.Bgra,
+                expected.Width, expected.Height, .97, ct: ct) is not null) return true;
+        }
+        return false;
+    }
+
+    /// <summary>保留原始字形优先；重采样画面仍须通过完整区域交并比，空白处多余数字也计入。</summary>
+    private static bool MatchesGlyphRegion(ScreenImage screen, Roi roi, TemplateImages templates,
+        bool allowNarrow, CancellationToken ct)
+    {
+        bool Matches(bool prepare)
+        {
+            var observed = prepare ? TemplateMatcher.PrepareFixedRegion(screen, roi, reference: false) : screen;
+            var actual = Mask(observed, prepare ? new(0, 0, roi.Width, roi.Height) : roi);
+            foreach (var template in templates.Candidates)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (template.Height != roi.Height || template.Width > roi.Width ||
+                    (!allowNarrow && template.Width != roi.Width)) continue;
+                var bounds = new Roi(0, 0, template.Width, template.Height);
+                var expected = Mask(prepare ? TemplateMatcher.PrepareFixedRegion(template, bounds, reference: true) : template, bounds);
+                if (MatchesComplete(actual, roi, expected, template.Width)) return true;
+            }
+            return false;
+        }
+        return Matches(false) || Matches(true);
+    }
+
+    private static bool MatchesComplete(bool[] actual, Roi roi, bool[] expected, int width)
+    {
         // 旧素材可以在扩展区域内平移；区域之外的多余白字仍计入交并比的惩罚。
-        for (var left = 0; left <= roi.Width - template.Width; left++)
+        for (var left = 0; left <= roi.Width - width; left++)
         {
             var padded = new bool[roi.Width * roi.Height];
-            for (var y = 0; y < template.Height; y++)
-                Array.Copy(expected, y * template.Width, padded, y * roi.Width + left, template.Width);
+            for (var y = 0; y < roi.Height; y++)
+                Array.Copy(expected, y * width, padded, y * roi.Width + left, width);
             if (Similarity(actual, padded, 0, roi.Width, roi.Width, roi.Height) >= .90) return true;
         }
         return false;
@@ -95,10 +126,8 @@ public sealed class HistoryProgressVision : IDisposable
     /// <summary>窗口传入的 OCR 由窗口释放；独立识别器只释放自己创建的延迟加载会话。</summary>
     public void Dispose() { if (_ownsOcr) _ocr.Dispose(); }
     /// <summary>标签后方有半透明机体图，不能用背景亮度判断文字是否存在；同时比较白色笔画与负空间。</summary>
-    private bool HasLabel(ScreenImage screen, Roi roi)
-        => _label.Candidates.Any(label => label.Width == roi.Width && label.Height == roi.Height &&
-            Similarity(Mask(screen, roi), Mask(label, new(0, 0, label.Width, label.Height)),
-                0, roi.Width, roi.Width, roi.Height) >= .90);
+    private bool HasLabel(ScreenImage screen, Roi roi, CancellationToken ct)
+        => MatchesGlyphRegion(screen, roi, _label, allowNarrow: false, ct);
 
     /// <summary>只保留亮且接近白色的文本核心，锁定区的灰字不会当成正常攻略度。</summary>
     private static bool[] Mask(ScreenImage image, Roi roi)

@@ -4,7 +4,6 @@ using GGEA.App.UI;
 using GGEA.App.Config;
 using GGEA.App.Vision;
 using System.IO;
-using OpenCvSharp;
 
 namespace GGEA.App.Tasks;
 
@@ -166,17 +165,7 @@ public sealed class UpgradeStagesService
         var match = new TemplateMatcher().Match(screen.Bgra, screen.Width, screen.Height,
             template.Bgra, template.Width, template.Height, .90, SkipAllRoi, ct: ct);
         if (match is null) return null;
-        using var source = Mat.FromPixelData(screen.Height, screen.Width, MatType.CV_8UC4, screen.Bgra);
-        using var target = Mat.FromPixelData(template.Height, template.Width, MatType.CV_8UC4, template.Bgra);
-        using var patch = new Mat(source, new Rect(match.X, match.Y, template.Width, template.Height));
-        using var gray = new Mat();
-        using var targetGray = new Mat();
-        using var correlation = new Mat();
-        Cv2.CvtColor(patch, gray, ColorConversionCodes.BGRA2GRAY);
-        Cv2.CvtColor(target, targetGray, ColorConversionCodes.BGRA2GRAY);
-        Cv2.MatchTemplate(gray, targetGray, correlation, TemplateMatchModes.CCoeffNormed);
-        var score = correlation.At<float>(0, 0);
-        return float.IsFinite(score) && score >= .85 ? match : null;
+        return TemplateMatcher.MatchesFixedTexture(screen, template, match.Region, .85) ? match : null;
     }, ct);
 
     /// <summary>点击返回按钮并等待页面加载稳定。</summary>

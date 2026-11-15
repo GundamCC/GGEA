@@ -4,7 +4,6 @@ using GGEA.App.Logging;
 using GGEA.App.Localization;
 using GGEA.App.UI;
 using GGEA.App.Vision;
-using OpenCvSharp;
 
 namespace GGEA.App.Tasks;
 
@@ -416,15 +415,7 @@ public sealed class StageSkipService
                         var candidate = matcher.Match(screen.Bgra, screen.Width, screen.Height, template.Bgra,
                             template.Width, template.Height, threshold, roi);
                         if (candidate is null) return null;
-                        using var source = Mat.FromPixelData(screen.Height, screen.Width, MatType.CV_8UC4, screen.Bgra);
-                        using var target = Mat.FromPixelData(template.Height, template.Width, MatType.CV_8UC4, template.Bgra);
-                        using var sourceGray = new Mat(); using var targetGray = new Mat(); using var correlation = new Mat();
-                        using var sourcePatch = new Mat(source, new Rect(candidate.X, candidate.Y, template.Width, template.Height));
-                        Cv2.CvtColor(sourcePatch, sourceGray, ColorConversionCodes.BGRA2GRAY);
-                        Cv2.CvtColor(target, targetGray, ColorConversionCodes.BGRA2GRAY);
-                        Cv2.MatchTemplate(sourceGray, targetGray, correlation, TemplateMatchModes.CCoeffNormed);
-                        var score = correlation.At<float>(0, 0);
-                        return float.IsFinite(score) && score >= 0.80 ? candidate : null;
+                        return TemplateMatcher.MatchesFixedTexture(screen, template, candidate.Region, .80) ? candidate : null;
                     }
                     // 高置信度正常按钮直接完成；较弱命中仍保留原阈值，但需等升级检查排除遮罩。
                     var countMatch = count is not null ? Match(count, countLimit!.Roi, _options.SkipCountLimitThreshold) : null;

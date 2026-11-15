@@ -59,11 +59,7 @@ public sealed class ShopConfirmationTests
     {
         foreach (var scenario in new[] { "free", "paid", "price_changed", "statement_changed", "item_changed", "risk_no_icon" })
         {
-            using var source = OpenCvSharp.Cv2.ImDecode(Frame(scenario), OpenCvSharp.ImreadModes.Color);
-            using var device = new OpenCvSharp.Mat();
-            OpenCvSharp.Cv2.Resize(source, device, new OpenCvSharp.Size(width, height),
-                interpolation: width < source.Width ? OpenCvSharp.InterpolationFlags.Area : OpenCvSharp.InterpolationFlags.Linear);
-            var frame = new GameResolution(width, height).Normalize(device.ToBytes(".png"));
+            var frame = ResolutionReplay.Png(Frame(scenario), width, height);
             var risk = new DiamondSafetyChecker(new FakeAdbService(frame), new TemplateMatcher(), new TestLog());
             var evidence = new ShopConfirmationRecognizer(risk).Evaluate(frame, Environment.TickCount64,
                 Layout(), Resource("button_confirm_buy.png"), DiamondPath);

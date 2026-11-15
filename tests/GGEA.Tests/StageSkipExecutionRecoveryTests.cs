@@ -8,11 +8,15 @@ namespace GGEA.Tests;
 public partial class StageSkipServiceTests
 {
     /// <summary>浅色数字的局部改变也必须撤销恢复资格，不能让整块相似度将其稀释。</summary>
-    [Fact]
-    public void ExecutionRecovery_SmallLowContrastApChange_RejectsIdentity()
+    [Theory]
+    [InlineData(1280, 720)]
+    [InlineData(1600, 900)]
+    [InlineData(1920, 1080)]
+    [InlineData(2560, 1440)]
+    public void ExecutionRecovery_SmallLowContrastApChange_RejectsIdentity(int width, int height)
     {
         var recognizer = new SkipExecutionDialogRecognizer();
-        var original = recognizer.Recognize(ImageCodec.DecodePng(ExecutionDialogFrame()), default)!;
+        var original = Assert.IsType<SkipExecutionDialog>(recognizer.Recognize(ResolutionReplay.Screen(ExecutionDialogFrame(), width, height), default));
         var changed = ImageCodec.DecodePng(ExecutionDialogFrame());
         for (var y = 602; y < 622; y++)
         for (var x = 1015; x < 1027; x++)
@@ -22,7 +26,7 @@ public partial class StageSkipServiceTests
             changed.Bgra[i] = (byte)(changed.Bgra[i] + 16);
         }
         Assert.True(recognizer.IsSameSelection(original, original, default));
-        var candidate = Assert.IsType<SkipExecutionDialog>(recognizer.Recognize(changed, default));
+        var candidate = Assert.IsType<SkipExecutionDialog>(recognizer.Recognize(ResolutionReplay.Screen(ImageCodec.EncodePng(changed.Bgra, changed.Width, changed.Height), width, height), default));
         Assert.False(recognizer.IsSameSelection(original, candidate, default));
     }
 
