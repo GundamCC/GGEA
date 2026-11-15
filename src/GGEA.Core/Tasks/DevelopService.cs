@@ -12,7 +12,7 @@ namespace GGEA.App.Tasks;
 /// 开发服务：实现“开发&强化一次”完整流程。
 /// 进入第一个开发路线图 → 查找目标机体 → 点击全部开发 → 两层确认 → 跳过立绘 → 返回主界面；
 /// “全部开发”按钮为灰色禁用状态（今日已开发或无可用开发）时视为任务完成并安全跳过。
-/// 保留游戏缩放，通过标准 ADB 拖动逐行搜索，连续两帧确认后才点击。
+/// 保留游戏缩放，通过标准 ADB 拖动逐行或逐列搜索，连续两帧确认后才点击。
 /// </summary>
 public sealed class DevelopService : IDevelopService
 {
@@ -49,7 +49,7 @@ public sealed class DevelopService : IDevelopService
     /// <param name="msTemplatePath">目标机体模板。</param>
     /// <param name="msLargeTemplatePath">目标机体大图模板（与小图共同覆盖不同缩放比例）；为空表示不启用。</param>
     /// <param name="developTitleTemplatePath">开发页左上角页面标题模板；为空表示不识别标题。</param>
-    /// <param name="maxDragsPerDirection">每个方向的最大拖动次数。</param>
+    /// <param name="maxDragsPerDirection">显式限制每方向步数；0 表示按实际边界遍历。</param>
     /// <param name="dragDurationMs">单次拖动时长。</param>
     /// <param name="threshold">机体匹配置信度阈值。</param>
     /// <param name="stepDelayMs">点击后的页面切换等待时长。</param>
@@ -66,7 +66,7 @@ public sealed class DevelopService : IDevelopService
         string msTemplatePath,
         string msLargeTemplatePath,
         string developTitleTemplatePath,
-        int maxDragsPerDirection = 10,
+        int maxDragsPerDirection = 0,
         int dragDurationMs = 700,
         double threshold = 0.86,
         int stepDelayMs = 2500,
@@ -156,20 +156,20 @@ public sealed class DevelopService : IDevelopService
 
     /// <summary>
     /// 在已打开的路线图上搜索，返回连续两帧稳定目标但不点击，供实际画面验证复用。
-    /// 官方单位先同帧检查两张放大立绘，另一单位命中时最多定向拖动两次，每次识别；失败后归位并逐行扫描。
+    /// 官方单位先同帧检查两张放大立绘，另一单位命中时最多定向拖动两次，每次识别；失败后归位并逐行或逐列扫描。
     /// 固定工具栏不参与识别或边界比较。步长保留重叠，避免大比例机体跨屏漏检。
     /// </summary>
     public async Task<TemplateMatchResult?> FindOnRoadmapAsync(string serial,
-        string msTemplatePath, string msLargeTemplatePath, int maxDragsPerDirection = 10,
+        string msTemplatePath, string msLargeTemplatePath, int maxDragsPerDirection = 0,
         int dragDurationMs = 700, double threshold = 0.86, string titleTemplatePath = "",
         double titleThreshold = 0.85, CancellationToken ct = default)
     {
-        if (maxDragsPerDirection is < 1 or > 30) throw new ArgumentOutOfRangeException(nameof(maxDragsPerDirection));
+        if (maxDragsPerDirection is < 0 or > 30) throw new ArgumentOutOfRangeException(nameof(maxDragsPerDirection));
         if (!double.IsFinite(threshold) || threshold is < 0 or > 1) throw new ArgumentOutOfRangeException(nameof(threshold));
         if (dragDurationMs is < 100 or > 5000) dragDurationMs = Math.Clamp(dragDurationMs, 100, 5000);
         // 透明立绘使用 RGB 相关性，恢复原有 0.86 下限；同时拒绝分数接近的其它位置。
         var wait = new WaitOptions { Threshold = Math.Max(0.86, threshold), Roi = new Roi(360, 240, 1520, 700), RoadmapFixedScales = _fixedUnitScales };
-        // 总时间独立于步数；异常、取消、未知页面均停止，不把未找到当作完成开发。
+        // 五分钟看门狗限制无进展的等待；有效位移会续期，宽图或高图不因正常扫描耗时被截断。
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromMinutes(5));
         var token = timeout.Token;
@@ -223,28 +223,38 @@ public sealed class DevelopService : IDevelopService
         // 截图相似只说明未观察到位移，不能用一次未生效的手势直接授权换行或结束扫描。
         async Task<(bool Moved, bool Found)> MoveAsync(int dx, int dy)
         {
-            for (var attempt = 0; attempt < 2; attempt++)
+            var staticGestures = 0;
+            for (var attempt = 0; attempt < 3; attempt++)
             {
                 var before = previous!;
+                // 两次仍缺少对应点时改用短步，让稀疏节点在前后帧中保留更多重叠。
+                var stepX = attempt == 2 ? dx / 2 : dx;
+                var stepY = attempt == 2 ? dy / 2 : dy;
                 // 换一个画布内的起点复核同一方向，避开原起点可能覆盖的节点/控件；不改变游戏缩放。
-                var sx = dx == 0 ? 1550 - attempt * 80 : 1140 - dx / 2;
-                var sy = dy == 0 ? 840 - attempt * 50 : 590 - dy / 2;
-                _log.Info($"路线图精确拖动: ({sx},{sy}) → ({sx + dx},{sy + dy})");
-                await _automation.DragAsync(serial, sx, sy, sx + dx, sy + dy, dragDurationMs, token);
-                await Task.Delay(GameTiming.RecognitionIntervalMs, token);
+                var sx = dx == 0 ? 1550 - attempt * 80 : 1140 - stepX / 2;
+                var sy = dy == 0 ? 840 - attempt * 50 : 590 - stepY / 2;
+                _log.Info($"路线图精确拖动: ({sx},{sy}) → ({sx + stepX},{sy + stepY})");
+                await _automation.DragAsync(serial, sx, sy, sx + stepX, sy + stepY, dragDurationMs, token);
+                // DragAsync 已等待抬手。短暂等待后按新帧确认页面和移动，不在每个网格额外等五秒。
+                await Task.Delay(GameTiming.ConfirmationIntervalMs, token);
                 await CaptureAsync();
-                var displacement = RoadmapMotion.Measure(before, previous!, dx, dy);
+                var displacement = RoadmapMotion.Measure(before, previous!, stepX, stepY, out var stationary);
                 if (displacement != 0)
                 {
+                    timeout.CancelAfter(TimeSpan.FromMinutes(5));
                     _log.Info($"路线图拖动后已观察到画布位移 {displacement}px（第 {attempt + 1} 次手势）");
                     return (true, false);
                 }
                 // 稀疏节点、加载或粒子容差可能掩盖真实变化；本帧必须识别后才能继续拖动。
                 if (await InspectAsync()) return (false, true);
-                if (attempt == 0) _log.Info("路线图未观察到明显位移，换起点复核同一方向一次");
+                if (stationary && ++staticGestures >= 2)
+                {
+                    _log.Info("路线图已在两个手势起点复核画布静止，按当前边界换向或结束搜索");
+                    return (false, false);
+                }
+                if (attempt < 2) _log.Info(stationary ? "路线图静止，换起点复核当前边界" : "路线图位移证据不足，复核同一方向");
             }
-            _log.Info("路线图同方向两次拖动均未观察到明显位移，按当前边界换向或结束搜索");
-            return (false, false);
+            throw new InvalidOperationException("路线图无法确认位移或边界，停止输入；本次未完成画布遍历");
         }
 
         await CaptureAsync();
@@ -285,21 +295,24 @@ public sealed class DevelopService : IDevelopService
                     inspectedFrame = null;
                     if (await InspectAsync()) return result;
                 }
-                _log.Info("两次快捷拖动后均未确认目标，继续原路线图归位与逐行搜索");
+                _log.Info("两次快捷拖动后均未确认目标，继续归位并按实际边界扫描");
             }
         }
-        var homingMoved = false;
-        // 正常归位只检查标题和位移；疑似撞边的帧额外检查目标，不能把未检索的新画面跳过。
+        // 实机上 850px 手势可推进约 1300px，缩短扫描步幅以保留整台机体与下一帧的重叠区。
+        const int scanStepX = 490;
+        var lastMoveWasHorizontal = false;
+        // 任意起点到角落沿途也属于搜索范围。记住最后实际推进的轴，抵达角落后沿另一轴展开。
         _log.Info("路线图定位左上角：检查页面与位移，疑似边界先识别目标再复核");
-        foreach (var (dx, dy) in new[] { (0, 250), (850, 0) })
+        foreach (var (dx, dy) in new[] { (0, 250), (scanStepX, 0) })
         {
             var edge = false;
-            for (var i = 0; i < maxDragsPerDirection; i++)
+            for (var i = 0; maxDragsPerDirection == 0 || i < maxDragsPerDirection; i++)
             {
                 var move = await MoveAsync(dx, dy);
                 if (move.Found) return result;
-                homingMoved |= move.Moved;
                 if (!move.Moved) { edge = true; break; }
+                lastMoveWasHorizontal = dx != 0;
+                if (await InspectAsync()) return result;
             }
             if (!edge)
             {
@@ -308,28 +321,30 @@ public sealed class DevelopService : IDevelopService
                 _log.Warn("路线图归位达到拖动上限，未确认边界，停止搜索"); return null;
             }
         }
-        // 只有完全未移动才复用初始未命中结论；远处的相似背景不能作为已扫描证据。
-        if (homingMoved && await InspectAsync()) return result;
-        var horizontal = -850;
-        for (var row = 0; row < maxDragsPerDirection; row++)
+        var alongColumns = lastMoveWasHorizontal;
+        var stripName = alongColumns ? "列" : "行";
+        var sweep = alongColumns ? (X: 0, Y: -250) : (X: -scanStepX, Y: 0);
+        var advance = alongColumns ? (X: -scanStepX, Y: 0) : (X: 0, Y: -250);
+        _log.Info($"路线图已归位，开始逐{stripName}扫描");
+        for (var strip = 0; maxDragsPerDirection == 0 || strip < maxDragsPerDirection; strip++)
         {
             var edge = false;
-            for (var column = 0; column < maxDragsPerDirection; column++)
+            for (var step = 0; maxDragsPerDirection == 0 || step < maxDragsPerDirection; step++)
             {
-                var move = await MoveAsync(horizontal, 0);
+                var move = await MoveAsync(sweep.X, sweep.Y);
                 if (move.Found) return result;
                 if (!move.Moved) { edge = true; break; }
                 if (await InspectAsync()) return result;
             }
-            if (!edge) { _log.Warn("路线图横向搜索达到上限，停止搜索"); return null; }
-            var advanced = await MoveAsync(0, -250);
+            if (!edge) { _log.Warn("路线图扫描达到指定步数上限，停止搜索"); return null; }
+            var advanced = await MoveAsync(advance.X, advance.Y);
             if (advanced.Found) return result;
-            if (!advanced.Moved) { _log.Warn("路线图扫描结束，同方向两次拖动均无明显位移，未找到稳定目标机体"); return null; }
+            if (!advanced.Moved) { _log.Warn("路线图扫描结束，未找到稳定目标机体"); return null; }
             if (await InspectAsync()) return result;
-            horizontal = -horizontal;
-            _log.Info($"路线图换至第 {row + 2} 行后反向扫描");
+            sweep = (-sweep.X, -sweep.Y);
+            _log.Info($"路线图换至第 {strip + 2} {stripName}后反向扫描");
         }
-        _log.Warn("路线图搜索达到行数上限，未找到目标机体");
+        _log.Warn("路线图搜索达到指定范围上限，未找到目标机体");
         return null;
     }
 
@@ -411,7 +426,7 @@ public sealed class DevelopService : IDevelopService
         string showcaseTapToNextTemplatePath,
         string backButtonTemplatePath,
         string developTitleTemplatePath,
-        int maxDragsPerDirection = 10,
+        int maxDragsPerDirection = 0,
         int dragDurationMs = 700,
         double threshold = 0.86,
         int stepDelayMs = 2500,

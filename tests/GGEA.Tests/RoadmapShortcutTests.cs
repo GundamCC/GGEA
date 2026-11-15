@@ -88,7 +88,7 @@ public sealed class RoadmapShortcutTests
             : adb.Swipes.Skip(2).Any(s => s.X2 < s.X1) ? targetFrame : blank;
         var service = new DevelopService(new AutomationService(adb, new TemplateMatcher(), new TestLog()), new TestLog(), true);
         Assert.NotNull(await service.FindOnRoadmapAsync("device", Template(target), "", maxDragsPerDirection: 3));
-        Assert.Equal(new[] { (direction * 850, 0), (direction * 850, 0), (0, 250), (0, 250), (850, 0), (850, 0), (-850, 0) },
+        Assert.Equal(new[] { (direction * 850, 0), (direction * 850, 0), (0, 250), (0, 250), (490, 0), (490, 0), (-490, 0) },
             adb.Swipes.Select(s => (s.X2 - s.X1, s.Y2 - s.Y1)));
     }
 
@@ -165,7 +165,7 @@ public sealed class RoadmapShortcutTests
     [Theory]
     [InlineData(Prototype, Ball)]
     [InlineData(Ball, Prototype)]
-    public async Task Shortcut_ReducesGestures_WithoutChangingCustomTemplateSearch(string target, string other)
+    public async Task ShortcutAndCustomHoming_InspectTheFirstMovedFrame(string target, string other)
     {
         var directory = Directory.CreateTempSubdirectory("ggea-shortcut-");
         try
@@ -181,17 +181,18 @@ public sealed class RoadmapShortcutTests
             }
             var first = WithNode(Frame((other, 1.3, 800)), 340);
             var next = WithNode(Frame((target, .832, 800)), 590);
-            async Task<int> Search(string path)
+            async Task<(int Dx, int Dy)> Search(string path)
             {
                 var adb = new FakeAdbService(first);
                 adb.ScreenshotProvider = () => adb.Swipes.Count == 0 ? first : next;
                 var service = new DevelopService(new AutomationService(adb, new TemplateMatcher(), new TestLog()), new TestLog(), true);
                 Assert.NotNull(await service.FindOnRoadmapAsync("device", path, "", maxDragsPerDirection: 3));
-                return adb.Swipes.Count;
+                var drag = Assert.Single(adb.Swipes);
+                return (drag.X2 - drag.X1, drag.Y2 - drag.Y1);
             }
-            // 自定义模板归位到疑似顶部时即检索目标，不再把它拖到下一方向才识别。
-            Assert.Equal(2, await Search(custom));
-            Assert.Equal(1, await Search(Template(target)));
+            // 自定义目标在归位途中命中立即停，官方目标仍按另一单位提示水平搜索。
+            Assert.Equal((0, 250), await Search(custom));
+            Assert.Equal((target == Prototype ? -850 : 850, 0), await Search(Template(target)));
         }
         finally { directory.Delete(true); } // 仅清理本测试创建的唯一目录。
     }

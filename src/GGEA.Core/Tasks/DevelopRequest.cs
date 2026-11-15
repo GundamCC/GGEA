@@ -42,8 +42,8 @@ public sealed record DevelopRequest
     /// <summary>开发页左上角页面标题模板；为空表示不识别标题。</summary>
     public required string DevelopTitleTemplatePath { get; init; }
 
-    /// <summary>每个方向的最大拖动次数。</summary>
-    public int MaxDragsPerDirection { get; init; } = 10;
+    /// <summary>每个方向的最大拖动次数；默认 0，按作品实际边界扫描。</summary>
+    public int MaxDragsPerDirection { get; init; }
 
     /// <summary>单次拖动时长（毫秒）。</summary>
     public int DragDurationMs { get; init; } = 700;
