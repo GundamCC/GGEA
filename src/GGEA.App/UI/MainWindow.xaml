@@ -1290,6 +1290,8 @@
                             <Button x:Name="ScreenshotButton" Content="{loc:Text Source='截图'}"
                                     Click="ScreenshotButton_Click"
                                     Style="{StaticResource ButtonPrimary}"/>
+                            <Button x:Name="MissionEntryButton" Content="{loc:Text Source='打开使命页'}" Margin="8,0,0,0"
+                                    Click="MissionEntryButton_Click" Style="{StaticResource ButtonSecondary}"/>
                             <Button x:Name="TapButton" Content="{loc:Text Source='点击所选'}" Margin="8,0,0,0"
                                     Click="TapButton_Click"
                                     Style="{StaticResource ButtonSecondary}"/>

@@ -1244,6 +1244,29 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>开发工具与正常自动化共用设备互斥；目标页确认后将控制权交回用户。</summary>
+    private async void MissionEntryButton_Click(object sender, RoutedEventArgs e)
+    {
+        await RunWindowTaskAsync(async () =>
+        {
+            using var execution = TryBeginExecution();
+            if (execution is null || !TryGetDeviceSerial(out var serial)) return;
+            try
+            {
+                var result = await new MissionEntryProbe(_adb!, _automation!).OpenAsync(
+                    serial, _config, _mainLayout, _missionLayout, _windowTasks.Token);
+                ConnectionStateText.Text = result;
+                _logger?.Info(result);
+            }
+            catch (OperationCanceledException) when (_windowTasks.Token.IsCancellationRequested) { }
+            catch (Exception ex)
+            {
+                ConnectionStateText.Text = L.Format($"使命入口检查失败：{ex.Message}");
+                _logger?.Warn(ConnectionStateText.Text);
+            }
+        });
+    }
+
     /// <summary>点击截图中选中的坐标点。</summary>
     private async void TapButton_Click(object sender, RoutedEventArgs e)
     {
@@ -3614,6 +3637,7 @@ public partial class MainWindow : Window
         RefreshButton.IsEnabled = !busy;
         ReconnectButton.IsEnabled = !busy && DeviceCombo.SelectedItem is AdbDevice { CanReconnect: true };
         ScreenshotButton.IsEnabled = !busy;
+        MissionEntryButton.IsEnabled = !busy;
         ScoutStartButton.IsEnabled = !_windowTasks.IsStopping && (!busy || (_scoutRunning && _scoutCts?.IsCancellationRequested == false));
         BallFactoryStartButton.IsEnabled = !_windowTasks.IsStopping && (!busy || (_ballFactoryRunning && _ballFactoryCts?.IsCancellationRequested == false));
         BallFactoryGpBox.IsEnabled = !busy;
