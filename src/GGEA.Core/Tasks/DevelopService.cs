@@ -180,14 +180,22 @@ public sealed class DevelopService : IDevelopService
         async Task CaptureAsync()
         {
             token.ThrowIfCancellationRequested();
-            previous = await _automation.ScreenshotAsync(serial, token);
-            var image = ImageCodec.DecodePng(previous);
-            if (image.Width != 1920 || image.Height != 1080)
-                throw new InvalidOperationException("开发路线图需要 1920×1080 游戏画面，请先调整模拟器分辨率");
-            if (!string.IsNullOrEmpty(titleTemplatePath) &&
-                await _automation.MatchImageAsync(previous, titleTemplatePath,
-                    new WaitOptions { Threshold = titleThreshold, Roi = new Roi(200, 0, 650, 150) }, token) is null)
-                throw new InvalidOperationException("路线图标题已消失，停止拖动与点击");
+            async Task<byte[]> Capture()
+            {
+                var png = await _automation.ScreenshotAsync(serial, token);
+                var image = GameResolution.ReadPng(png);
+                if (image.Width != GameResolution.BaseWidth || image.Height != GameResolution.BaseHeight)
+                    throw new InvalidOperationException("开发路线图需要 1920×1080 游戏画面，请先调整模拟器分辨率");
+                return png;
+            }
+            previous = await Capture();
+            if (string.IsNullOrEmpty(titleTemplatePath)) return;
+            var options = new WaitOptions { Threshold = titleThreshold, Roi = new Roi(200, 0, 650, 150) };
+            var check = await PageObservation.ConfirmAsync(previous, Capture,
+                async (frame, _) => await _automation.MatchImageAsync(frame, titleTemplatePath, options, token) is not null,
+                GameTiming.ConfirmationIntervalMs, token);
+            previous = check.Frame;
+            if (!check.Confirmed) throw new InvalidOperationException("路线图标题已消失，停止拖动与点击");
         }
 
         async Task<bool> InspectAsync()

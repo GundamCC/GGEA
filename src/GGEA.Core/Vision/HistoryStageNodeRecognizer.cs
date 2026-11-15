@@ -9,7 +9,10 @@ public sealed class HistoryStageNodeRecognizer(AutomationService automation, Sta
     HistoryProgressNavigator navigation) : IStageNodeRecognizer, IStageNextNodeRecognizer
 {
     /// <summary>每张用于节点决策的截图先验证作品和页面，两帧编号、状态与位置一致才返回。</summary>
-    public async Task<StageNodeRecognition?> RecognizeSelectedAsync(string serial, HardStageEntry work, CancellationToken ct = default)
+    public Task<StageNodeRecognition?> RecognizeSelectedAsync(string serial, HardStageEntry work, CancellationToken ct = default) =>
+        PageObservation.ReadAsync(() => ReadSelectedAsync(serial, work, ct), ct);
+
+    private async Task<StageNodeRecognition?> ReadSelectedAsync(string serial, HardStageEntry work, CancellationToken ct)
     {
         var previous = await Read();
         StageNodeRecognition? stopEvidence = null;

@@ -170,6 +170,28 @@ public sealed class HistoryStageNavigationTests
         Assert.InRange(test.Scrolls, 1, 2);
     }
 
+    [Fact]
+    public async Task MissingListBeforeScroll_RecapturesWithoutInput()
+    {
+        var readsAtRecovery = 0;
+        Scenario? session = null;
+        session = new Scenario(Selected(1), new(false, null, null, null, null, null),
+            Selected(1), Selected(9), Selected(9), Detail(9), Detail(9))
+        {
+            BeforeObservation = n =>
+            {
+                if (n != 3) return;
+                readsAtRecovery++;
+                Assert.Empty(session!.Taps);
+                Assert.Equal(0, session.Scrolls);
+            }
+        };
+        Assert.True((await session.Run()).Success);
+        Assert.Equal(1, readsAtRecovery);
+        Assert.Equal(1, session.Scrolls);
+        Assert.Equal(new[] { (1675, 895) }, session.Taps);
+    }
+
     /// <summary>第二帧到达时取消必须撤销已经取得的第一帧授权。</summary>
     [Fact]
     public async Task CancellationBeforeClick_RevokesAuthorization()

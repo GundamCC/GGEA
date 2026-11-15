@@ -16,8 +16,10 @@ public sealed class HistoryProgressNavigator(AutomationService automation, Histo
     public async Task<HistoryProgressObservation> OpenOverviewAsync(CancellationToken ct)
     {
         var state = await ObserveAsync(ct);
-        if (state.Page == HistoryPageKind.Unknown && state.Entry is null && !state.MainStageTitle)
-            await openMainStage(ct);
+        var entry = await PageObservation.ConfirmAsync(state, () => ObserveAsync(ct),
+            (frame, _) => Task.FromResult(frame.Page != HistoryPageKind.Unknown || frame.Entry is not null || frame.MainStageTitle),
+            GameTiming.ConfirmationIntervalMs, ct);
+        if (!entry.Confirmed) await openMainStage(ct);
         var opened = await new HistoryStageNavigationService(automation, vision, serial, log)
             .OpenAsync(work, catalog.Works.Count, ct);
         if (!opened.Success) throw new InvalidOperationException(opened.Message);
@@ -25,7 +27,10 @@ public sealed class HistoryProgressNavigator(AutomationService automation, Histo
     }
 
     /// <summary>攻略度需要同作品连续两帧一致，未知状态由流程决策阻止推进。</summary>
-    public async Task<HistoryProgressObservation> ReadOverviewAsync(CancellationToken ct)
+    public Task<HistoryProgressObservation> ReadOverviewAsync(CancellationToken ct) =>
+        PageObservation.ReadAsync(() => ReadOverviewPairAsync(ct), ct);
+
+    private async Task<HistoryProgressObservation> ReadOverviewPairAsync(CancellationToken ct)
     {
         var state = await WaitForPageAsync(HistoryPageKind.Overview, ct);
         await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
@@ -67,17 +72,24 @@ public sealed class HistoryProgressNavigator(AutomationService automation, Histo
     /// <summary>结算后只从已确认的本作品节点/BOSS 页返回一层；未知页不盲点返回。</summary>
     public async Task<HistoryProgressObservation> ReturnOverviewAsync(CancellationToken ct)
     {
-        var first = await ObserveAsync(ct);
-        if (first.Page == HistoryPageKind.Overview && first.DetailWorkId == work.Id) return await ReadOverviewAsync(ct);
-        if (first.DetailWorkId != work.Id || first.Page is not (HistoryPageKind.StageNodes or HistoryPageKind.Boss) || first.Back is null)
-            throw new InvalidOperationException(L.Text("未确认本作品的节点或 BOSS 页，未点击返回。"));
-        await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
-        var next = await ObserveAsync(ct);
-        Require(next, first.Page);
-        if (next.Back is null || Math.Abs(next.Back.CenterX - first.Back.CenterX) > 8 ||
-            Math.Abs(next.Back.CenterY - first.Back.CenterY) > 8)
-            throw new InvalidOperationException(L.Text("返回按钮未连续确认，停止历史作品推进。"));
-        await automation.TapAsync(serial, next.Back.CenterX, next.Back.CenterY, ct);
+        var back = await PageObservation.ReadAsync(async () =>
+        {
+            var first = await ObserveAsync(ct);
+            if (first.Page == HistoryPageKind.Overview && first.DetailWorkId == work.Id) return null;
+            if (first.Page == HistoryPageKind.Unknown || first.DetailWorkId is null)
+                throw new MissingPageEvidenceException(L.Text("未确认本作品的节点或 BOSS 页，未点击返回。"));
+            if (first.DetailWorkId != work.Id || first.Page is not (HistoryPageKind.StageNodes or HistoryPageKind.Boss) || first.Back is null)
+                throw new InvalidOperationException(L.Text("未确认本作品的节点或 BOSS 页，未点击返回。"));
+            await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
+            var next = await ObserveAsync(ct);
+            Require(next, first.Page);
+            if (next.Back is null || Math.Abs(next.Back.CenterX - first.Back.CenterX) > 8 ||
+                Math.Abs(next.Back.CenterY - first.Back.CenterY) > 8)
+                throw new InvalidOperationException(L.Text("返回按钮未连续确认，停止历史作品推进。"));
+            return next.Back;
+        }, ct);
+        if (back is null) return await ReadOverviewAsync(ct);
+        await automation.TapAsync(serial, back.CenterX, back.CenterY, ct);
         return await ReadOverviewAsync(ct);
     }
 
@@ -109,7 +121,11 @@ public sealed class HistoryProgressNavigator(AutomationService automation, Histo
 
     private void Require(HistoryStageObservation observation, HistoryPageKind page)
     {
-        if (observation.DetailWorkId != work.Id || observation.Page != page)
-            throw new InvalidOperationException(L.Text("历史作品身份或当前页面不符，停止后续点击。"));
+        if (observation.DetailWorkId == work.Id && observation.Page == page) return;
+        var message = L.Text("历史作品身份或当前页面不符，停止后续点击。");
+        if ((observation.DetailWorkId is not null && observation.DetailWorkId != work.Id) ||
+            (observation.Page != HistoryPageKind.Unknown && observation.Page != page))
+            throw new InvalidOperationException(message);
+        throw new MissingPageEvidenceException(message);
     }
 }

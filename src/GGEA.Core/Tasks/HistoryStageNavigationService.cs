@@ -70,28 +70,36 @@ public sealed class HistoryStageNavigationService
                 else return Fail(L.Text("HISTORY STAGE 入口或主要关卡标题未连续确认，未点击。"));
                 state = await Wait(s => s.HistoryTitle && s.Go is not null);
             }
-            if (!IsList(state)) return Fail(L.Text("未确认历史作品列表。请先进入主要关卡或历史关卡界面。"));
+            var initialList = await ConfirmList(state);
+            state = initialList.Frame;
+            if (!initialList.Confirmed) return Fail(L.Text("未确认历史作品列表。请先进入主要关卡或历史关卡界面。"));
 
             // 优先处理当前可见目标；选择失败只撤销候选，不把同系列误命中当作进入成功。
             if (await TryCurrent(state)) return await Finish();
             var maxScrolls = Math.Clamp((int)Math.Ceiling(workCount * 180.0 / 500), 1, 8);
             for (var i = 0; i < maxScrolls; i++)
             {
-                if (!IsList(await Observe())) return Fail(L.Text("历史列表标题或前往关卡按钮消失，已停止拖动。"));
+                if (!(await ConfirmList(await Observe())).Confirmed) return Fail(L.Text("历史列表标题或前往关卡按钮消失，已停止拖动。"));
                 await _scroll(false, token); await _delay(GameTiming.RecognitionIntervalMs, token);
             }
             for (var page = 0; page <= maxScrolls; page++)
             {
                 state = await Observe();
-                if (!IsList(state)) return Fail(L.Text("未确认历史作品列表，已停止作品搜索。"));
+                var list = await ConfirmList(state);
+                state = list.Frame;
+                if (!list.Confirmed) return Fail(L.Text("未确认历史作品列表，已停止作品搜索。"));
                 if (await TryCurrent(state)) return await Finish();
                 if (page == maxScrolls) break;
                 // 识别与动作之间再检查页面，不能用旧帧在其他页面滚动。
-                if (!IsList(await Observe())) return Fail(L.Text("页面已改变，未继续拖动。"));
+                if (!(await ConfirmList(await Observe())).Confirmed) return Fail(L.Text("页面已改变，未继续拖动。"));
                 _log.Info("当前历史列表未确认目标作品，继续向下浏览。");
                 await _scroll(true, token); await _delay(GameTiming.RecognitionIntervalMs, token);
             }
             return Fail(L.Format($"有限浏览后仍未确认历史作品 {target.Work}，未点击前往关卡。"));
+
+            Task<(HistoryStageObservation Frame, bool Confirmed)> ConfirmList(HistoryStageObservation first) =>
+                PageObservation.ConfirmAsync(first, Observe, (frame, _) => Task.FromResult(IsList(frame)),
+                    GameTiming.ConfirmationIntervalMs, token);
 
             async Task<HistoryStageObservation> Observe()
             {

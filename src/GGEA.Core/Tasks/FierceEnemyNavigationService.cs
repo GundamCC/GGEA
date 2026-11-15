@@ -26,7 +26,7 @@ public sealed class FierceEnemyNavigationService(AutomationService automation, I
         ScreenImage? homeScreen = null;
         FierceEnemyUnitObservation? home = null;
         // 标题素材缺失属于资源错误，必须先于历史入口点击暴露。
-        ImageCodec.DecodePng(System.IO.File.ReadAllBytes(ConfigService.ResolvePath(HistoryTitleTemplate)));
+        var historyPage = new FierceHistoryListRecognizer(ConfigService.ResolvePath(HistoryTitleTemplate));
         var ready = await automation.WaitForImageAsync(serial, ConfigService.ResolvePath(SelectStageTemplate), HomeOptions, ct,
             async (screen, token) =>
             {
@@ -40,8 +40,12 @@ public sealed class FierceEnemyNavigationService(AutomationService automation, I
             ct.ThrowIfCancellationRequested();
             // 第一次沿用刚确认按钮的同帧，其余重读，禁止以旧按钮授权新的未知画面。
             if (attempt > 0) homeScreen = await automation.CaptureScreenAsync(serial, ct);
-            if (await automation.MatchImageAsync(homeScreen!, ConfigService.ResolvePath(SelectStageTemplate), HomeOptions, ct) is null)
-                return await FailAsync(serial, "home-changed", homeScreen, unit, ct, home);
+            var homeCheck = await PageObservation.ConfirmAsync(homeScreen!,
+                () => automation.CaptureScreenAsync(serial, ct),
+                async (frame, _) => await automation.MatchImageAsync(frame, ConfigService.ResolvePath(SelectStageTemplate), HomeOptions, ct) is not null,
+                Math.Min(pollIntervalMs, GameTiming.ConfirmationIntervalMs), ct);
+            homeScreen = homeCheck.Frame;
+            if (!homeCheck.Confirmed) return await FailAsync(serial, "home-changed", homeScreen, unit, ct, home);
             home = await Task.Run(() => unit.ObserveHomeSelection(homeScreen!, ct), ct);
             if (home.Match is { } circle)
             {
@@ -53,19 +57,23 @@ public sealed class FierceEnemyNavigationService(AutomationService automation, I
         log.Info(L.Text("强敌首页连续四帧未确认目标蓝圈，转入历史列表查找。"));
         await automation.TapAsync(serial, 1575, 415, ct);
         ScreenImage? screen = null;
+        var observedEntry = false;
         var title = await automation.WaitForImageAsync(serial, ConfigService.ResolvePath(HistoryTitleTemplate), HistoryOptions, ct,
             async (frame, token) =>
             {
                 screen = frame;
-                return await automation.MatchImageAsync(frame, ConfigService.ResolvePath(HistoryTitleTemplate), HistoryOptions, token);
+                var match = await Task.Run(() => historyPage.Match(frame, observedEntry, token), token);
+                observedEntry = true;
+                return match;
             });
         if (title is null)
             return await FailAsync(serial, "history-not-ready", screen, unit, ct, home: home, homeScreen: homeScreen);
         // 历史列表可能保留上次位置。每次手势前确认仍在历史页，避免切页后继续盲滑。
         for (var i = 0; i < 4; i++)
         {
-            screen = await automation.CaptureScreenAsync(serial, ct);
-            if (!await IsHistoryAsync(screen, ct))
+            var check = await ConfirmHistory();
+            screen = check.Frame;
+            if (!check.Confirmed)
                 return await FailAsync(serial, "history-changed", screen, unit, ct, home: home, homeScreen: homeScreen);
             await automation.SwipeAsync(serial, 1100, 300, 1100, 900, 400, ct);
         }
@@ -73,8 +81,9 @@ public sealed class FierceEnemyNavigationService(AutomationService automation, I
         FierceEnemyUnitObservation? history = null;
         for (var page = 0; page < 7; page++)
         {
-            screen = await automation.CaptureScreenAsync(serial, ct);
-            if (!await IsHistoryAsync(screen, ct))
+            var check = await ConfirmHistory();
+            screen = check.Frame;
+            if (!check.Confirmed)
                 return await FailAsync(serial, "history-changed", screen, unit, ct, home: home, homeScreen: homeScreen);
             history = await Task.Run(() => unit.ObserveHistorySelection(screen, ct), ct);
             if (history.Match is { } hit)
@@ -88,10 +97,13 @@ public sealed class FierceEnemyNavigationService(AutomationService automation, I
             await Task.Delay(pollIntervalMs, ct);
         }
         return await FailAsync(serial, "history-unit-not-found", screen, unit, ct, history, home, homeScreen);
-    }
 
-    private async Task<bool> IsHistoryAsync(ScreenImage screen, CancellationToken ct)
-        => await automation.MatchImageAsync(screen, ConfigService.ResolvePath(HistoryTitleTemplate), HistoryOptions, ct) is not null;
+        async Task<(ScreenImage Frame, bool Confirmed)> ConfirmHistory() =>
+            await PageObservation.ConfirmAsync(await automation.CaptureScreenAsync(serial, ct),
+                () => automation.CaptureScreenAsync(serial, ct),
+                (frame, retry) => Task.Run(() => historyPage.Match(frame, retry, ct) is not null, ct),
+                Math.Min(pollIntervalMs, GameTiming.ConfirmationIntervalMs), ct);
+    }
 
     /// <summary>识别关卡选择按钮后直接进入；“最新”不会点击单位蓝圈或进入历史列表。</summary>
     private async Task<bool> SelectStageAsync(string serial, FierceEnemyUnitRecognizer? unit, CancellationToken ct)
