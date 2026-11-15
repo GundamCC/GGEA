@@ -59,7 +59,8 @@ public partial class MainWindow : Window
     // 设备执行权保证同一时刻只有一个独立任务；网络错误提醒与 finally 共用本轮通知状态。
     private TaskEndNotification? _activeTaskEndNotification;
     private readonly ApStopNotification _apStopNotification = new();
-    private AdbService? _adb;
+    private AutomationDevice? _adb;
+    private AutomationDevice.Target? _previewTarget;
     private bool _windowClosed;
     private bool _windowClosing;
     private bool _refreshingDeviceSelection;
@@ -399,8 +400,8 @@ public partial class MainWindow : Window
             ConfigService.ApplyResourceLanguage(_config);
 
             // 初始化服务
-            _adb = new AdbService(_config.AdbPath, _logger, _config.CommandTimeoutMs, _config.ScreenshotTimeoutMs, _environmentDiagnostics, _config.EmulatorPath, _config.PreferMuMuNativeScreenshot, _config.GamePackage);
-            _deviceCompatibility = new DeviceCompatibilityService(_adb);
+            _adb = new AutomationDevice(new AdbService(_config.AdbPath, _logger, _config.CommandTimeoutMs, _config.ScreenshotTimeoutMs, _environmentDiagnostics, _config.EmulatorPath, _config.PreferMuMuNativeScreenshot, _config.GamePackage));
+            _deviceCompatibility = new DeviceCompatibilityService(_adb.Transport);
             _connectionErrorDetector = CreateConnectionErrorDetector();
             ConfigureExecutionMonitoring();
             _automation = new AutomationService(_adb, _matcher, _logger, connectionErrorDetector: _connectionErrorDetector,
@@ -475,7 +476,7 @@ public partial class MainWindow : Window
             _preferredDeviceSerial = selected.Serial;
             _preferredDeviceBootId = selected.BootId;
             await SyncDeviceServicesAsync(null, ct: _windowTasks.Token);
-            await _adb.ReconnectDeviceAsync(selected, _windowTasks.Token);
+            await _adb.Transport.ReconnectDeviceAsync(selected, _windowTasks.Token);
             if (await RefreshDevicesAsync(_windowTasks.Token, preserveSelection: false))
                 ConnectionStateText.Text = L.Text("重连成功，请重新选择设备");
         }
@@ -535,8 +536,8 @@ public partial class MainWindow : Window
         _textOcr = null;
         ConfigService.ApplyResourceLanguage(_config);
         CompleteKnownEmulatorPaths();
-        _adb = new AdbService(_config.AdbPath, _logger, _config.CommandTimeoutMs, _config.ScreenshotTimeoutMs, _environmentDiagnostics, _config.EmulatorPath, _config.PreferMuMuNativeScreenshot, _config.GamePackage);
-        _deviceCompatibility = new DeviceCompatibilityService(_adb);
+        _adb = new AutomationDevice(new AdbService(_config.AdbPath, _logger, _config.CommandTimeoutMs, _config.ScreenshotTimeoutMs, _environmentDiagnostics, _config.EmulatorPath, _config.PreferMuMuNativeScreenshot, _config.GamePackage));
+        _deviceCompatibility = new DeviceCompatibilityService(_adb.Transport);
         _connectionErrorDetector = CreateConnectionErrorDetector();
         ConfigureExecutionMonitoring();
         _automation = new AutomationService(_adb, _matcher, _logger, connectionErrorDetector: _connectionErrorDetector,
@@ -1225,8 +1226,10 @@ public partial class MainWindow : Window
         UpdateBusyState();
         try
         {
-            var png = await _adb!.ScreenshotAsync(serial, _windowTasks.Token);
-            _currentScreen = await Task.Run(() => ImageCodec.DecodePng(png));
+            _previewTarget = null;
+            var preview = await _adb!.PreviewAsync(serial, _windowTasks.Token);
+            _currentScreen = await Task.Run(() => ImageCodec.DecodePng(preview.Png));
+            _previewTarget = preview.Target;
 
             ScreenImage.Source = WpfImageCodec.ToBitmap(_currentScreen);
             OverlayCanvas.Width = _currentScreen.Width;
@@ -1267,6 +1270,17 @@ public partial class MainWindow : Window
         });
     }
 
+    private bool BindPreviewTarget(string serial)
+    {
+        if (_previewTarget is not { } target || target.Serial != serial)
+        {
+            _logger?.Warn(L.Text("请重新截取当前设备画面"));
+            return false;
+        }
+        _adb!.BindPreview(target);
+        return true;
+    }
+
     /// <summary>点击截图中选中的坐标点。</summary>
     private async void TapButton_Click(object sender, RoutedEventArgs e)
     {
@@ -1293,6 +1307,7 @@ public partial class MainWindow : Window
         UpdateBusyState();
         try
         {
+            if (!BindPreviewTarget(serial)) return;
             await _adb.TapAsync(serial, (int)Math.Round(point.X), (int)Math.Round(point.Y), _windowTasks.Token);
         }
         catch (Exception ex)
@@ -1366,6 +1381,7 @@ public partial class MainWindow : Window
         UpdateBusyState();
         try
         {
+            if (!BindPreviewTarget(serial)) return;
             Func<string, int, int, int, int, int, CancellationToken, Task> gesture =
                 ReferenceEquals(sender, PreciseDragButton) ? _adb.DragAsync : _adb.SwipeAsync;
             await gesture(
@@ -1563,7 +1579,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 验证当前截图符合 1920×1080 横屏基准。不兼容时仅阻止业务自动化，
+    /// 验证当前截图属于支持的四档横屏尺寸。不兼容时仅阻止业务自动化，
     /// 手动截图仍保持可用，方便用户调整模拟器设置后再次检查。
     /// </summary>
     private async Task<bool> EnsureDeviceCompatibilityAsync(string serial, CancellationToken ct)
@@ -1707,7 +1723,7 @@ public partial class MainWindow : Window
         {
             if (!await EnsureDeviceCompatibilityAsync(serial, ct))
             {
-                AutoFarmStatusText.Text = L.Text("当前模拟器画面不是 1920×1080 横屏，已停止自动刷取。");
+                AutoFarmStatusText.Text = L.Text("当前设备画面不兼容，已停止自动刷取。");
                 return;
             }
 
@@ -3608,6 +3624,7 @@ public partial class MainWindow : Window
         try
         {
             _apStopNotification.Reset();
+            _adb?.BeginOperation();
             _executionMonitor?.BeginSession();
             _config = SnapshotConfig();
             _config.IsDarkMode = ((App)Application.Current).IsDarkMode;

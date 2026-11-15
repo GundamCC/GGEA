@@ -10,12 +10,14 @@ internal sealed class PreciseDragChannel(AdbService adb, MuMuInputService route,
     private const string Digest = "a5f18604bdd698bd2e929161d96b80038b431c8229c3f78762f3cb7025128581";
     private const string Remote = "/data/local/tmp/ggea-drag-" + Digest + ".dex";
 
-    internal async Task DragAsync(string serial, int x1, int y1, int x2, int y2, int duration, CancellationToken ct)
+    internal async Task DragAsync(string serial, int x1, int y1, int x2, int y2, int duration, CancellationToken ct,
+        int? expectedDisplay = null, ulong? expectedPhysical = null)
     {
         if (duration is <= 0 or > 60000) throw new ArgumentOutOfRangeException(nameof(duration));
         if (x1 < 0 || x2 < 0 || y1 < 0 || y2 < 0 || (x1 == x2 && y1 == y2))
             throw new ArgumentException("精确拖动需要有效且不同的起点和终点");
         var display = await route.TryResolveDisplayAsync(serial, ct);
+        if (expectedDisplay.HasValue && expectedDisplay != (display ?? 0)) throw new AdbException("游戏显示屏已变化");
         var lease = "/data/local/tmp/ggea-gesture-" + Guid.NewGuid().ToString("N");
         Task<string> Shell(string command, int timeout, CancellationToken token) =>
             adb.DeviceTextAsync(["-s", serial, "shell", command], timeout, token);
@@ -37,7 +39,8 @@ internal sealed class PreciseDragChannel(AdbService adb, MuMuInputService route,
             }
             if ((await Shell($"printf 1 > {lease} && echo READY", 5000, ct)).Trim() != "READY")
                 throw new AdbException("无法创建设备端手势会话");
-            if (await route.TryResolveDisplayAsync(serial, ct) != display)
+            if (await route.TryResolveDisplayAsync(serial, ct) != display || (expectedDisplay is > 0 &&
+                await route.ReadPhysicalDisplayAsync(serial, expectedDisplay.Value, ct) != expectedPhysical))
                 throw new AdbException("游戏显示屏已变化，请重新确认画面");
             var args = FormattableString.Invariant($"{display ?? -1} {x1} {y1} {x2} {y2} {duration} {lease}");
             ct.ThrowIfCancellationRequested();

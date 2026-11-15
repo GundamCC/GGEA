@@ -219,13 +219,12 @@ public sealed class AdbService : IAdbService
     }
 
     /// <summary>将识别帧的设备像素点击绑定到原显示屏；独立屏重查身份后按固定编号投递。</summary>
-    internal async Task TapFrameAsync(string serial, int display, ulong? physical, int x, int y, CancellationToken ct)
+    internal async Task FrameInputAsync(string serial, int display, ulong? physical, IReadOnlyList<string> input, CancellationToken ct)
     {
         var current = await _mumuInput.TryResolveDisplayAsync(serial, ct);
         if ((current ?? 0) != display || (display > 0 &&
             await _mumuInput.ReadPhysicalDisplayAsync(serial, display, ct) != physical))
             throw new AdbException("游戏显示屏已变化，请重新确认主页");
-        string[] input = ["tap", x.ToString(CultureInfo.InvariantCulture), y.ToString(CultureInfo.InvariantCulture)];
         ct.ThrowIfCancellationRequested();
         if (display > 0)
             await _mumuInput.ExecuteAsync(serial, input, ct, display);
@@ -233,6 +232,10 @@ public sealed class AdbService : IAdbService
             await DeviceTextAsync(["-s", serial, "shell", "input", .. input], _commandTimeoutMs, ct);
         ExecutionObserver?.OnInputCompleted(serial);
     }
+
+    internal Task DragFrameAsync(string serial, int display, ulong? physical, int x1, int y1, int x2, int y2,
+        int durationMs, CancellationToken ct) =>
+        _preciseDrag.DragAsync(serial, x1, y1, x2, y2, durationMs, ct, display, physical);
 
     /// <summary>按设备显示像素执行画布拖动；只有设备确认抬起后才通知执行观察器。</summary>
     public async Task DragAsync(string serial, int x1, int y1, int x2, int y2, int durationMs, CancellationToken ct = default)

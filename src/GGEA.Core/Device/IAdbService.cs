@@ -8,13 +8,13 @@ public interface IAdbService
     /// <summary>列出所有 ADB 设备。</summary>
     Task<IReadOnlyList<AdbDevice>> ListDevicesAsync(CancellationToken ct = default);
 
-    /// <summary>对指定设备截图，返回 PNG 字节。</summary>
+    /// <summary>业务自动化截图统一返回 1920×1080 PNG，包含 OCR 与模板匹配所用的同一坐标空间。</summary>
     Task<byte[]> ScreenshotAsync(string serial, CancellationToken ct = default);
 
     /// <summary>在指定设备上点击坐标。</summary>
     Task TapAsync(string serial, int x, int y, CancellationToken ct = default);
 
-    /// <summary>以设备逻辑像素为单位精确拖动画布，移动结束后在终点停留再抬起。</summary>
+    /// <summary>以 1920×1080 基准像素为单位精确拖动画布，移动结束后在终点停留再抬起。</summary>
     Task DragAsync(string serial, int x1, int y1, int x2, int y2, int durationMs, CancellationToken ct = default);
 
     /// <summary>在指定设备上滑动。</summary>

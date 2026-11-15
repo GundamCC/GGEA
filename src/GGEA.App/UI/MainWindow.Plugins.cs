@@ -19,7 +19,7 @@ public partial class MainWindow
     private async Task SyncPluginsAsync(string? serial, CancellationToken ct, bool newlyStarted = false)
     {
         if (_plugins is null || !_plugins.Entries.Any(entry => entry.Instance is not null)) return;
-        var adb = _adb;
+        var adb = _adb?.Transport;
         if (serial is null || adb is null) { await _plugins.SetDeviceAsync(null, ct); return; }
         var selected = (DeviceCombo.ItemsSource as IEnumerable<AdbDevice>)?
             .FirstOrDefault(device => device.Serial == serial && device.IsAvailable);

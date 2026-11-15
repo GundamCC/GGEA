@@ -15,6 +15,8 @@ public class MissionEntryResolutionTests
     [InlineData(1280, 720, 76, 467, false)]
     [InlineData(1280, 720, 76, 467, true)]
     [InlineData(1920, 1080, 114, 700, false)]
+    [InlineData(1600, 900, 95, 583, false)]
+    [InlineData(2560, 1440, 152, 934, false)]
     public async Task Open_ConfirmsHomeAndMission(int width, int height, int x, int y, bool fromStage)
     {
         var fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures");
@@ -58,7 +60,7 @@ public class MissionEntryResolutionTests
         var layouts = new UiLayoutService(log);
         var config = new AppConfig { MainScreenConfirmationIntervalMs = 0 };
         using var automation = new AutomationService(adb, new TemplateMatcher(), log, resources: resources);
-        var result = await new MissionEntryProbe(adb, automation).OpenAsync("serial", config,
+        var result = await new MissionEntryProbe(new AutomationDevice(adb), automation).OpenAsync("serial", config,
             layouts.Load(resources.Resolve(config.MainUiLayout)), layouts.Load(resources.Resolve(config.MissionLayout)), default);
         Assert.Equal("已确认使命页", result);
         Assert.Equal(fromStage ? 2 : 1, taps.Count);
@@ -69,7 +71,7 @@ public class MissionEntryResolutionTests
             Assert.InRange(int.Parse(point[^2]), 20, 175);
             Assert.InRange(int.Parse(point[^1]), 650, 719);
         }
-        Assert.Equal(config.MainScreenConfirmationFrames + (fromStage ? 2 : 1), frames);
+        Assert.Equal(config.MainScreenConfirmationFrames + (fromStage ? 4 : 2), frames);
     }
 
     // 雷电原生 720p 的标题、图标和按钮按原位置回放，避免只验证由 1080p 缩小的素材。
@@ -94,9 +96,43 @@ public class MissionEntryResolutionTests
         var config = new AppConfig();
         var layouts = new UiLayoutService(log);
         using var automation = new AutomationService(adb, new TemplateMatcher(), log);
-        var result = await new MissionEntryProbe(adb, automation).OpenAsync("device", config,
+        var result = await new MissionEntryProbe(new AutomationDevice(adb), automation).OpenAsync("device", config,
             layouts.Load(ConfigService.ResolvePath(config.MainUiLayout)), layouts.Load(ConfigService.ResolvePath(config.MissionLayout)), default);
         Assert.Equal(missionVisible ? "已确认使命页" : "未确认游戏主页", result);
+    }
+
+    [Theory]
+    [InlineData(1280, 720, 240)]
+    [InlineData(1600, 900, 240)]
+    [InlineData(1920, 1080, 280)]
+    [InlineData(2560, 1440, 320)]
+    public async Task SwipeMapsBothCornersAndRejectsChangedFrame(int width, int height, int dpi)
+    {
+        byte[] Frame(int w, int h)
+        {
+            using var frame = new Mat(h, w, MatType.CV_8UC3, Scalar.Black);
+            return frame.ToBytes(".png");
+        }
+
+        var png = Frame(width, height);
+        var inputs = new List<string>();
+        var transport = new AdbService("adb.exe", new TestLog())
+        {
+            DeviceBytesAsync = (_, _, _) => Task.FromResult(png),
+            DeviceTextAsync = (args, _, _) =>
+            {
+                if (args.Contains("input")) inputs.Add(string.Join(" ", args));
+                return Task.FromResult("");
+            }
+        };
+        var device = new AutomationDevice(transport);
+        Assert.Equal(dpi, new GameResolution(width, height).PresetDpi);
+        Assert.Equal(new GameResolution(1920, 1080), GameResolution.ReadPng(await device.ScreenshotAsync("device")));
+        await device.SwipeAsync("device", 0, 0, 1919, 1079, 300);
+        Assert.Equal($"-s device shell input swipe 0 0 {width - 1} {height - 1} 300", Assert.Single(inputs));
+        png = width == 1280 ? Frame(1920, 1080) : Frame(1280, 720);
+        await Assert.ThrowsAsync<AdbException>(() => device.TapAsync("device", 10, 20));
+        Assert.Single(inputs);
     }
 
     private static void Paste(Mat frame, string name, int x, int y)
@@ -112,6 +148,6 @@ public class MissionEntryResolutionTests
     public void RejectsUnsupportedShape(int width, int height)
     {
         var png = ImageCodec.EncodePng(TestImageFactory.CreateBgra(width, height, 0), width, height);
-        Assert.Throws<InvalidOperationException>(() => LandscapeFrame.FromPng(png));
+        Assert.Throws<InvalidOperationException>(() => GameResolution.ReadPng(png).Normalize(png));
     }
 }
