@@ -56,9 +56,10 @@ internal sealed class MuMuInputService
     }
 
     /// <summary>仅在唯一确认游戏正在目标显示屏运行后发送输入，失败绝不回退默认显示屏。</summary>
-    internal async Task ExecuteAsync(string serial, IReadOnlyList<string> input, CancellationToken ct)
+    internal async Task ExecuteAsync(string serial, IReadOnlyList<string> input, CancellationToken ct, int? expectedDisplay = null)
     {
         var display = await ResolveDisplayAsync(serial, ct);
+        if (expectedDisplay.HasValue && expectedDisplay != display) throw new AdbException("游戏显示屏已变化，请重新确认主页");
         ct.ThrowIfCancellationRequested();
         // 常规动作由 AdbService 统一记录，显示屏路由不重复刷屏；失败仍通过异常交由调用方处理。
         var result = await _run(["-s", serial, "shell", "input", "-d",

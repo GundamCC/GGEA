@@ -61,8 +61,11 @@ public sealed class RoadmapDragBoundaryTests
         var after = (byte[])before.Clone();
         PaintBlue(before, 600);
         PaintBlue(after, 1200);
-        Assert.False(DevelopService.IsNearlySame(ImageCodec.EncodePng(before, 1920, 1080),
-            ImageCodec.EncodePng(after, 1920, 1080)));
+        var first = ImageCodec.EncodePng(before, 1920, 1080);
+        var next = ImageCodec.EncodePng(after, 1920, 1080);
+        Assert.InRange(RoadmapMotion.Measure(first, next, 850, 0), 596, 604);
+        Assert.Equal(0, RoadmapMotion.Measure(first, next, -850, 0));
+        Assert.Equal(0, RoadmapMotion.Measure(first, next, 0, 250));
     }
 
     /// <summary>生成有明确色差、却几乎没有亮度差的节点，隔离边界比较的灰度缺陷。</summary>

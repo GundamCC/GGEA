@@ -31,11 +31,16 @@ public sealed class FierceEnemyAssaultServiceTests
     }
 
     /// <summary>真实截图裁剪保留原像素，回放主界面到活动的完整点击顺序。</summary>
-    [Fact]
-    public async Task OpenFromHome_RealEvent_ClicksOnlyExpectedEntries()
+    [Theory]
+    [InlineData(1280, 720)]
+    [InlineData(1600, 900)]
+    [InlineData(1920, 1080)]
+    [InlineData(2560, 1440)]
+    public async Task OpenFromHome_RealEvent_ClicksOnlyExpectedEntries(int width, int height)
     {
         var adb = new FakeAdbService(TestImageFactory.CreateStageMenuPng());
-        adb.EnqueueScreenshots(Frame(), Frame());
+        var ready = ResolutionReplay.Png(Frame(), width, height);
+        adb.EnqueueScreenshots(ready, ready);
         var log = new TestLog();
         var service = new FierceEnemyAssaultService(new AutomationService(adb, new TemplateMatcher(), log), log);
         var result = await service.OpenFromHomeAsync("serial", new UiLayout

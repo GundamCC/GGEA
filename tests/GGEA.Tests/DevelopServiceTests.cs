@@ -580,7 +580,7 @@ public class DevelopServiceTests
     }
 
     [Fact]
-    public void IsNearlySame_ParticleEffectsTolerated_ReturnsTrue()
+    public void RoadmapMotion_ParticleEffectsDoNotConfirmDrag()
     {
         // 两张截图只有少量粒子特效位置不同（约占 5% 采样点），应判定为“几乎相同”
         var a = TestImageFactory.CreateBgra(1920, 1080, 20);
@@ -600,23 +600,23 @@ public class DevelopServiceTests
         var pngA = ImageCodec.EncodePng(a, 1920, 1080);
         var pngB = ImageCodec.EncodePng(b, 1920, 1080);
 
-        Assert.True(DevelopService.IsNearlySame(pngA, pngB));
+        Assert.Equal(0, RoadmapMotion.Measure(pngA, pngB, 850, 0));
     }
 
     [Fact]
-    public void IsNearlySame_ContentMoved_ReturnsFalse()
+    public void RoadmapMotion_TracksMovingEdge()
     {
         // 整块内容位移属于真实拖动，差异远超粒子容差
         // 大块内容位移（接近整屏变化），差异远超粒子容差
         var a = TestImageFactory.CreateBgra(1920, 1080, 20);
         var b = TestImageFactory.CreateBgra(1920, 1080, 20);
         TestImageFactory.PasteBlock(a, 1920, 1600, 900, 0, 0, 200);
-        TestImageFactory.PasteBlock(b, 1920, 1600, 900, 60, 60, 200);
+        TestImageFactory.PasteBlock(b, 1920, 1600, 900, 60, 0, 200);
 
         var pngA = ImageCodec.EncodePng(a, 1920, 1080);
         var pngB = ImageCodec.EncodePng(b, 1920, 1080);
 
-        Assert.False(DevelopService.IsNearlySame(pngA, pngB));
+        Assert.InRange(RoadmapMotion.Measure(pngA, pngB, 850, 0), 56, 64);
     }
 
     /// <summary>通过共享接口验证真实开发操作序列及明确结果，防止重构改变点击和失败边界。</summary>

@@ -15,6 +15,7 @@ public sealed class AdbService : IAdbService
     private readonly Func<MuMuScreenshotService?> _mumuScreenshot;
     private readonly MuMuScreenshotChannel _mumuScreenshotChannel;
     private readonly MuMuInputService _mumuInput;
+    private readonly PreciseDragChannel _preciseDrag;
     private readonly bool _preferMuMuNativeScreenshot;
     /// <summary>统一设备命令边界；测试仅替换进程 I/O，仍经过生产截图和输入决策。</summary>
     internal Func<IReadOnlyList<string>, int, CancellationToken, Task<string>> DeviceTextAsync { get; set; }
@@ -56,6 +57,7 @@ public sealed class AdbService : IAdbService
         // 所有品牌走相同命令链；仅非默认游戏显示屏需要特殊投递，不读取品牌或管理器身份。
         _mumuInput = new MuMuInputService(gamePackage,
             (args, ct) => DeviceTextAsync(args, args.Contains("dumpsys") ? Math.Min(commandTimeoutMs, 1500) : commandTimeoutMs, ct));
+        _preciseDrag = new PreciseDragChannel(this, _mumuInput, log);
         _diagnostics = diagnostics;
         _emulatorPath = emulatorPath;
         _adbPath = adbPath;
@@ -117,14 +119,14 @@ public sealed class AdbService : IAdbService
     /// <summary>截图失败时保留实际目标与阶段，便于仅凭用户日志定位；取消仍按取消传播。</summary>
     public async Task<byte[]> ScreenshotAsync(string serial, CancellationToken ct = default)
     {
-        var png = await CaptureScreenshotAsync(serial, ct);
+        var (png, _, _) = await CaptureScreenshotAsync(serial, ct);
         if (ExecutionObserver is { } observer)
             await observer.OnScreenshotAsync(serial, png, ct);
         return png;
     }
 
     /// <summary>截图传输与兼容校验有独立预算；异常诊断在预算外执行，不能被包装成 ADB 捕获失败。</summary>
-    private async Task<byte[]> CaptureScreenshotAsync(string serial, CancellationToken ct)
+    internal async Task<(byte[] Png, int Display, ulong? Physical)> CaptureScreenshotAsync(string serial, CancellationToken ct)
     {
         var timer = Stopwatch.StartNew();
         var stage = "读取游戏显示屏";
@@ -152,14 +154,14 @@ public sealed class AdbService : IAdbService
                     var route = $"serial={serial}，logical={display}，physical={id}";
                     if (Interlocked.Exchange(ref _lastTargetRoute, route) != route)
                         _log.Info($"截图通道=ADB 指定游戏标签，{route}");
-                    return normalized;
+                    return (normalized, display.Value, physical);
                 }
                 if (!_preferMuMuNativeScreenshot)
                     throw new AdbException("游戏位于独立显示屏，请启用原生截图；未截取安卓桌面");
                 stage = "MuMu 截图能力探测及安全回退";
                 command = "MuMuNative -> ADB（校验后回退）";
                 // 身份查询与两种截图共用总预算，防止多个内部超时叠加。
-                return await _mumuScreenshotChannel.CaptureAsync(serial, ct);
+                return (await _mumuScreenshotChannel.CaptureAsync(serial, ct), display.Value, null);
             }
             stage = "执行命令";
             var bytes = await DeviceBytesAsync(
@@ -173,7 +175,7 @@ public sealed class AdbService : IAdbService
             ct.ThrowIfCancellationRequested();
             if ((prefixLength > 0 || newlineRecovered) && Interlocked.Exchange(ref _prefixRecoveryReported, 1) == 0)
                 _log.Warn($"截图输出兼容恢复 [serial={serial}]: 已移除 {prefixLength} 字节前缀，换行转换恢复={newlineRecovered}，PNG 结构、CRC 与像素解码验证通过；后续同类恢复不重复提示，未记录前缀内容");
-            return png;
+            return (png, 0, null);
         }
         catch (OperationCanceledException) when (!requestToken.IsCancellationRequested)
         {
@@ -214,6 +216,33 @@ public sealed class AdbService : IAdbService
     {
         _log.Info($"点击: ({x}, {y})");
         await ExecuteInputAsync(serial, ["tap", x.ToString(CultureInfo.InvariantCulture), y.ToString(CultureInfo.InvariantCulture)], ct);
+    }
+
+    /// <summary>将识别帧的设备像素点击绑定到原显示屏；独立屏重查身份后按固定编号投递。</summary>
+    internal async Task FrameInputAsync(string serial, int display, ulong? physical, IReadOnlyList<string> input, CancellationToken ct)
+    {
+        var current = await _mumuInput.TryResolveDisplayAsync(serial, ct);
+        if ((current ?? 0) != display || (display > 0 &&
+            await _mumuInput.ReadPhysicalDisplayAsync(serial, display, ct) != physical))
+            throw new AdbException("游戏显示屏已变化，请重新确认主页");
+        ct.ThrowIfCancellationRequested();
+        if (display > 0)
+            await _mumuInput.ExecuteAsync(serial, input, ct, display);
+        else
+            await DeviceTextAsync(["-s", serial, "shell", "input", .. input], _commandTimeoutMs, ct);
+        ExecutionObserver?.OnInputCompleted(serial);
+    }
+
+    internal Task DragFrameAsync(string serial, int display, ulong? physical, int x1, int y1, int x2, int y2,
+        int durationMs, CancellationToken ct) =>
+        _preciseDrag.DragAsync(serial, x1, y1, x2, y2, durationMs, ct, display, physical);
+
+    /// <summary>按设备显示像素执行画布拖动；只有设备确认抬起后才通知执行观察器。</summary>
+    public async Task DragAsync(string serial, int x1, int y1, int x2, int y2, int durationMs, CancellationToken ct = default)
+    {
+        await _preciseDrag.DragAsync(serial, x1, y1, x2, y2, durationMs, ct);
+        _log.Info($"精确拖动: ({x1}, {y1}) → ({x2}, {y2})，移动时长 {durationMs}ms");
+        ExecutionObserver?.OnInputCompleted(serial);
     }
 
     /// <summary>滑动与点击共用显示屏路由，避免列表滑动落入模拟器桌面。</summary>

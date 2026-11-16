@@ -15,12 +15,6 @@ public sealed record DeviceCompatibilityResult(
 /// </summary>
 public sealed class DeviceCompatibilityService
 {
-    /// <summary>当前模板与坐标数据的基准宽度。</summary>
-    public const int RequiredWidth = 1920;
-
-    /// <summary>当前模板与坐标数据的基准高度。</summary>
-    public const int RequiredHeight = 1080;
-
     private readonly IAdbService _adb;
 
     public DeviceCompatibilityService(IAdbService adb)
@@ -61,7 +55,8 @@ public sealed class DeviceCompatibilityService
         }
         callerToken.ThrowIfCancellationRequested();
         var screen = await Task.Run(() => ImageCodec.DecodePng(png), callerToken);
-        if (screen.Width == RequiredWidth && screen.Height == RequiredHeight)
+        var size = new GameResolution(screen.Width, screen.Height);
+        if (size.IsSupported)
         {
             return new DeviceCompatibilityResult(
                 true,
@@ -74,6 +69,6 @@ public sealed class DeviceCompatibilityService
             false,
             screen.Width,
             screen.Height,
-            L.Format($"当前截图为 {screen.Width}×{screen.Height}，自动化仅支持 {RequiredWidth}×{RequiredHeight} 横屏"));
+            size.UnsupportedMessage);
     }
 }

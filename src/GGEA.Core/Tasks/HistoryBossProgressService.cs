@@ -126,19 +126,22 @@ public sealed class HistoryBossProgressService(AutomationService automation, His
     /// <summary>一次截图确认作品页面并读取完成标记，返回只属于该帧的位置与状态。</summary>
     private async Task<IReadOnlyList<HistoryBossCard>> ReadCurrentAsync(CancellationToken ct)
     {
-        var screen = await automation.CaptureScreenAsync(serial, ct);
-        return await Task.Run(() =>
-        {
-            navigation.Require(screen, HistoryPageKind.Boss, ct);
-            return recognizer.Read(screen, ct);
-        }, ct);
+        var screen = await ConfirmBossPageAsync(ct);
+        return await Task.Run(() => recognizer.Read(screen, ct), ct);
     }
 
-    /// <summary>只在目标不在当前视口时短距离移动；每次动作前确认仍在本作品 BOSS 页面。</summary>
+    private Task<ScreenImage> ConfirmBossPageAsync(CancellationToken ct) =>
+        PageObservation.ReadAsync(async () =>
+        {
+            var screen = await automation.CaptureScreenAsync(serial, ct);
+            await Task.Run(() => navigation.Require(screen, HistoryPageKind.Boss, ct), ct);
+            return screen;
+        }, ct);
+
+    /// <summary>每次移动前重新确认本作品 BOSS 页，复采期间不发出手势。</summary>
     private async Task ScrollAsync(int movement, CancellationToken ct)
     {
-        var screen = await automation.CaptureScreenAsync(serial, ct);
-        await Task.Run(() => navigation.Require(screen, HistoryPageKind.Boss, ct), ct);
+        await ConfirmBossPageAsync(ct);
         // 手指方向与列表浏览方向相反；限制手势在卡片视口内，避免触及底部导航。
         movement = Math.Clamp(movement, -420, 420);
         var startY = movement < 0 ? 800 : 350;

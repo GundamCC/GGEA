@@ -322,6 +322,10 @@ public sealed partial class AutomationService : IDisposable
         return screen;
     }
 
+    /// <summary>画布拖动使用连续触点，列表翻页继续使用滑动。</summary>
+    public Task DragAsync(string serial, int x1, int y1, int x2, int y2, int durationMs, CancellationToken ct = default)
+        => _adb.DragAsync(serial, x1, y1, x2, y2, durationMs, ct);
+
     /// <summary>仅供专属流程读取同帧证据；回调不得点击，消费授权由调用方复核。</summary>
     internal Task<(ScreenImage Screen, T Observation)> CaptureAndObserveAsync<T>(string serial,
         Func<ScreenImage, CancellationToken, Task<T>> observe, CancellationToken ct, bool retryOnFailure = true)

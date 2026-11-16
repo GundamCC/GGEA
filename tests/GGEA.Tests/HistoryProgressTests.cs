@@ -33,6 +33,24 @@ public sealed class HistoryProgressTests
         Assert.Equal(step, HistoryProgressDecision.Decide(observed));
     }
 
+    [Theory]
+    [InlineData(1280, 720)]
+    [InlineData(1600, 900)]
+    [InlineData(1920, 1080)]
+    [InlineData(2560, 1440)]
+    public void NormalizedHistoryCards_PreserveProgressAndLock(int width, int height)
+    {
+        using var vision = Vision();
+        foreach (var name in new[] { "complete", "locked" })
+        {
+            var source = Frame(name);
+            var frame = ResolutionReplay.Screen(ImageCodec.EncodePng(source.Bgra, source.Width, source.Height), width, height);
+            var observed = vision.Inspect(frame, default);
+            Assert.Equal(name == "complete" ? HistoryCompletion.Complete : HistoryCompletion.Incomplete, observed.Stage);
+            Assert.Equal(name == "complete" ? HistoryCompletion.Complete : HistoryCompletion.Locked, observed.Boss);
+        }
+    }
+
     /// <summary>用真实 27% 数字替换 BOSS 数字，验证已解锁但未完成时的第二阶段计划。</summary>
     [Fact]
     public void UnlockedIncompleteBoss_SelectsBossAfterStageComplete()

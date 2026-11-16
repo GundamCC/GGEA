@@ -57,7 +57,7 @@ public class DeviceCompatibilityServiceTests
     }
 
     [Theory]
-    [InlineData(1280, 720)]
+    [InlineData(1024, 576)]
     [InlineData(1080, 1920)]
     [Trait("Category", "Smoke")]
     public async Task CheckAsync_OtherResolution_ReturnsClearDiagnostic(int width, int height)

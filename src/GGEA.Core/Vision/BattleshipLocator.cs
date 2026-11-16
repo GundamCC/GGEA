@@ -85,7 +85,7 @@ public sealed class BattleshipLocator
             var ex = 960 + dx / 2;
             var ey = 540 + dy / 2;
             _log.Info($"未找到战舰区域，拖动画面 ({attempt + 1}/{maxDrags})…");
-            await _adb.SwipeAsync(serial, sx, sy, ex, ey, dragDurationMs, ct);
+            await _adb.DragAsync(serial, sx, sy, ex, ey, dragDurationMs, ct);
             await Task.Delay(GameTiming.RecognitionIntervalMs, ct);
         }
 

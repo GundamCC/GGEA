@@ -141,10 +141,7 @@ public sealed class WorkLogoVision : IWorkLogoVision
             using var subtitle = new Mat(template, area);
             using var subtitleMask = new Mat(mask, area);
             using var patch = new Mat(gray, new Rect(match.Bounds.X + area.X, match.Bounds.Y + area.Y, area.Width, area.Height));
-            using var result = new Mat();
-            Cv2.MatchTemplate(patch, subtitle, result, TemplateMatchModes.CCoeffNormed, subtitleMask);
-            var score = result.At<float>(0, 0);
-            if (float.IsFinite(score) && score >= .80 && score <= 1.001) return true;
+            if (TemplateMatcher.MatchesFixedTexture(patch, subtitle, .80, subtitleMask)) return true;
         }
         return false;
     }
@@ -166,6 +163,8 @@ public sealed class WorkLogoVision : IWorkLogoVision
         var candidate = _matcher.Match(screen.Bgra, screen.Width, screen.Height, template.Bgra,
             template.Width, template.Height, _options.WorkSelectThreshold, roi);
         if (candidate is null) return null;
+        if (!closed)
+            return TemplateMatcher.MatchesFixedTexture(screen, template, candidate.Region, .80) ? candidate : null;
         // SSD 对大面积同色背景可能给出高分，再核对按钮/标题纹理，拒绝画布上的假暗态选择。
         using var source = Mat.FromPixelData(screen.Height, screen.Width, MatType.CV_8UC4, screen.Bgra);
         using var target = Mat.FromPixelData(template.Height, template.Width, MatType.CV_8UC4, template.Bgra);
@@ -174,10 +173,10 @@ public sealed class WorkLogoVision : IWorkLogoVision
         Cv2.CvtColor(target, targetGray, ColorConversionCodes.BGRA2GRAY);
         // 暗态按钮顶部可能被“特别活动举办中”的箭头覆盖；复核下方主体文字与边框，
         // 不降低相关性阈值，也不取消完整按钮的 SSD 校验。
-        var topInset = closed ? template.Height / 5 : 0;
+        var topInset = template.Height / 5;
         // 暗态按钮受标牌和动态背景影响，SSD 最佳位置可能偏移一两个像素。
         // 只在原 ROI 内精修邻近位置，再于同一位置复核完整 SSD，不能用不同位置的分数拼成命中。
-        var radius = closed ? 2 : 0;
+        const int radius = 2;
         var left = Math.Max(roi.X, candidate.X - radius);
         var top = Math.Max(roi.Y, candidate.Y - radius);
         var right = Math.Min(roi.X + roi.Width - template.Width, candidate.X + radius);

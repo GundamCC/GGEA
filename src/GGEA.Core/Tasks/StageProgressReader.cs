@@ -56,13 +56,18 @@ public sealed class StageProgressReader(AutomationService automation, IStageNode
         for (var attempt = 0; attempt < 5; attempt++)
         {
             // 公共截图入口校验有效图像；标记出现也不能绕过新帧复核与取消，网络诊断由异常入口负责。
-            var firstScreen = await automation.CaptureScreenAsync(serial, ct);
-            var first = await Task.Run(() => nextRecognizer.RecognizeNext(firstScreen, work, ct), ct);
-            if (first is not null)
+            var (first, next) = await PageObservation.ReadAsync<(StageNextNodeRecognition?, StageNextNodeRecognition?)>(async () =>
             {
+                var firstScreen = await automation.CaptureScreenAsync(serial, ct);
+                var marker = await Task.Run(() => nextRecognizer.RecognizeNext(firstScreen, work, ct), ct);
+                if (marker is null) return (null, null);
                 await DelayAsync(GameTiming.ConfirmationIntervalMs, ct);
                 var nextScreen = await automation.CaptureScreenAsync(serial, ct);
-                var next = await Task.Run(() => nextRecognizer.RecognizeNext(nextScreen, work, ct), ct);
+                var confirmed = await Task.Run(() => nextRecognizer.RecognizeNext(nextScreen, work, ct), ct);
+                return (marker, confirmed);
+            }, ct);
+            if (first is not null)
+            {
                 if (next is not null && first.Position == next.Position && next.Position != current.Position &&
                     Math.Abs(first.MarkerRegion.CenterX - next.MarkerRegion.CenterX) <= 8 &&
                     Math.Abs(first.MarkerRegion.CenterY - next.MarkerRegion.CenterY) <= 12 &&

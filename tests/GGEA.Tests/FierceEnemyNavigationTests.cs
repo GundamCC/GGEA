@@ -67,9 +67,8 @@ public sealed class FierceEnemyNavigationTests
     {
         using var temp = new TempDirectory();
         var home = Home("stable");
-        var pixels = TestImageFactory.CreateBgra(1920, 1080, 20);
-        if (historyReady) Paste(pixels, LoadTemplate(FierceEnemyNavigationService.HistoryTitleTemplate), 220, 18);
-        var history = ImageCodec.EncodePng(pixels, 1920, 1080);
+        var history = historyReady ? HistoryFrame() :
+            ImageCodec.EncodePng(TestImageFactory.CreateBgra(1920, 1080, 20), 1920, 1080);
         var adb = new FakeAdbService(home);
         adb.ScreenshotProvider = () => adb.Taps.Count == 0 ? home : history;
         var log = new TestLog();
@@ -107,6 +106,62 @@ public sealed class FierceEnemyNavigationTests
         Assert.Empty(adb.Taps);
         Assert.Empty(adb.Swipes);
         Assert.Empty(Directory.GetFiles(temp.Path));
+    }
+
+    private static byte[] HistoryFrame() => File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory,
+        "Fixtures/Navigation/fierce-history-list.png"));
+
+    [Theory]
+    [InlineData(1280, 720)]
+    [InlineData(1600, 900)]
+    [InlineData(1920, 1080)]
+    [InlineData(2560, 1440)]
+    public async Task HistoryPage_RequiresFreshTitleAndListBeforeInput(int width, int height)
+    {
+        var page = new FierceHistoryListRecognizer(ConfigService.ResolvePath(FierceEnemyNavigationService.HistoryTitleTemplate));
+        var actual = ResolutionReplay.Screen(HistoryFrame(), width, height);
+        var noList = new ScreenImage { Width = actual.Width, Height = actual.Height, Bgra = (byte[])actual.Bgra.Clone() };
+        Array.Clear(noList.Bgra, 150 * 1920 * 4, (1080 - 150) * 1920 * 4);
+        var noTitle = new ScreenImage { Width = actual.Width, Height = actual.Height, Bgra = (byte[])actual.Bgra.Clone() };
+        Array.Clear(noTitle.Bgra, 0, 120 * 1920 * 4);
+        Assert.Null(page.Match(noList, true, default));
+        Assert.Null(page.Match(noTitle, true, default));
+        var reads = 0;
+        var check = await PageObservation.ConfirmAsync(noTitle, () => { reads++; return Task.FromResult(actual); },
+            (frame, retry) => Task.FromResult(page.Match(frame, retry, default) is not null), 1, default);
+        Assert.True(check.Confirmed);
+        Assert.Same(actual, check.Frame);
+        Assert.Equal(1, reads);
+
+        // 完整导航回放：首帧进入列表、标题丢失、真实帧恢复后只滑一次；随后持续丢失不得再滑。
+        var entry = ImageCodec.DecodePng(HistoryFrame());
+        Paste(entry.Bgra, LoadTemplate(FierceEnemyNavigationService.HistoryTitleTemplate), 220, 18);
+        var ready = ImageCodec.EncodePng(entry.Bgra, entry.Width, entry.Height);
+        var missing = ImageCodec.EncodePng(noTitle.Bgra, noTitle.Width, noTitle.Height);
+        var recovered = ImageCodec.EncodePng(actual.Bgra, actual.Width, actual.Height);
+        var home = Home(null);
+        var adb = new FakeAdbService(home);
+        var historyReads = 0;
+        adb.ScreenshotProvider = () =>
+        {
+            if (adb.Taps.Count == 0) return home;
+            historyReads++;
+            if (historyReads == 1) return ready;
+            if (historyReads == 3)
+            {
+                Assert.Empty(adb.Swipes);
+                return recovered;
+            }
+            return missing;
+        };
+        var log = new TestLog();
+        using var automation = new AutomationService(adb, new TemplateMatcher(), log, textOcr: TapToNextOcrSamples.SharedOcr);
+        using var unit = Unit(1);
+        var navigation = new FierceEnemyNavigationService(automation, log, TapToNextOcrSamples.SharedOcr,
+            timeoutMs: 2000, pollIntervalMs: 1);
+        Assert.False(await navigation.NavigateAsync("serial", unit, default));
+        Assert.Single(adb.Swipes);
+        Assert.Equal(new[] { (1575, 415) }, adb.Taps);
     }
 
     private static FierceEnemyUnitRecognizer Unit(int id) => new(FierceEnemyUnit.Load().Single(u => u.Id == id).TemplatePath);

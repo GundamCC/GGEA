@@ -33,27 +33,7 @@ public sealed class SkipExecutionDialogRecognizer
     {
         foreach (var region in IdentityRegions)
         {
-            // 无字形的空白区域不能建立资源未变的证据。
-            var minimum = 255;
-            var maximum = 0;
-            var changedPixels = 0;
-            for (var y = region.Y; y < region.Y + region.Height; y++)
-            {
-                ct.ThrowIfCancellationRequested();
-                for (var x = region.X; x < region.X + region.Width; x++)
-                {
-                    var i = (y * 1920 + x) * 4;
-                    minimum = Math.Min(minimum, original.Screen.Bgra[i]);
-                    maximum = Math.Max(maximum, original.Screen.Bgra[i]);
-                    // 原生 PNG 的静止内容稳定；只容忍轻微色差和少量孤立噪点。
-                    // 不用整块相关系数，否则浅色 AP 数字变化会被大面积相同背景淹没。
-                    if ((Math.Abs(original.Screen.Bgra[i] - current.Screen.Bgra[i]) > 8 ||
-                         Math.Abs(original.Screen.Bgra[i + 1] - current.Screen.Bgra[i + 1]) > 8 ||
-                         Math.Abs(original.Screen.Bgra[i + 2] - current.Screen.Bgra[i + 2]) > 8) &&
-                        ++changedPixels > 8) return false;
-                }
-            }
-            if (maximum - minimum < 25) return false;
+            if (!TemplateMatcher.MatchesUnchangedText(original.Screen, current.Screen, region, ct)) return false;
         }
         return true;
     }
