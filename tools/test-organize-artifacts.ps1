@@ -2,8 +2,6 @@
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $work = Join-Path $root ('build/migration-test-' + [Guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path (Join-Path $work 'tools') -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'organize-artifacts.ps1') -Destination (Join-Path $work 'tools')
 $script = Join-Path $work 'tools/organize-artifacts.ps1'
 
 # 内容哨兵用于确认移动没有覆盖或丢失；不依赖真实本机依赖和发布包。
@@ -16,6 +14,8 @@ function Assert-Fixture([string]$Relative, [string]$Content) {
     if ([IO.File]::ReadAllText((Join-Path $work $Relative)) -cne $Content) { throw "Content changed: $Relative" }
 }
 try {
+    New-Item -ItemType Directory -Path (Join-Path $work 'tools') -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'organize-artifacts.ps1') -Destination (Join-Path $work 'tools')
     Write-Fixture 'artifacts/publish/config/settings.json' 'personal settings'
     Write-Fixture 'artifacts/dist/package.zip' 'package'
     Write-Fixture 'artifacts/tools-cache/jdk/tool.txt' 'toolchain'

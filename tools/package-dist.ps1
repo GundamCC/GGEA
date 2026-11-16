@@ -19,14 +19,7 @@ if (-not $SourceCommit) {
 $dist = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $root 'artifacts/dist' }
 $name = "GGEA-v$version-$Runtime-$($SourceCommit.Substring(0, 12))"
 $zip = Join-Path $dist "$name.zip"
-$acceptance = Join-Path $dist "$name-verified"
-# 完整发布已存在时优先复核其解压验收目录，避免默认 publish 中运行的旧程序阻碍重复校验。
-$publishDir = if ($PublishDirectory) { [IO.Path]::GetFullPath($PublishDirectory) }
-    elseif ((Test-Path -LiteralPath $zip) -or (Test-Path -LiteralPath "$zip.sha256")) { $acceptance }
-    else { Join-Path $root 'artifacts/publish' }
-if (-not $PublishDirectory -and $publishDir -eq $acceptance -and -not (Test-Path -LiteralPath $acceptance -PathType Container)) {
-    throw "Missing acceptance directory: $acceptance"
-}
+$publishDir = if ($PublishDirectory) { [IO.Path]::GetFullPath($PublishDirectory) } else { Join-Path $root 'artifacts/publish' }
 # 界面普通打包入口仅在没有当前提交的包时检查构建身份；旧 publish 可能正被程序占用。
 # 固定提交完整构建在独立源码快照中完成，避免尝试覆盖正在运行的旧程序。
 if ($BuildIfNeeded -and -not $PublishDirectory -and -not (Test-Path -LiteralPath $zip) -and
@@ -43,7 +36,6 @@ if ($BuildIfNeeded -and -not $PublishDirectory -and -not (Test-Path -LiteralPath
         return
     }
 }
-Assert-ReleaseInfo $publishDir $version $SourceCommit $Runtime -AllowRuntimeLogs
 # 只有压缩、解压与真实程序自检全部通过，才将 ZIP 移到最终输出目录。
 $workRoot = Join-Path $root 'build'
 $work = Join-Path $workRoot ('.verify-' + [Guid]::NewGuid().ToString('N'))
@@ -63,19 +55,18 @@ try {
         Assert-ReleaseInfo $verified $version $SourceCommit $Runtime
         Test-ReleaseExecutable $verified
         Assert-ReleaseInfo $verified $version $SourceCommit $Runtime
-        if (-not (Test-Path -LiteralPath $acceptance -PathType Container)) { throw "Missing acceptance directory: $acceptance" }
-        Assert-ReleaseInfo $acceptance $version $SourceCommit $Runtime
-        if ((Get-FileHash -LiteralPath (Join-Path $verified 'build-info.json') -Algorithm SHA256).Hash -ne
-            (Get-FileHash -LiteralPath (Join-Path $acceptance 'build-info.json') -Algorithm SHA256).Hash) {
-            throw "Existing release acceptance mismatch: $acceptance"
+        if ($PublishDirectory) {
+            Assert-ReleaseInfo $publishDir $version $SourceCommit $Runtime -AllowRuntimeLogs
+            if ((Get-FileHash -LiteralPath (Join-Path $verified 'build-info.json')).Hash -ne
+                (Get-FileHash -LiteralPath (Join-Path $publishDir 'build-info.json')).Hash) { throw 'Existing release manifest mismatch' }
         }
         & (Join-Path $PSScriptRoot 'package-range-index.ps1') $zip $verified $hash "$zip.index.json"
         Write-Host "Verified existing ZIP: $zip"
         Write-Host "SHA-256: $hash"
-        Write-Host "Acceptance directory (extracted from ZIP): $acceptance"
-        if ($BaseDirectory) { & (Join-Path $PSScriptRoot 'package-delta.ps1') -BaseDirectory $BaseDirectory -PublishDirectory $acceptance -OutputDirectory $dist }
+        if ($BaseDirectory) { & (Join-Path $PSScriptRoot 'package-delta.ps1') -BaseDirectory $BaseDirectory -PublishDirectory $verified -OutputDirectory $dist }
         return
     }
+    Assert-ReleaseInfo $publishDir $version $SourceCommit $Runtime -AllowRuntimeLogs
     Copy-DirectoryContents $publishDir $package -Exclude @('logs')
     Assert-ReleaseInfo $package $version $SourceCommit $Runtime
     $candidate = Join-Path $work "$name.zip"
@@ -88,18 +79,14 @@ try {
     Assert-ReleaseInfo $verified $version $SourceCommit $Runtime
     $hash = (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
     "$hash  $name.zip" | Set-Content -LiteralPath (Join-Path $work 'checksum.txt') -Encoding ASCII
-    # 保留从 ZIP 解压的目录，用于人工实机验收。
-    if (Test-Path -LiteralPath $acceptance) { throw "Acceptance directory exists: $acceptance" }
     New-Item -ItemType Directory -Path $dist -Force | Out-Null
-    Move-Item -LiteralPath $verified -Destination $acceptance
     Move-Item -LiteralPath (Join-Path $work 'checksum.txt') -Destination "$zip.sha256"
     try { Move-Item -LiteralPath $candidate -Destination $zip }
     catch { Remove-Item -LiteralPath "$zip.sha256" -Force; throw }
-    & (Join-Path $PSScriptRoot 'package-range-index.ps1') $zip $acceptance $hash "$zip.index.json"
+    & (Join-Path $PSScriptRoot 'package-range-index.ps1') $zip $verified $hash "$zip.index.json"
     Write-Host "Verified ZIP: $zip"
     Write-Host "SHA-256: $hash"
-    Write-Host "Acceptance directory (extracted from ZIP): $acceptance"
-    if ($BaseDirectory) { & (Join-Path $PSScriptRoot 'package-delta.ps1') -BaseDirectory $BaseDirectory -PublishDirectory $acceptance -OutputDirectory $dist }
+    if ($BaseDirectory) { & (Join-Path $PSScriptRoot 'package-delta.ps1') -BaseDirectory $BaseDirectory -PublishDirectory $verified -OutputDirectory $dist }
 }
 finally {
     $resolved = [IO.Path]::GetFullPath($work)

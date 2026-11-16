@@ -35,6 +35,8 @@ jobs:
       # PR 使用 checkout 的合并提交；release 内部固定 HEAD 并导出源码快照。
       # 沿用核心和 Windows 冒烟范围，同时完整执行打包与启动验证。
       - name: Build, test and verify Windows package
+        env:
+          GGEA_TEST_RESULTS_DIRECTORY: ${{ github.workspace }}/test-results
         run: ./tools/release.ps1 -Commit HEAD
       - name: Upload verified CI package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -54,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: windows-test-results-${{ github.sha }}
-          path: build/release-work-*/source/test-results/*.trx
+          path: test-results/*.trx
           if-no-files-found: warn
           retention-days: 7
 

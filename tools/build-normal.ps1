@@ -19,9 +19,10 @@ if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect source worktree.' }
 # 普通版本用于本地快速验收：读取当前工作区，写入 artifacts/publish，不声明固定提交验收身份。
 $identifier = [Guid]::NewGuid().ToString('N')
 $name = "GGEA-v$version-win-x64-$(Get-Date -Format 'yyyyMMdd-HHmmss')-$($identifier.Substring(0, 8))"
-$packageDirectory = Join-Path $outputRoot $name
 $workRoot = Join-Path $root 'build'
-$staging = Join-Path $workRoot ".building-$identifier"
+$work = Join-Path $workRoot ".building-$identifier"
+# ZIP 顶层保留版本名，解压前的目录只在本次工作区内存在。
+$staging = if ($Package) { Join-Path $work $name } else { $work }
 $candidateZip = Join-Path $workRoot ".building-$identifier.zip"
 $zip = Join-Path $outputRoot "$name.zip"
 New-Item -ItemType Directory -Path $outputRoot, $workRoot -Force | Out-Null
@@ -30,9 +31,10 @@ if (-not $Package) {
     # 编译前先检查，保留部署前的再次校验以防构建期间重新打开程序。
     Assert-PublishFilesAvailable -Directory $destination -Exclude @('logs')
 }
-$backup = $null
 $deploymentStarted = $false
 $previousCliLanguage = $env:DOTNET_CLI_UI_LANGUAGE
+$keepRollback = $false
+$backup = $null
 try {
     # 嵌套 MSBuild Exec 的本地代码页不一致时会二次乱码；构建工具统一输出英文。
     $env:DOTNET_CLI_UI_LANGUAGE = 'en'
@@ -55,16 +57,12 @@ try {
         'commit' = $commit; 'worktreeDirty' = ($dirty.Count -gt 0)
         'builtAtUtc' = [DateTime]::UtcNow.ToString('o')
     } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $staging 'local-build-info.json') -Encoding UTF8
-    if ($Package) {
-        Move-Item -LiteralPath $staging -Destination $packageDirectory
-    }
-    else {
+    if (-not $Package) {
         # 原位更新 publish，先检查占用并备份旧内容；保留运行日志，失败时恢复旧包。
         Assert-PublishFilesAvailable -Directory $destination -Exclude @('logs')
         $previousOutputExisted = Test-Path -LiteralPath $destination
         if ($previousOutputExisted) {
-            $backupName = 'publish-backup-normal-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + $identifier.Substring(0, 8)
-            $backup = Join-Path (Join-Path $root 'backups') $backupName
+            $backup = Join-Path (Join-Path $root 'build') ('.rollback-' + [Guid]::NewGuid().ToString('N'))
             Copy-DirectoryContents -Source $destination -Destination $backup -Exclude @('logs')
             # 新包继续使用已有 ADB、区服语言和 AP 方案，不能把每次本地构建变成首次启动。
             Copy-PublishUserFiles -Source $backup -Destination $staging
@@ -86,7 +84,7 @@ try {
                     Copy-DirectoryContents -Source $backup -Destination $destination -SkipIdentical
                     Clear-DirectoryContents -Directory $destination -Exclude @('logs') -KeepDirectory $backup
                 }
-                catch { Write-Warning "Automatic rollback did not finish; the previous package backup is at $backup." }
+                catch { $keepRollback = $true; Write-Warning "Automatic rollback did not finish; the previous package backup is at $backup." }
             }
             elseif ($deploymentStarted -and -not $previousOutputExisted) {
                 try { Clear-DirectoryContents -Directory $destination -Exclude @('logs') }
@@ -95,12 +93,11 @@ try {
             throw $deploymentError
         }
     }
-    $buildOutput = if ($Package) { $packageDirectory } else { $destination }
-    Write-Host "Build: $buildOutput"
+    if (-not $Package) { Write-Host "Build: $destination" }
     Write-Host "Version: $version; source commit: $commit; worktree dirty: $($dirty.Count -gt 0)"
 
     if ($Package) {
-        Compress-Archive -LiteralPath $packageDirectory -DestinationPath $candidateZip -CompressionLevel Optimal
+        Compress-Archive -LiteralPath $staging -DestinationPath $candidateZip -CompressionLevel Optimal
         Move-Item -LiteralPath $candidateZip -Destination $zip
         $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
         "$hash  $name.zip" | Set-Content -LiteralPath "$zip.sha256" -Encoding ASCII
@@ -109,10 +106,16 @@ try {
     }
 }
 finally {
+    # 恢复失败时保留旧产物的唯一完整副本，其余退出路径释放回滚暂存。
+    if ($backup -and -not $keepRollback -and (Test-Path -LiteralPath $backup)) {
+        if ([IO.Directory]::GetParent($backup).FullName -ne (Join-Path $root 'build') -or
+            [IO.Path]::GetFileName($backup) -notmatch '^\.rollback-[a-f0-9]{32}$') { throw 'Unsafe rollback path' }
+        Remove-Item -LiteralPath $backup -Recurse -Force
+    }
     $env:DOTNET_CLI_UI_LANGUAGE = $previousCliLanguage
-    # 只清理本次随机暂存文件；失败时保留已完成的独立目录供排查。
+    # 只清理本次随机工作目录和候选 ZIP。
     $base = [IO.Path]::GetFullPath($workRoot).TrimEnd('\', '/')
-    foreach ($path in @($staging, $candidateZip)) {
+    foreach ($path in @($work, $candidateZip)) {
         $target = [IO.Path]::GetFullPath($path)
         if ([IO.Directory]::GetParent($target).FullName.TrimEnd('\', '/') -ne $base -or
             [IO.Path]::GetFileName($target) -cnotmatch "^\.building-$identifier(\.zip)?$") {

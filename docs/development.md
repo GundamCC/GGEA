@@ -73,14 +73,14 @@ pwsh -File tools/release.ps1 -Commit HEAD
 依次执行资源/文档校验 → Release Build → 核心冒烟检查 → 发布 → 防混用回归 → ZIP 压缩/解压 → 文件清单校验 → EXE 启动自检；任一步失败不输出新 ZIP。完整测试只在显式传入 `-FullTests` 时执行；`tools/build-dev.ps1` 和 `tools/publish.ps1` 同样支持该参数。
 
 产物为 `artifacts/dist/GGEA-v1.3.3.2-win-x64-<提交前12位>.zip` 及 `.zip.sha256`。
-完整发布后，重复执行 `tools/package-dist.ps1` 会优先读取本次提交的解压验收目录，重新校验现有 ZIP，不会替换运行中的 `artifacts/publish/` 或覆盖同名产物。SHA-256 用于完整性核验，不代替数字签名。
+完整发布后，重复执行 `tools/package-dist.ps1` 会在临时目录解压并重新校验现有 ZIP，不会替换运行中的 `artifacts/publish/` 或覆盖同名产物。SHA-256 用于完整性核验，不代替数字签名。
 `build-info.json` 包含完整提交、程序版本、构建参数、SDK、构建时间、资源/配置内容版本和逐文件 SHA-256。
 资源/配置版本是排序后路径与摘要的内容哈希，无须维护另一个手工版本号。
 
 文件级差异包可通过 `tools/release.ps1 -BaseDirectory <旧版原始解压目录>` 随完整包生成，也可单独执行 `tools/package-delta.ps1`。附件命名、基线校验、完整包兜底与发布步骤见[构建工具说明](../tools/README-release-manager.md#文件级差异附件)。差异包不能单独作为安装包分发。
 
-实际 ZIP 解压验收目录保留为同级的 `*-verified/`。**人工验收也必须从该目录启动程序**，按使用说明检查设备、截图和单项流程；启动自检只检查原生库、PNG、JSON 完整性，不代表游戏、UI 或所有模拟器实测通过。
-完整构建证据保留在 `build/release-work-*/`，均不纳入 Git。
+自动验收结束后清理解压目录。人工验收时自行解压正式 ZIP，从该目录启动程序，按使用说明检查设备、截图和单项流程；启动自检只检查原生库、PNG、JSON 完整性，不代表游戏、UI 或所有模拟器实测通过。
+固定提交的源码快照和构建工作目录在脚本退出时自动清理。Windows CI 单独收集 TRX，本地测试结束后清理临时结果。
 
 底层 `tools/publish.ps1` / `tools/package-dist.ps1` 独立调用默认要求干净工作区；完整正式交付请使用上述统一入口。
 打包严格核验已有 EXE 与 build-info，只复制该次构建文件，绝不使用当前仓库配置/说明覆盖旧发布目录；修改发布目录后需重新构建。

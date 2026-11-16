@@ -71,8 +71,7 @@ public partial class MainWindow : Window
                               File.Exists(Path.Combine(dist, stem + ".zip.sha256")) &&
                               File.Exists(Path.Combine(dist, stem + ".zip.index.json")) &&
                               File.Exists(Path.Combine(dist, stem + ".zip.blocks")) &&
-                              File.Exists(Path.Combine(dist, stem + ".zip.updater.blocks")) &&
-                              Directory.Exists(Path.Combine(dist, stem + "-verified"));
+                              File.Exists(Path.Combine(dist, stem + ".zip.updater.blocks"));
             VersionText.Text = $"v{_version}";
             CommitText.Text = _commit[..12];
             WorkingTreeText.Text = _clean ? (artifactExists ? "发布包已就绪" : "工作区干净 · 尚无发布包") : "源码有未提交修改";

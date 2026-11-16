@@ -55,6 +55,8 @@ Assert-PublishFilesAvailable -Directory $output -Exclude @("logs")
 
 Write-Host "Publishing GGEA ($Runtime, self-contained, single-file)..."
 
+$keepRollback = $false
+$backup = $null
 try {
     # Follow agent.md section 10: Release + win-x64 + self-contained + single-file.
     dotnet publish $project `
@@ -93,17 +95,14 @@ try {
     # 确保新版本的默认参数不会被旧发布目录中的配置静默覆盖。
 
     # Back up the previous package before changing any live files.
-    $backup = $null
     if (Test-Path -LiteralPath $output) {
-        $backupName = "publish-backup-" + (Get-Date -Format "yyyyMMdd-HHmmss") + "-" + [Guid]::NewGuid().ToString("N").Substring(0, 8)
-        $backup = Join-Path (Join-Path $root "backups") $backupName
+        $backup = Join-Path (Join-Path $root 'build') ('.rollback-' + [Guid]::NewGuid().ToString('N'))
         # Logs are runtime data and may be open in a viewer; they are not part of the package backup.
         Copy-DirectoryContents -Source $output -Destination $backup -Exclude @("logs")
     }
 
     # 构建/备份期间可能出现新的占用，再次确认后才开始修改现有文件。
     Assert-PublishFilesAvailable -Directory $output -Exclude @("logs")
-    if ($backup) { Write-Host "Previous package backup: $backup" }
     $deploymentStarted = $true
     try {
         # Replace contents in place because Explorer may hold the publish directory itself open.
@@ -123,7 +122,7 @@ try {
                 Copy-DirectoryContents -Source $backup -Destination $output -SkipIdentical
                 Clear-DirectoryContents -Directory $output -Exclude @("logs") -KeepDirectory $backup
             }
-            catch { Write-Warning "自动恢复未完成，完整备份位于 $backup。请先关闭文件占用，再从备份恢复。" }
+            catch { $keepRollback = $true; Write-Warning "自动恢复未完成，完整备份位于 $backup。请先关闭文件占用，再从备份恢复。" }
         }
         throw $deploymentError
     }
@@ -131,6 +130,12 @@ try {
     Write-Host "Done: $output"
 }
 finally {
+    # 恢复失败时保留旧产物的唯一完整副本，其余退出路径释放回滚暂存。
+    if ($backup -and -not $keepRollback -and (Test-Path -LiteralPath $backup)) {
+        if ([IO.Directory]::GetParent($backup).FullName -ne (Join-Path $root 'build') -or
+            [IO.Path]::GetFileName($backup) -notmatch '^\.rollback-[a-f0-9]{32}$') { throw 'Unsafe rollback path' }
+        Remove-Item -LiteralPath $backup -Recurse -Force
+    }
     # Remove only the unique staging directory created by this invocation.
     if (Test-Path -LiteralPath $staging) {
         $resolvedStaging = [IO.Path]::GetFullPath($staging)
