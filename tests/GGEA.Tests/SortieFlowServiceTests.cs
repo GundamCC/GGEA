@@ -537,7 +537,7 @@ public class SortieFlowServiceTests
             TestImageFactory.PasteBlock(pixels.Bgra, ScreenWidth, 363, 122, 1120, 930, 84);
         }
         var terminal = ImageCodec.EncodePng(pixels.Bgra, ScreenWidth, ScreenHeight);
-        var adb = new FakeAdbService(phase == 0 ? terminal : phase == 4 ? CreatePlainScreen() : CreateTapToNextScreen());
+        var adb = new FakeAdbService(phase == 0 ? terminal : phase == 4 ? CreateIconsScreen(AutoBlue, 70) : CreateTapToNextScreen());
         if (phase == 4) adb.EnqueueScreenshots(terminal);
         if (phase > 0 && phase < 4)
         {
@@ -920,9 +920,11 @@ public class SortieFlowServiceTests
         Assert.Equal((1670, 980), adb.Taps[^1]); // 最后一轮点击退出坐标
     }
 
-    /// <summary>第一张截图中的短暂开场也必须参与识别，不能读完安全状态后丢掉。</summary>
-    [Fact]
-    public async Task ExecuteNextRoundAsync_OpeningOnlyInFirstFrame_DoesNotLoseOpening()
+    /// <summary>开场只出现一帧：首帧直接点击，加载后先出现战斗图标时也要及时复查并点击。</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExecuteNextRoundAsync_TransientOpening_TapsFirstOrBattleRecheckFrame(bool afterBattleIcons)
     {
         using var temp = new TempDirectory();
         var dialog = CreateDialogTemplates(temp);
@@ -932,17 +934,22 @@ public class SortieFlowServiceTests
         var resultPage = CreateResultScreen();
         var plain = CreatePlainScreen();
         var adb = new FakeAdbService(opening);
-        adb.ScreenshotProvider = () => adb.ScreenshotCount == 1 ? opening : adb.Taps.Count switch
+        var icons = CreateIconsScreen(AutoBlue, 70);
+        adb.ScreenshotProvider = () =>
         {
-            0 => plain,
-            1 => score,
-            _ => resultPage,
+            if (adb.Taps.Count > 0) return adb.Taps.Count == 1 ? score : resultPage;
+            if (afterBattleIcons && adb.ScreenshotCount == 2) return icons;
+            return adb.ScreenshotCount == (afterBattleIcons ? 3 : 1) ? opening : plain;
         };
         var service = CreateService(adb, dialog.Download, dialog.Cancel, sortie.Tap, sortie.SpeedOn, sortie.SpeedOff,
             sortie.Continue, sortie.Again, sortie.AgainClose, sortie.Failed, sortie.EmptySlotHint, sortie.DialogSortie,
             sortie.DialogCancel, sortie.NoAp, sortie.PlayerLevelUp, sortie.Reward, sortie.TapToNextReward, sortie.SelectStage);
 
-        Assert.Equal(SortieFlowResult.RoundCompleted, await RunNextRoundAsync(service, adb, true));
+        // 使用正式入口的默认采样节奏；按旧的五秒间隔，第二帧前就会超过开场预算。
+        var result = await service.ExecuteNextRoundAsync("serial", true, tapToNextWaitTimeoutMs: 4500,
+            continueStartDelayMs: 1, continueClickDelayMs: 1, continuePollIntervalMs: 10, continueWaitTimeoutMs: 2000,
+            continueRepeatIntervalMs: 1, againStartDelayMs: 1, againPollIntervalMs: 10, againWaitTimeoutMs: 2000);
+        Assert.Equal(SortieFlowResult.RoundCompleted, result);
         Assert.Equal(new[] { (959, 968), (1731, 1011), (1300, 990) }, adb.Taps);
     }
 

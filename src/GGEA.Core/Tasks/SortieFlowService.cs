@@ -375,7 +375,7 @@ public sealed partial class SortieFlowService
         bool moreRoundsRemaining,
         int tapToNextWaitTimeoutMs = 600000,
         int tapToNextPollIntervalMs = 5000,
-        int tapToNextClickDelayMs = GameTiming.RecognitionIntervalMs,
+        int tapToNextClickDelayMs = 0,
         int continueStartDelayMs = 30000,
         int continueClickDelayMs = 1500,
         int continuePollIntervalMs = 5000,
@@ -395,34 +395,40 @@ public sealed partial class SortieFlowService
         _log.Info("再次出击后开启新一轮，等待关卡开场 TAP TO NEXT 或战斗图标");
         var startedAt = Environment.TickCount64;
         var deadline = startedAt + Math.Max(0, tapToNextWaitTimeoutMs);
+        var fastPollUntil = startedAt + GameTiming.AnimationSettleMs;
+        var pollInterval = Math.Max(1, tapToNextPollIntervalMs);
+        var fastPollInterval = Math.Min(pollInterval, GameTiming.ConfirmationIntervalMs);
         var nextProgressAt = startedAt + 15000;
         TemplateMatchResult? tapToNext = null;
+        var recheckingOpening = false;
         var battleReady = false;
         while (Environment.TickCount64 < deadline)
         {
             ct.ThrowIfCancellationRequested();
             var screen = ImageCodec.DecodePng(await _automation.ScreenshotAsync(serial, ct));
             if (await HandleTerminalStateAsync(serial, screen, ct) is { } terminal) return terminal;
-            var recovered = await RecoverFarmIfStalledAsync(serial, screen, recovery, FarmRecoveryStage.NextBattle, ct);
-            if (recovered.Terminal is { } recoveryTerminal) return recoveryTerminal;
-            if (recovered.Acted) { await Task.Delay(Math.Max(1, tapToNextPollIntervalMs), ct); continue; }
-
             tapToNext = await MatchTapToNextAsync(screen, ct, recovery.ForAutoProgress);
             if (tapToNext is not null) { recovery.Watchdog.Observe(SortiePage.TapToNext); break; }
-            battleReady = HasActiveBattleControls(screen);
-            if (battleReady)
+            if (recheckingOpening)
             {
+                battleReady = true;
                 recovery.Watchdog.Observe(SortiePage.Battle);
-                _log.Info("再次出击后已识别到战斗图标，开场提示已略过，继续等待本轮结算。");
+                _log.Info("再次出击后已识别到战斗图标，下一帧未识别到 TAP TO NEXT，继续等待本轮结算。");
                 break;
             }
+
+            var recovered = await RecoverFarmIfStalledAsync(serial, screen, recovery, FarmRecoveryStage.NextBattle, ct);
+            if (recovered.Terminal is { } recoveryTerminal) return recoveryTerminal;
+            // 恢复操作改变了画面，只有未经操作的同帧战斗控件能触发下一帧复查。
+            recheckingOpening = !recovered.Acted && HasActiveBattleControls(screen);
             var now = Environment.TickCount64;
             if (now >= nextProgressAt)
             {
                 _log.Info($"再次出击后尚未确认新开场或战斗，继续等待（已等待 {(now - startedAt) / 1000}s，上限 {tapToNextWaitTimeoutMs / 1000}s）。");
                 nextProgressAt = now + 15000;
             }
-            await Task.Delay(Math.Max(1, tapToNextPollIntervalMs), ct);
+            var delay = recheckingOpening || now < fastPollUntil ? fastPollInterval : pollInterval;
+            await Task.Delay((int)Math.Clamp(deadline - now, 0, delay), ct);
         }
         ct.ThrowIfCancellationRequested();
         if (tapToNext is null && !battleReady)
@@ -433,7 +439,7 @@ public sealed partial class SortieFlowService
 
         if (tapToNext is not null)
         {
-            await Task.Delay(Math.Max(1, tapToNextClickDelayMs), ct);
+            if (tapToNextClickDelayMs > 0) await Task.Delay(tapToNextClickDelayMs, ct);
             await _automation.TapAsync(serial, tapToNext.CenterX, tapToNext.CenterY, ct);
             _log.Info($"已点击 TAP TO NEXT: ({tapToNext.CenterX},{tapToNext.CenterY})");
         }
