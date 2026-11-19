@@ -95,7 +95,7 @@ public partial class MainWindow
         if (execution is null) return;
         if (_automation is null || _stageService is null || _sortieFlowService is null || _logger is null)
         { AutoProgressStatusText.Text = L.Text("请先连接并选择模拟器。"); return; }
-        var serial = await GetOnlineTaskSerialAsync(AutoProgressStatusText, _windowTasks.Token);
+        var serial = await GetOnlineTaskSerialAsync(execution, AutoProgressStatusText, _windowTasks.Token);
         if (serial is null) return;
         var targets = AvailableAutoProgressTargets();
         if (targets.Length == 0)

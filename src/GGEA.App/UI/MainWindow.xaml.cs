@@ -661,7 +661,7 @@ public partial class MainWindow : Window
             ConnectionStateText.Text = L.Format($"正在打开游戏: {selectedDevice.Serial}");
             try
             {
-                if (await GetOnlineTaskSerialAsync(ConnectionStateText, ct) is null) return;
+                if (await GetOnlineTaskSerialAsync(execution, ConnectionStateText, ct) is null) return;
                 await SyncDeviceServicesAsync(selectedDevice.Serial, ct: ct);
                 await _adb.LaunchAppAsync(selectedDevice.Serial, _config.GamePackage, ct);
                 _preferredDeviceSerial = selectedDevice.Serial;
@@ -716,7 +716,12 @@ public partial class MainWindow : Window
                 GamePackage = _config.GamePackage,
                 DeviceWaitTimeoutMs = _config.DeviceWaitTimeoutMs,
                 BootCompletedTimeoutMs = _config.BootCompletedTimeoutMs,
-                BeforeGameLaunchAsync = (serial, ct) => SyncDeviceServicesAsync(serial, ct: ct, newlyStarted: true),
+                BeforeGameLaunchAsync = async (serial, ct) =>
+                {
+                    var busy = await ClaimTaskDeviceAsync(execution, serial, Guid.Empty, ct);
+                    if (busy is not null) throw new AdbException(busy);
+                    await SyncDeviceServicesAsync(serial, ct: ct, newlyStarted: true);
+                },
             };
 
             var result = await _emulator.StartAndOpenGameAsync(options, launchCt);
@@ -1123,7 +1128,7 @@ public partial class MainWindow : Window
             ScoutStatusText.Text = L.Text("请先连接并选择模拟器。");
             return;
         }
-        var serial = await GetOnlineTaskSerialAsync(ScoutStatusText, _windowTasks.Token);
+        var serial = await GetOnlineTaskSerialAsync(execution, ScoutStatusText, _windowTasks.Token);
         if (serial is null) return;
         _scoutRunning = true;
         _scoutCts = CancellationTokenSource.CreateLinkedTokenSource(_windowTasks.Token);
@@ -1238,7 +1243,9 @@ public partial class MainWindow : Window
         await RunWindowTaskAsync(async () =>
         {
             using var execution = TryBeginExecution();
-            if (execution is null || !TryGetDeviceSerial(out var serial)) return;
+            if (execution is null) return;
+            var serial = await GetOnlineTaskSerialAsync(execution, ConnectionStateText, _windowTasks.Token);
+            if (serial is null) return;
             try
             {
                 var result = await new MissionEntryProbe(_adb!, _automation!).OpenAsync(
@@ -1278,10 +1285,9 @@ public partial class MainWindow : Window
         using var execution = TryBeginExecution();
         if (execution is null) return;
 
-        if (!TryGetDeviceSerial(out var serial) || _adb is null)
-        {
-            return;
-        }
+        if (_adb is null) return;
+        var serial = await GetOnlineTaskSerialAsync(execution, ConnectionStateText, _windowTasks.Token);
+        if (serial is null) return;
 
         if (_selectedPoint is not Point point)
         {
@@ -1347,10 +1353,9 @@ public partial class MainWindow : Window
         using var execution = TryBeginExecution();
         if (execution is null) return;
 
-        if (!TryGetDeviceSerial(out var serial) || _adb is null)
-        {
-            return;
-        }
+        if (_adb is null) return;
+        var serial = await GetOnlineTaskSerialAsync(execution, ConnectionStateText, _windowTasks.Token);
+        if (serial is null) return;
 
         if (_swipeStart is not Point start || _swipeEnd is not Point end)
         {
@@ -1550,7 +1555,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>开始时核对用户选择的实例，失效后刷新列表，交由用户重新选择。</summary>
-    private async Task<string?> GetOnlineTaskSerialAsync(TextBlock taskStatus, CancellationToken ct)
+    private async Task<string?> GetOnlineTaskSerialAsync(DeviceExecutionGate.Lease execution, TextBlock taskStatus, CancellationToken ct)
     {
         void Report(string message)
         {
@@ -1569,6 +1574,13 @@ public partial class MainWindow : Window
         try
         {
             issue = await EmulatorDeviceSelector.GetStartIssueAsync(_adb, selected, ct);
+            if (issue is null)
+            {
+                var busy = await ClaimTaskDeviceAsync(execution, selected.Serial, selected.BootId, ct);
+                if (busy is null) return selected.Serial;
+                Report(busy);
+                return null;
+            }
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -1576,7 +1588,6 @@ public partial class MainWindow : Window
             Report(L.Format($"无法核验设备 {selected.Serial}，请检查 ADB 连接后重试。详情：{ex.Message}"));
             return null;
         }
-        if (issue is null) return selected.Serial;
 
         // 先撤销旧选择。即使重新发现设备失败，旧行也不能继续作为有效目标。
         _refreshingDeviceSelection = true;
@@ -1589,6 +1600,19 @@ public partial class MainWindow : Window
         taskStatus.Text = issue;
         AccountStatusText.Text = issue;
         return null;
+    }
+
+    /// <summary>已知启动身份由开始前的在线核验确认。旧列表无身份时，再向目标查询一次。</summary>
+    private async Task<string?> ClaimTaskDeviceAsync(DeviceExecutionGate.Lease execution, string serial, Guid bootId, CancellationToken ct)
+    {
+        if (bootId == Guid.Empty)
+        {
+            try { Guid.TryParse(await _adb!.GetBootIdAsync(serial, ct), out bootId); }
+            catch (AdbException) { /* 部分模拟器不能读取 boot_id，仍按 ADB 地址互斥。 */ }
+        }
+        ct.ThrowIfCancellationRequested();
+        return execution.TryClaimDevice(serial, bootId) ? null
+            : L.Format($"设备正在使用：{serial}。请等待另一个 GGEA 窗口的任务结束，或选择其他模拟器。");
     }
 
     /// <summary>获取当前选中的设备序列号。</summary>
@@ -1735,7 +1759,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var serial = await GetOnlineTaskSerialAsync(AutoFarmStatusText, _windowTasks.Token);
+        var serial = await GetOnlineTaskSerialAsync(execution, AutoFarmStatusText, _windowTasks.Token);
         if (serial is null) return;
 
         _autoFarmRunning = true;
@@ -2022,7 +2046,7 @@ public partial class MainWindow : Window
             BallFactoryStatusText.Text = L.Text("请先连接并选择模拟器。");
             return;
         }
-        var serial = await GetOnlineTaskSerialAsync(BallFactoryStatusText, _windowTasks.Token);
+        var serial = await GetOnlineTaskSerialAsync(execution, BallFactoryStatusText, _windowTasks.Token);
         if (serial is null) return;
         var targetGp = _ballFactoryTargetGp;
         _ballFactoryRunning = true;
@@ -2196,7 +2220,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var serial = await GetOnlineTaskSerialAsync(AccountStatusText, _windowTasks.Token);
+        var serial = await GetOnlineTaskSerialAsync(execution, AccountStatusText, _windowTasks.Token);
         if (serial is null) return;
 
         // 领取每日使命奖励：勾选后随“领取奖励”任务按队列顺序执行一次，
@@ -3625,7 +3649,7 @@ public partial class MainWindow : Window
     /// 因而业务的本地 serial、配置快照、ADB 路径和服务实例在整个 await/finally 链中保持一致。
     /// 取消只发信号，只有最外层事件完成清理后才释放租约；内部刷新不拥有释放权。
     /// </summary>
-    private IDisposable? TryBeginExecution(bool logRoutineChecks = true)
+    private DeviceExecutionGate.Lease? TryBeginExecution(bool logRoutineChecks = true)
     {
         if (_plugins?.HasDeviceFault == true)
         {
@@ -3637,7 +3661,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>设置仍可在插件故障后访问；执行互斥、关窗和更新闸门保持一致。</summary>
-    private IDisposable? TryBeginHostOperation(bool logRoutineChecks = true)
+    private DeviceExecutionGate.Lease? TryBeginHostOperation(bool logRoutineChecks = true)
     {
         if (_windowTasks.IsStopping || _busy || _updatePending) return null;
         var lease = _executionGate.TryEnter(() =>

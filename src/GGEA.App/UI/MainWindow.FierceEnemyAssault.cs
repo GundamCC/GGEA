@@ -123,7 +123,7 @@ public partial class MainWindow
         if (execution is null) return;
         if (_automation is null || _logger is null)
         { FierceEnemyAssaultStatusText.Text = L.Text("请先连接并选择模拟器。"); return; }
-        var serial = await GetOnlineTaskSerialAsync(FierceEnemyAssaultStatusText, _windowTasks.Token);
+        var serial = await GetOnlineTaskSerialAsync(execution, FierceEnemyAssaultStatusText, _windowTasks.Token);
         if (serial is null) return;
         if (FierceEnemyUnitBox.SelectedItem is not FierceEnemyUnit unit ||
             FierceEnemyDifficultyBox.SelectedItem is not FierceEnemyDifficulty difficulty)
