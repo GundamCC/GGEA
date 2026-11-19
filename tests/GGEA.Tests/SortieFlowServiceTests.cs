@@ -144,7 +144,7 @@ public class SortieFlowServiceTests
         var result = nextRound ? await RunNextRoundAsync(service, adb, true) : await RunAsync(service, adb, true);
 
         Assert.Equal(SortieFlowResult.RoundCompleted, result);
-        var tap = adb.Taps[0];
+        var tap = adb.Taps[nextRound ? 0 : 2];
         Assert.InRange(tap.X, cropX + 214, cropX + 218);
         Assert.InRange(tap.Y, 968, 972);
         Assert.DoesNotContain((960, 540), adb.Taps);
@@ -572,27 +572,55 @@ public class SortieFlowServiceTests
         using var temp = new TempDirectory();
         var dialog = CreateDialogTemplates(temp);
         var sortie = CreateSortieTemplates(temp);
-        // AUTO 关闭 + 二倍速关闭：各点击一次；继续按钮点击两次；再次出击点击一次
-        var adb = new FakeAdbService(CreateTapToNextScreen());
-        adb.EnqueueScreenshots(
-            CreateIconsScreen(AutoGray, 160),
-            CreateIconsScreen(AutoGray, 160),
-            CreateContinueScreen(), CreateContinueScreen(), CreateRewardScreen(), CreateContinueScreen(),
-            CreateAgainScreen(),
-            CreateAgainScreen());
+        var opening = ImageCodec.DecodePng(CreateTapToNextScreen());
+        byte[] OpeningWithIcons((byte R, byte G, byte B) auto, byte speed)
+        {
+            var icons = ImageCodec.DecodePng(CreateIconsScreen(auto, speed));
+            Buffer.BlockCopy(icons.Bgra, 0, opening.Bgra, 0, 115 * ScreenWidth * 4);
+            return ImageCodec.EncodePng(opening.Bgra, ScreenWidth, ScreenHeight);
+        }
+        var closed = OpeningWithIcons(AutoGray, 160);
+        var autoOn = OpeningWithIcons(AutoBlue, 160);
+        var bothOn = OpeningWithIcons(AutoBlue, 70);
+        var story = CreatePlainScreen();
+        var score = CreateContinueScreen();
+        var resultPage = CreateResultScreen();
+        var storySeen = false;
+        var adb = new FakeAdbService(closed);
+        adb.ScreenshotProvider = () =>
+        {
+            if (!adb.Taps.Contains((959, 968)))
+                return adb.Taps.Contains((1712, 50)) ? bothOn : adb.Taps.Contains((1508, 50)) ? autoOn : closed;
+            // 点开场后剧情立即覆盖两个控件，无法在后续画面补设。
+            if (!storySeen) { storySeen = true; return story; }
+            return adb.Taps.Contains((1731, 1011)) ? resultPage : score;
+        };
         var service = CreateService(adb, dialog.Download, dialog.Cancel, sortie.Tap, sortie.SpeedOn, sortie.SpeedOff, sortie.Continue, sortie.Again, sortie.AgainClose, sortie.Failed,
-            sortie.EmptySlotHint, sortie.DialogSortie, sortie.DialogCancel, sortie.NoAp, sortie.PlayerLevelUp, sortie.Reward, sortie.TapToNextReward);
+            sortie.EmptySlotHint, sortie.DialogSortie, sortie.DialogCancel, sortie.NoAp, sortie.PlayerLevelUp, sortie.Reward, sortie.TapToNextReward, sortie.SelectStage);
 
-        var result = await RunAsync(service, adb, moreRoundsRemaining: true);
+        Assert.Equal(SortieFlowResult.RoundCompleted, await RunAsync(service, adb, true));
+        Assert.True(storySeen);
+        Assert.Equal(new[] { (1508, 50), (1712, 50), (959, 968), (1731, 1011), (1300, 990) }, adb.Taps);
+    }
 
-        Assert.Equal(SortieFlowResult.RoundCompleted, result);
-        Assert.Equal(6, adb.Taps.Count);
-        Assert.Equal((959, 968), adb.Taps[0]);                       // 优先点击当前帧的开场文字
-        Assert.Equal((1508, 50), adb.Taps[1]);                      // AUTO 固定位置
-        Assert.Equal((1712, 50), adb.Taps[2]);                      // 二倍速固定位置
-        Assert.Equal((1550 + 362 / 2, 950 + 123 / 2), adb.Taps[3]); // 继续按钮第一次
-        Assert.Equal((1550 + 362 / 2, 950 + 123 / 2), adb.Taps[4]); // 继续按钮第二次（同一位置）
-        Assert.Equal((1120 + 361 / 2, 930 + 120 / 2), adb.Taps[5]); // 再次出击
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ExecuteAfterSortieAsync_OpeningReplacedDuringConfiguration_DiscardsPendingTap(bool failed)
+    {
+        using var temp = new TempDirectory();
+        var dialog = CreateDialogTemplates(temp);
+        var sortie = CreateSortieTemplates(temp);
+        var opening = CreateTapToNextScreen();
+        var replacement = failed ? CreateFailedScreen() : CreateResultScreen();
+        var adb = new FakeAdbService(opening);
+        adb.ScreenshotProvider = () => adb.ScreenshotCount == 1 ? opening : replacement;
+        var service = CreateService(adb, dialog.Download, dialog.Cancel, sortie.Tap, sortie.SpeedOn, sortie.SpeedOff,
+            sortie.Continue, sortie.Again, sortie.AgainClose, sortie.Failed, sortie.EmptySlotHint, sortie.DialogSortie,
+            sortie.DialogCancel, sortie.NoAp, sortie.PlayerLevelUp, sortie.Reward, sortie.TapToNextReward, sortie.SelectStage);
+        Assert.Equal(failed ? SortieFlowResult.FailureDetected : SortieFlowResult.RoundCompleted,
+            await RunAsync(service, adb, true));
+        Assert.Equal(failed ? (1670, 980) : (1300, 990), Assert.Single(adb.Taps));
     }
 
     [Fact]
@@ -943,9 +971,9 @@ public class SortieFlowServiceTests
             sortie.DialogCancel, sortie.NoAp, sortie.PlayerLevelUp, sortie.Reward, sortie.TapToNextReward, sortie.SelectStage);
 
         Assert.Equal(SortieFlowResult.RoundCompleted, await RunAsync(service, adb, true));
-        var expected = new List<(int, int)>();
+        var expected = new List<(int, int)> { (1508, 50) };
         if (openingOnRecheck) expected.Add((959, 968));
-        expected.AddRange([(1508, 50), (1731, 1011), (1300, 990)]);
+        expected.AddRange([(1731, 1011), (1300, 990)]);
         Assert.Equal(expected, adb.Taps);
     }
 
@@ -1481,9 +1509,9 @@ public class SortieFlowServiceTests
         Assert.Equal(SortieFlowResult.RoundCompleted, result);
         Assert.Equal(7, adb.Taps.Count);
         Assert.Equal((980 + sortieImage.Width / 2, 800 + sortieImage.Height / 2), adb.Taps[0]); // 空位出击确认
-        Assert.Equal((959, 968), adb.Taps[1]);                      // 开场提示
-        Assert.Equal((1508, 50), adb.Taps[2]);                      // AUTO
-        Assert.Equal((1712, 50), adb.Taps[3]);                      // 二倍速
+        Assert.Equal((1508, 50), adb.Taps[1]);                      // AUTO
+        Assert.Equal((1712, 50), adb.Taps[2]);                      // 二倍速
+        Assert.Equal((959, 968), adb.Taps[3]);                      // 开场提示
         Assert.Equal((1550 + 362 / 2, 950 + 123 / 2), adb.Taps[4]); // 继续按钮第一次
         Assert.Equal((1550 + 362 / 2, 950 + 123 / 2), adb.Taps[5]); // 继续按钮第二次
         Assert.Equal((1120 + 361 / 2, 930 + 120 / 2), adb.Taps[6]); // 再次出击

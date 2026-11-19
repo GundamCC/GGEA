@@ -332,8 +332,6 @@ public sealed partial class SortieFlowService
                 if (tapToNext is not null)
                 {
                     recovery.Watchdog.Observe(SortiePage.TapToNext);
-                    await _automation.TapAsync(serial, tapToNext.CenterX, tapToNext.CenterY, ct);
-                    _log.Info($"已点击 TAP TO NEXT: ({tapToNext.CenterX},{tapToNext.CenterY})");
                 }
                 else if (IsSettlementPage(screen))
                 {
@@ -353,8 +351,8 @@ public sealed partial class SortieFlowService
                     recovery.Watchdog.Observe(SortiePage.Battle);
                     _log.Info("首轮出击后已确认 AUTO 和速度控件，开始配置战斗并等待结算。");
                 }
-                var configured = await ConfigureBattleIconsAsync(serial, iconClickIntervalMs, battleIconDelayMs, ct,
-                    stopAtSettlement: true);
+                var configured = await ConfigureAndAdvanceOpeningAsync(serial, tapToNext, iconClickIntervalMs,
+                    battleIconDelayMs, 0, ct);
                 if (configured.Terminal is { } farmTerminal) return farmTerminal;
                 return await CompleteRound();
             }
@@ -566,16 +564,10 @@ public sealed partial class SortieFlowService
 
         if (!settlementReady)
         {
-            var configured = await ConfigureBattleIconsAsync(serial, iconClickIntervalMs, battleIconDelayMs, ct,
-                stopAtSettlement: true);
+            var configured = await ConfigureAndAdvanceOpeningAsync(serial, tapToNext, iconClickIntervalMs,
+                battleIconDelayMs, tapToNextClickDelayMs, ct);
             if (configured.Terminal is { } configurationTerminal) return configurationTerminal;
-            settlementReady = IsSettlementPage(configured.Screen);
-            if (tapToNext is not null && !settlementReady)
-            {
-                await Task.Delay(Math.Max(1, tapToNextClickDelayMs), ct);
-                await _automation.TapAsync(serial, tapToNext.CenterX, tapToNext.CenterY, ct);
-                _log.Info($"已点击 TAP TO NEXT: ({tapToNext.CenterX},{tapToNext.CenterY})");
-            }
+            settlementReady = configured.SettlementReady;
         }
 
         return await CompleteRoundAsync(
@@ -590,6 +582,24 @@ public sealed partial class SortieFlowService
             againPollIntervalMs,
             againWaitTimeoutMs,
             ct, recovery: recovery);
+    }
+
+    /// <summary>开场提示可能闪烁，先保留 OCR 命中位置。点击提示会触发剧情，必须先处理仍可见的 AUTO 和倍速。</summary>
+    private async Task<(bool SettlementReady, SortieFlowResult? Terminal)> ConfigureAndAdvanceOpeningAsync(
+        string serial, TemplateMatchResult? opening, int iconClickIntervalMs, int battleIconDelayMs,
+        int clickDelayMs, CancellationToken ct)
+    {
+        var configured = await ConfigureBattleIconsAsync(serial, iconClickIntervalMs, battleIconDelayMs, ct,
+            stopAtSettlement: true);
+        if (configured.Terminal is { } terminal) return (false, terminal);
+        if (IsSettlementPage(configured.Screen)) return (true, null);
+        if (opening is not null)
+        {
+            if (clickDelayMs > 0) await Task.Delay(clickDelayMs, ct);
+            await _automation.TapAsync(serial, opening.CenterX, opening.CenterY, ct);
+            _log.Info($"已点击 TAP TO NEXT: ({opening.CenterX},{opening.CenterY})");
+        }
+        return (false, null);
     }
 
     /// <summary>
