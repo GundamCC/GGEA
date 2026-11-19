@@ -144,7 +144,7 @@ public class SortieFlowServiceTests
         var result = nextRound ? await RunNextRoundAsync(service, adb, true) : await RunAsync(service, adb, true);
 
         Assert.Equal(SortieFlowResult.RoundCompleted, result);
-        var tap = adb.Taps[nextRound ? 0 : 2];
+        var tap = adb.Taps[0];
         Assert.InRange(tap.X, cropX + 214, cropX + 218);
         Assert.InRange(tap.Y, 968, 972);
         Assert.DoesNotContain((960, 540), adb.Taps);
@@ -587,9 +587,9 @@ public class SortieFlowServiceTests
 
         Assert.Equal(SortieFlowResult.RoundCompleted, result);
         Assert.Equal(6, adb.Taps.Count);
-        Assert.Equal((1508, 50), adb.Taps[0]);                      // AUTO 固定位置
-        Assert.Equal((1712, 50), adb.Taps[1]);                      // 二倍速固定位置
-        Assert.Equal((959, 968), adb.Taps[2]);  // TAP TO NEXT
+        Assert.Equal((959, 968), adb.Taps[0]);                       // 优先点击当前帧的开场文字
+        Assert.Equal((1508, 50), adb.Taps[1]);                      // AUTO 固定位置
+        Assert.Equal((1712, 50), adb.Taps[2]);                      // 二倍速固定位置
         Assert.Equal((1550 + 362 / 2, 950 + 123 / 2), adb.Taps[3]); // 继续按钮第一次
         Assert.Equal((1550 + 362 / 2, 950 + 123 / 2), adb.Taps[4]); // 继续按钮第二次（同一位置）
         Assert.Equal((1120 + 361 / 2, 930 + 120 / 2), adb.Taps[5]); // 再次出击
@@ -672,11 +672,13 @@ public class SortieFlowServiceTests
         Assert.Contains(adb.Taps, tap => tap == (1120 + 361 / 2, 930 + 120 / 2)); // 再次出击
     }
 
-    /// <summary>实机成绩页没有 TAP；下载后必须根据当前继续按钮接续结算，不能空等十分钟或操作 AUTO。</summary>
+    /// <summary>首轮直接进入成绩页或下载后进入成绩页，都应根据实际按钮接续结算。</summary>
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task DownloadResume_ScoreOrResultWithoutOpening_ContinuesSettlement(bool alreadyResult)
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task FirstSortie_ScoreOrResultWithoutOpening_ContinuesSettlement(bool downloaded, bool alreadyResult)
     {
         using var temp = new TempDirectory();
         var dialog = CreateDialogTemplates(temp);
@@ -685,26 +687,33 @@ public class SortieFlowServiceTests
         PasteTemplate(pixels, ImageCodec.DecodePng(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory,
             "Fixtures", "Sortie", "score-continue-mumu5556.png"))), 1470, 905);
         var score = ImageCodec.EncodePng(pixels, ScreenWidth, ScreenHeight);
-        var adb = new FakeAdbService(CreateDownloadPromptScreen(true));
-        adb.ScreenshotProvider = () => adb.Taps.Count switch
+        // 使用真实下载文字，避免纯黑占位模板把没有弹窗的深色成绩页也识别为下载提示。
+        var downloadHint = ConfigService.ResolvePath(new AppConfig().SortieDownloadTemplate);
+        var dialogFrame = ImageCodec.DecodePng(CreateDialogScreen());
+        PasteTemplate(dialogFrame.Bgra, ImageCodec.DecodePng(File.ReadAllBytes(downloadHint)), 720, 383);
+        var download = ImageCodec.EncodePng(dialogFrame.Bgra, ScreenWidth, ScreenHeight);
+        var resultPage = CreateResultScreen();
+        var adb = new FakeAdbService(score);
+        adb.ScreenshotProvider = () =>
         {
-            0 => CreateDownloadPromptScreen(true),
-            1 when !alreadyResult => score,
-            _ => CreateResultScreen()
+            if (downloaded && adb.Taps.Count == 0) return download;
+            if (!alreadyResult && !adb.Taps.Contains((1677, 990))) return score;
+            return resultPage;
         };
         var log = new TestLog();
         var service = CreateService(adb, dialog.Download, dialog.Cancel, sortie.Tap, sortie.SpeedOn, sortie.SpeedOff,
             ConfigService.ResolvePath("resources/templates/stage/sortie/continue.png"), sortie.Again, sortie.AgainClose,
             sortie.Failed, sortie.EmptySlotHint, sortie.DialogSortie, sortie.DialogCancel, sortie.NoAp,
             sortie.PlayerLevelUp, sortie.Reward, sortie.TapToNextReward, selectStageTemplate: sortie.SelectStage,
-            sortieDownloadTemplate: sortie.DownloadHint, testLog: log);
+            sortieDownloadTemplate: downloadHint, testLog: log);
 
         Assert.Equal(SortieFlowResult.RoundCompleted, await RunDownloadAsync(service));
-        var expected = new List<(int, int)> { (881, 863) };
+        var expected = new List<(int, int)>();
+        if (downloaded) expected.Add((881, 863));
         if (!alreadyResult) expected.Add((1677, 990));
         expected.Add((1300, 990));
         Assert.Equal(expected, adb.Taps);
-        Assert.Contains(log.Entries, entry => entry.Message.Contains("下载后已识别到结算页面"));
+        Assert.Contains(log.Entries, entry => entry.Message.Contains(downloaded ? "下载后已识别到结算页面" : "首轮出击后已识别到结算页面"));
     }
 
     /// <summary>下载后已在战斗时按真实战斗控件配置并等待结算，不能发送旧开场坐标或中央盲点。</summary>
@@ -866,7 +875,7 @@ public class SortieFlowServiceTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task ExecuteAfterSortieAsync_NoInitialPrompt_ConfiguresIconsAndTapsCenterBeforeContinue(bool autoVisible)
+    public async Task ExecuteAfterSortieAsync_HardProgressNoInitialPrompt_PreservesCenterFallback(bool autoVisible)
     {
         using var temp = new TempDirectory();
         var dialog = CreateDialogTemplates(temp);
@@ -890,7 +899,7 @@ public class SortieFlowServiceTests
             continueStartDelayMs: 0, continueClickDelayMs: 0, continuePollIntervalMs: 1,
             continueWaitTimeoutMs: 5000, continueRepeatIntervalMs: 1,
             againStartDelayMs: 0, againPollIntervalMs: 1, againWaitTimeoutMs: 1000,
-            ct: cts.Token);
+            ct: cts.Token, forAutoProgress: true);
 
         Assert.Equal(SortieFlowResult.RoundCompleted, result);
         var expected = new List<(int, int)>();
@@ -899,6 +908,56 @@ public class SortieFlowServiceTests
             (1550 + 362 / 2, 950 + 123 / 2), (1550 + 362 / 2, 950 + 123 / 2),
             (1120 + 361 / 2, 930 + 120 / 2)]);
         Assert.Equal(expected, adb.Taps);
+    }
+
+    /// <summary>回放首轮加载后直接出现关闭 AUTO 和已启用二倍速；复查时出现的开场应先点击。</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ExecuteAfterSortieAsync_FirstBattleWithAutoOff_ConfiguresAndSettles(bool openingOnRecheck)
+    {
+        using var temp = new TempDirectory();
+        var dialog = CreateDialogTemplates(temp);
+        var sortie = CreateSortieTemplates(temp);
+        var closed = CreateIconsScreen(AutoGray, 70);
+        var opening = CreateTapToNextScreen();
+        var active = CreateIconsScreen(AutoBlue, 70);
+        var score = CreateContinueScreen();
+        var resultPage = CreateResultScreen();
+        var adb = new FakeAdbService(closed);
+        adb.ScreenshotProvider = () => adb.ScreenshotCount switch
+        {
+            2 when openingOnRecheck => opening,
+            <= 3 => closed,
+            4 => active,
+            _ => adb.Taps.Contains((1731, 1011)) ? resultPage : score,
+        };
+        var service = CreateService(adb, dialog.Download, dialog.Cancel, sortie.Tap, sortie.SpeedOn, sortie.SpeedOff,
+            sortie.Continue, sortie.Again, sortie.AgainClose, sortie.Failed, sortie.EmptySlotHint, sortie.DialogSortie,
+            sortie.DialogCancel, sortie.NoAp, sortie.PlayerLevelUp, sortie.Reward, sortie.TapToNextReward, sortie.SelectStage);
+
+        Assert.Equal(SortieFlowResult.RoundCompleted, await RunAsync(service, adb, true));
+        var expected = new List<(int, int)>();
+        if (openingOnRecheck) expected.Add((959, 968));
+        expected.AddRange([(1508, 50), (1731, 1011), (1300, 990)]);
+        Assert.Equal(expected, adb.Taps);
+    }
+
+    [Fact]
+    public async Task ExecuteAfterSortieAsync_OnlyAutoWithoutSpeed_TimesOutWithoutInput()
+    {
+        using var temp = new TempDirectory();
+        var dialog = CreateDialogTemplates(temp);
+        var sortie = CreateSortieTemplates(temp);
+        var adb = new FakeAdbService(CreateIconsScreen(AutoGray, 20));
+        var service = CreateService(adb, dialog.Download, dialog.Cancel, sortie.Tap, sortie.SpeedOn, sortie.SpeedOff,
+            sortie.Continue, sortie.Again, sortie.AgainClose, sortie.Failed, sortie.EmptySlotHint, sortie.DialogSortie,
+            sortie.DialogCancel, sortie.NoAp, sortie.PlayerLevelUp, sortie.Reward, sortie.TapToNextReward, sortie.SelectStage);
+
+        var result = await service.ExecuteAfterSortieAsync("serial", true, true, true,
+            downloadDetectTimeoutMs: 500, pollIntervalMs: 10);
+        Assert.Equal(SortieFlowResult.TapToNextTimeout, result);
+        Assert.Empty(adb.Taps);
     }
 
     [Fact]
@@ -1348,9 +1407,9 @@ public class SortieFlowServiceTests
         Assert.Equal(SortieFlowResult.RoundCompleted, result);
         Assert.Equal(7, adb.Taps.Count);
         Assert.Equal((980 + sortieImage.Width / 2, 800 + sortieImage.Height / 2), adb.Taps[0]); // 空位出击确认
-        Assert.Equal((1508, 50), adb.Taps[1]);                      // AUTO
-        Assert.Equal((1712, 50), adb.Taps[2]);                      // 二倍速
-        Assert.Equal((959, 968), adb.Taps[3]);  // TAP TO NEXT
+        Assert.Equal((959, 968), adb.Taps[1]);                      // 开场提示
+        Assert.Equal((1508, 50), adb.Taps[2]);                      // AUTO
+        Assert.Equal((1712, 50), adb.Taps[3]);                      // 二倍速
         Assert.Equal((1550 + 362 / 2, 950 + 123 / 2), adb.Taps[4]); // 继续按钮第一次
         Assert.Equal((1550 + 362 / 2, 950 + 123 / 2), adb.Taps[5]); // 继续按钮第二次
         Assert.Equal((1120 + 361 / 2, 930 + 120 / 2), adb.Taps[6]); // 再次出击

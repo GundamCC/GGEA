@@ -189,9 +189,8 @@ public sealed partial class SortieFlowService
     }
 
     /// <summary>
-    /// 点击出击按钮后执行：30 秒内依次识别地形、空位、AP 不足、下载与 TAP TO NEXT；
-    /// 命中 TAP TO NEXT 时先配置战斗图标再点击提示；若前置提示均未出现，
-    /// 则配置战斗图标并点击画面中央开始战斗，之后统一进入继续按钮识别流程。
+    /// 点击出击后优先处理终止状态和编制、下载提示。刷本首轮可从开场、战斗或结算接续；
+    /// HARD 推图沿用自己的开场配置及回退顺序。
     /// </summary>
     public async Task<SortieFlowResult> ExecuteAfterSortieAsync(
         string serial,
@@ -219,7 +218,13 @@ public sealed partial class SortieFlowService
     {
         var recovery = new FarmRecoverySession(allowDownload, allowEmptySlotSortie, allowTerrainUnsuitableSortie,
             recoverySortieTemplate, recoveryTimeProvider, forAutoProgress);
-        var deadline = Environment.TickCount64 + Math.Max(0, downloadDetectTimeoutMs);
+        if (!forAutoProgress) _log.Info("已点击首轮出击，开始检查编制、下载、开场、战斗和结算页面。");
+        var startedAt = Environment.TickCount64;
+        var deadline = startedAt + Math.Max(0, downloadDetectTimeoutMs);
+        var recheckBattle = false;
+        Task<SortieFlowResult> CompleteRound() => CompleteRoundAsync(serial, moreRoundsRemaining,
+            continueStartDelayMs, continueClickDelayMs, continuePollIntervalMs, continueWaitTimeoutMs,
+            continueRepeatIntervalMs, againStartDelayMs, againPollIntervalMs, againWaitTimeoutMs, ct, recovery);
         while (Environment.TickCount64 < deadline)
         {
             ct.ThrowIfCancellationRequested();
@@ -228,11 +233,13 @@ public sealed partial class SortieFlowService
             // 下载按钮仅在下载提示命中后匹配，避免其它页面的相似按钮触发下载流程。
             var screen = ImageCodec.DecodePng(await _automation.ScreenshotAsync(serial, ct));
             if (await HandleTerminalStateAsync(serial, screen, ct) is { } initialTerminal) return initialTerminal;
+            var delay = Math.Max(1, pollIntervalMs);
+            if (!forAutoProgress && Environment.TickCount64 - startedAt < GameTiming.AnimationSettleMs)
+                delay = Math.Min(delay, GameTiming.ConfirmationIntervalMs);
 
             var terrainHint = MatchIfConfigured(screen, _terrainTemplatePath, TerrainHintRoi(screen), StageSortieTemplateThreshold);
             var emptySlotHint = MatchEmptySlotDialog(screen);
             var downloadHint = MatchIfConfigured(screen, _sortieDownloadTemplatePath, DownloadHintRoi(screen), StageSortieTemplateThreshold);
-            var tapToNext = await MatchTapToNextAsync(screen, ct, recovery.ForAutoProgress);
 
             // 地形适性提示优先：按自动刷本勾选项点击出击或取消。
             if (terrainHint is not null)
@@ -248,7 +255,8 @@ public sealed partial class SortieFlowService
                     return SortieFlowResult.TerrainTimeout;
                 }
 
-                await Task.Delay(Math.Max(1, pollIntervalMs), ct);
+                recheckBattle = false;
+                await Task.Delay(delay, ct);
                 continue;
             }
 
@@ -267,7 +275,8 @@ public sealed partial class SortieFlowService
                 }
 
                 // 已点击空位出击确认：继续本循环识别后续提示。
-                await Task.Delay(Math.Max(1, pollIntervalMs), ct);
+                recheckBattle = false;
+                await Task.Delay(delay, ct);
                 continue;
             }
 
@@ -310,8 +319,42 @@ public sealed partial class SortieFlowService
                 }
 
                 // 下载提示仍在但按钮尚未渲染完成：保持在下载处理阶段，不能越过提示去点击其它目标。
-                await Task.Delay(Math.Max(1, pollIntervalMs), ct);
+                recheckBattle = false;
+                await Task.Delay(delay, ct);
                 continue;
+            }
+
+            var tapToNext = await MatchTapToNextAsync(screen, ct, recovery.ForAutoProgress);
+            if (!forAutoProgress)
+            {
+                if (tapToNext is not null)
+                {
+                    recovery.Watchdog.Observe(SortiePage.TapToNext);
+                    await _automation.TapAsync(serial, tapToNext.CenterX, tapToNext.CenterY, ct);
+                    _log.Info($"已点击 TAP TO NEXT: ({tapToNext.CenterX},{tapToNext.CenterY})");
+                }
+                else if (IsSettlementPage(screen))
+                {
+                    _log.Info("首轮出击后已识别到结算页面，开始处理本轮结算。");
+                    return await CompleteRound();
+                }
+                else
+                {
+                    // 首轮允许 AUTO 处于关闭态，但须同帧确认速度控件；再取一帧给短暂开场文字优先权。
+                    var wasBattle = recheckBattle;
+                    recheckBattle = HasBattleControls(screen, allowClosedAuto: true);
+                    if (!wasBattle || !recheckBattle)
+                    {
+                        await Task.Delay(recheckBattle ? Math.Min(delay, GameTiming.ConfirmationIntervalMs) : delay, ct);
+                        continue;
+                    }
+                    recovery.Watchdog.Observe(SortiePage.Battle);
+                    _log.Info("首轮出击后已确认 AUTO 和速度控件，开始配置战斗并等待结算。");
+                }
+                var configured = await ConfigureBattleIconsAsync(serial, iconClickIntervalMs, battleIconDelayMs, ct,
+                    stopAtSettlement: true);
+                if (configured.Terminal is { } farmTerminal) return farmTerminal;
+                return await CompleteRound();
             }
 
             // TAP TO NEXT 先出现：先完成右上角按钮配置，再点击提示开始战斗。
@@ -324,23 +367,17 @@ public sealed partial class SortieFlowService
                 await Task.Delay(Math.Max(1, tapToNextClickDelayMs), ct);
                 await _automation.TapAsync(serial, tapToNext.CenterX, tapToNext.CenterY, ct);
                 _log.Info($"已点击 TAP TO NEXT: ({tapToNext.CenterX},{tapToNext.CenterY})");
-                return await CompleteRoundAsync(
-                    serial,
-                    moreRoundsRemaining,
-                    continueStartDelayMs,
-                    continueClickDelayMs,
-                    continuePollIntervalMs,
-                    continueWaitTimeoutMs,
-                    continueRepeatIntervalMs,
-                    againStartDelayMs,
-                    againPollIntervalMs,
-                    againWaitTimeoutMs,
-                    ct, recovery: recovery);
+                return await CompleteRound();
             }
 
             await Task.Delay(Math.Max(1, pollIntervalMs), ct);
         }
 
+        if (!forAutoProgress)
+        {
+            _log.Warn($"首轮出击后 {downloadDetectTimeoutMs}ms 内未确认开场、战斗或结算，停止刷本并保留当前画面。");
+            return SortieFlowResult.TapToNextTimeout;
+        }
         _log.Warn(
             $"点击出击后 {downloadDetectTimeoutMs}ms 内未识别到地形、空位、AP 不足、下载提示或 TAP TO NEXT，" +
             "开始配置战斗图标，并点击画面中央进入战斗");
@@ -352,18 +389,7 @@ public sealed partial class SortieFlowService
         _log.Info($"未识别到 TAP TO NEXT，已点击画面中央开始战斗: ({centerX},{centerY})");
 
         // 中央点击与 TAP TO NEXT 点击具有相同语义：从此处统一执行正常战斗收尾流程。
-        return await CompleteRoundAsync(
-            serial,
-            moreRoundsRemaining,
-            continueStartDelayMs: continueStartDelayMs,
-            continueClickDelayMs: continueClickDelayMs,
-            continuePollIntervalMs: continuePollIntervalMs,
-            continueWaitTimeoutMs: continueWaitTimeoutMs,
-            continueRepeatIntervalMs: continueRepeatIntervalMs,
-            againStartDelayMs: againStartDelayMs,
-            againPollIntervalMs: againPollIntervalMs,
-            againWaitTimeoutMs: againWaitTimeoutMs,
-            ct: ct, recovery: recovery);
+        return await CompleteRound();
     }
 
     /// <summary>
@@ -420,7 +446,7 @@ public sealed partial class SortieFlowService
             var recovered = await RecoverFarmIfStalledAsync(serial, screen, recovery, FarmRecoveryStage.NextBattle, ct);
             if (recovered.Terminal is { } recoveryTerminal) return recoveryTerminal;
             // 恢复操作改变了画面，只有未经操作的同帧战斗控件能触发下一帧复查。
-            recheckingOpening = !recovered.Acted && HasActiveBattleControls(screen);
+            recheckingOpening = !recovered.Acted && HasBattleControls(screen);
             var now = Environment.TickCount64;
             if (now >= nextProgressAt)
             {
@@ -504,7 +530,7 @@ public sealed partial class SortieFlowService
                 _log.Info("下载后已识别到结算页面，接续本轮结算，不再等待开场 TAP TO NEXT。");
                 break;
             }
-            battleReady = HasActiveBattleControls(screen);
+            battleReady = HasBattleControls(screen);
             if (battleReady)
             {
                 recovery.Watchdog.Observe(SortiePage.Battle);
@@ -1201,10 +1227,13 @@ public sealed partial class SortieFlowService
         return resultPage || currentContinue is not null && IsCurrentContinueCandidate(currentContinue, selectStage);
     }
 
-    /// <summary>彩色 AUTO 与速度字形、颜色同帧确认才确认已在战斗；背景色或单独速度相似块不足以推进。</summary>
-    private bool HasActiveBattleControls(ScreenImage screen)
-        => BattleAutoRecognizer().Recognize(screen, AutoToggleRoi)?.State is AutoButtonState.All or AutoButtonState.Enemy &&
-            RecognizeSpeed(screen)?.State is SpeedButtonState.On or SpeedButtonState.Off;
+    /// <summary>同时确认 AUTO 与速度的字形、颜色；首轮要配置 AUTO，因此也接受已识别的关闭态。</summary>
+    private bool HasBattleControls(ScreenImage screen, bool allowClosedAuto = false)
+    {
+        var auto = BattleAutoRecognizer().Recognize(screen, AutoToggleRoi)?.State;
+        return (auto is AutoButtonState.All or AutoButtonState.Enemy || allowClosedAuto && auto == AutoButtonState.Close)
+            && RecognizeSpeed(screen)?.State is SpeedButtonState.On or SpeedButtonState.Off;
+    }
 
     /// <summary>按需缓存真实速度字形；所有战斗入口共用颜色状态判定。</summary>
     private SpeedButtonMatch? RecognizeSpeed(ScreenImage screen, CancellationToken ct = default)
