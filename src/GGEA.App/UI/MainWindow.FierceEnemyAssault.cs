@@ -30,13 +30,18 @@ public partial class MainWindow
     private void SaveFierceEnemyDailyTask()
     {
         var item = _dailyTasks.FirstOrDefault(task => task.Kind == DailyTaskKind.FierceEnemySkip);
+        var edit = SnapshotConfig();
         _config.FierceEnemyDaily = item?.FierceEnemySelection is { } choice
             ? new FierceEnemyDailySettings { UnitId = choice.Unit.Id, Difficulty = choice.Difficulty,
                 IsChecked = item.IsChecked, Index = _dailyTasks.IndexOf(item) }
             : null;
         // 未加载日志的设计与测试窗口只更新内存，不写入用户配置。
         if (_logger is null) return;
-        try { new ConfigService(_logger).Save(SnapshotConfig(), ConfigService.ResolvePath(DefaultConfigFile)); }
+        try
+        {
+            edit.FierceEnemyDaily = _config.FierceEnemyDaily;
+            new ConfigService(_logger).Save(edit, ConfigService.ResolvePath(DefaultConfigFile));
+        }
         catch (Exception ex)
         {
             FierceEnemyAssaultStatusText.Text = L.Text("每日任务已在当前窗口更新，但保存失败，重启后可能丢失，请检查配置目录。");

@@ -51,9 +51,14 @@ public partial class MainWindow
         _loadingAutoProgressOptions = true;
         try { RefreshAutoProgressOptions(settings); }
         finally { _loadingAutoProgressOptions = false; }
+        var edit = SnapshotConfig();
         _config.AutoProgress = settings;
         if (_logger is null) return;
-        try { new ConfigService(_logger).Save(SnapshotConfig(), ConfigService.ResolvePath(DefaultConfigFile)); }
+        try
+        {
+            edit.AutoProgress = _config.AutoProgress;
+            new ConfigService(_logger).Save(edit, ConfigService.ResolvePath(DefaultConfigFile));
+        }
         catch (Exception ex)
         {
             AutoProgressStatusText.Text = L.Text("设置在当前窗口已生效，但保存失败，请检查配置目录。");

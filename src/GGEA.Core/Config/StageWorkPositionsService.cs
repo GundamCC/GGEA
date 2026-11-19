@@ -58,6 +58,31 @@ public sealed class StageWorkPositionsService
         }
     }
 
+    internal StageWorkPositionsData SaveEdits(StageWorkPositionsData original, StageWorkPositionsData edited, string path)
+    {
+        using var file = new SharedConfigFile(path);
+        var latest = JsonSerializer.Deserialize<StageWorkPositionsData>(file.Read(),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidDataException();
+        foreach (var item in edited.Positions)
+        {
+            var before = original.Find(item.Id);
+            if (before is null || (before.CanvasX == item.CanvasX && before.CanvasY == item.CanvasY)) continue;
+            var current = latest.Find(item.Id);
+            if (current is null) throw new IOException(GGEA.App.Localization.L.Text("此设置已被其他窗口修改，请重新打开后再保存。"));
+            current.CanvasX = MergeCoordinate(before.CanvasX, item.CanvasX, current.CanvasX);
+            current.CanvasY = MergeCoordinate(before.CanvasY, item.CanvasY, current.CanvasY);
+        }
+        file.Write(JsonSerializer.Serialize(latest, new JsonSerializerOptions { WriteIndented = true }));
+        return latest;
+    }
+
+    private static int MergeCoordinate(int original, int edited, int latest)
+    {
+        if (original == edited) return latest;
+        if (latest == original || latest == edited) return edited;
+        throw new IOException(GGEA.App.Localization.L.Text("此设置已被其他窗口修改，请重新打开后再保存。"));
+    }
+
     /// <summary>将作品位置映射写回 JSON 文件（camelCase，缩进格式），目录不存在时自动创建。</summary>
     public void Save(StageWorkPositionsData data, string path)
     {

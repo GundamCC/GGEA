@@ -30,6 +30,8 @@ internal sealed class SharedConfigFile : IDisposable
         _mutex.Dispose();
     }
 
+    internal bool Exists => File.Exists(_path);
+
     internal string Read() => File.ReadAllText(_path);
 
     internal void Write(string json)

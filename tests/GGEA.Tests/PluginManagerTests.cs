@@ -9,6 +9,19 @@ namespace GGEA.Tests;
 /// <summary>验证真实 DLL 接入与设备生命周期；全部使用临时目录，不加载用户插件或连接设备。</summary>
 public sealed class PluginManagerTests
 {
+    [Fact]
+    public async Task SavingUnchangedPluginChoices_PreservesAnotherWindowEnablingPlugin()
+    {
+        using var files = new Package();
+        await using var first = new PluginManager(files.Root, new TestLog());
+        await using var second = new PluginManager(files.Root, new TestLog());
+        await first.InitializeAsync(new Version(1, 3, 2, 0), "zh-CN", default);
+        await second.InitializeAsync(new Version(1, 3, 2, 0), "zh-CN", default);
+        first.SaveEnabled(["ggea.sample"]);
+        second.SaveEnabled([]);
+        Assert.True(Assert.Single(second.Entries).EnabledNextStart);
+    }
+
     /// <summary>拆分程序集后，插件仍不能借默认加载上下文访问宿主核心。</summary>
     [Theory]
     [InlineData("GGEA")]

@@ -19,6 +19,8 @@
 
 按钮识别后点击和返回主页的共用动作在 `TaskNavigationActions`。所需布局锚点通过 `UiLayout.Require` 获取；同一帧按语言素材回退匹配完整模板使用 `TemplateFallback.MatchImage`。各任务负责决定何时进入下一步、何时重试或终止。
 
+自动刷本的开始按钮取得设备租约后调用 `SortieFlowService.RunFarmAsync`。`AutoFarmRunner` 按结算结果推进轮次，开场控件确认和再次出击识别由出击服务处理。
+
 ## 构建与测试
 
 ```powershell
@@ -76,7 +78,7 @@ dotnet publish src/GGEA.App/GGEA.App.csproj -c Debug -r win-x64 --self-contained
 成功后运行 `artifacts/publish-dev/GGEA.exe`，重复双击即可多开。此目录独立于正式发布目录；重新打包前关闭该目录中的所有 GGEA 进程。分发时压缩整个目录，不能只复制 EXE。
 
 开发包来自当前工作区，不具有正式发布入口的固定提交与清单验证保证。
-普通版和开发版均支持同目录多开。各实例的任务状态独立，日志为 `logs/ggea-日期-进程号.log`。同一目录的实例仍共用配置、模板与布局文件，保存会影响后续读取；需要独立配置时，将完整程序包复制到不同目录。同一 Windows 会话中的 GGEA 窗口按 ADB 地址和可确认的 Android 启动身份互斥，跨目录运行也生效。设备选择本身不占用设备，任务收尾后释放。
+普通版和开发版均支持同目录多开。各实例的任务状态独立，日志为 `logs/ggea-日期-进程号.log`。同一目录的实例共用配置、模板与布局文件。设置窗口按字段提交改动，如果同一字段发生冲突，请重新打开设置后再编辑；需要独立配置时，将完整程序包复制到不同目录。同一 Windows 会话中的 GGEA 窗口按 ADB 地址和可确认的 Android 启动身份互斥，跨目录运行也生效。设备选择本身不占用设备，任务收尾后释放。
 
 ## 正式发布入口
 

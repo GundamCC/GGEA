@@ -9,6 +9,9 @@ namespace GGEA.App.Config;
 /// </summary>
 public sealed class AppConfig
 {
+    // 当前编辑副本打开或上次成功保存时的值，用于识别本窗口实际改过的字段。
+    internal System.Text.Json.Nodes.JsonObject? SavedValues { get; set; }
+
     /// <summary>保留未知字段供独立扩展迁移，宿主不解释或执行其中的业务状态。</summary>
     [JsonExtensionData]
     public Dictionary<string, System.Text.Json.JsonElement>? ExtensionData { get; set; }

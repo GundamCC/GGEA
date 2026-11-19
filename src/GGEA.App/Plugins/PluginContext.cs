@@ -1,5 +1,6 @@
 using System.IO;
-using System.Text.Json;
+using System.Text.Json.Nodes;
+using GGEA.App.Config;
 using GGEA.App.Logging;
 using GGEA.Plugin.Abstractions;
 using GGEA.Updater;
@@ -11,18 +12,37 @@ internal sealed class PluginContext(string directory, string settingsPath, strin
 {
     public string PluginDirectory => directory;
     public string UiLanguage => language;
+    private JsonNode? _baseline;
+    private bool _hasBaseline;
+
     public string? ReadSettings()
     {
+        using var file = new SharedConfigFile(settingsPath);
         UpdateFiles.RejectLinks(settingsPath);
-        if (!File.Exists(settingsPath)) return null;
-        var json = File.ReadAllText(settingsPath);
-        using var parsed = JsonDocument.Parse(json);
+        var json = file.Exists ? file.Read() : null;
+        _baseline = json is null ? null : JsonNode.Parse(json);
+        _hasBaseline = true;
         return json;
     }
+
     public void WriteSettings(string json)
     {
-        using var parsed = JsonDocument.Parse(json);
-        UpdateFiles.WriteJson(settingsPath, parsed.RootElement);
+        var edited = JsonNode.Parse(json);
+        using var file = new SharedConfigFile(settingsPath);
+        UpdateFiles.RejectLinks(settingsPath);
+        var latest = file.Exists ? JsonNode.Parse(file.Read()) : null;
+        JsonNode? merged = edited;
+        if (_hasBaseline && JsonNode.DeepEquals(edited, _baseline)) return;
+        if (edited is JsonObject updated && latest is JsonObject current && (_baseline is null || _baseline is JsonObject))
+        {
+            JsonSettingChanges.Apply(_baseline as JsonObject ?? new JsonObject(), updated, current);
+            merged = current;
+        }
+        else if (!JsonNode.DeepEquals(latest, _baseline) && !JsonNode.DeepEquals(latest, edited))
+            throw new IOException(GGEA.App.Localization.L.Text("此设置已被其他窗口修改，请重新打开后再保存。"));
+        UpdateFiles.WriteJson(settingsPath, merged);
+        _baseline = edited;
+        _hasBaseline = true;
     }
     public void Log(PluginLogLevel level, string message)
     {

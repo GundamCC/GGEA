@@ -35,7 +35,7 @@ public partial class SettingsWindow : Window
         UpdateRelease? availableUpdate = null, Action<bool>? saveUpdatePreference = null, Plugins.PluginManager? plugins = null)
     {
         InitializeComponent();
-        _config = config;
+        _config = ConfigService.Snapshot(config);
         _log = log;
         PluginSettings.Initialize(plugins);
         UiLanguageCombo.ItemsSource = GGEA.App.Localization.UiLanguages.All;
@@ -48,6 +48,7 @@ public partial class SettingsWindow : Window
             else UpdatePreferences.SaveAutoInstallUpdates(enabled,
                 Path.Combine(AppContext.BaseDirectory, "config", "ggea.config.json"));
             _config.AutoInstallUpdates = enabled;
+            _config.SavedValues!["autoInstallUpdates"] = enabled;
         });
         Updates.InstallationReady += (_, _) => DialogResult = false;
         foreach (var path in (config.AdbPaths ?? []).Append(config.AdbPath).Where(p => !string.IsNullOrWhiteSpace(p)).Distinct(StringComparer.OrdinalIgnoreCase))
@@ -328,7 +329,7 @@ public partial class SettingsWindow : Window
             _config.EnableWindowsNotifications = EnableWindowsNotificationsCheckBox.IsChecked == true;
             var configPath = Path.Combine(AppContext.BaseDirectory, "config", "ggea.config.json");
             PluginSettings.Save();
-            new ConfigService(_log).Save(_config, configPath);
+            _config = new ConfigService(_log).SaveEdited(_config, configPath);
             _log.Info(L.Format($"设置已保存: ADB 路径 = {path}, 模拟器 = {_config.EmulatorPath}, 游戏包 = {_config.GamePackage}"));
             DialogResult = true;
         }

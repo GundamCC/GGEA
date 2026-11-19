@@ -39,9 +39,6 @@ public partial class MainWindow : Window
     // 底部版权声明固定归属作者，年份随运行时间自动更新，无需每年手动修改界面资源。
     private static readonly string AppCopyright = $"© {DateTime.Now.Year} GundamC";
 
-    /// <summary>出击按钮模板位于 stage/sortie，统一按 90% 置信度识别。</summary>
-    private const double SortieTemplateThreshold = 0.90;
-
     /// <summary>主界面确认后固定点击主画面入口的坐标，用于收敛底部导航的焦点状态。</summary>
     private const int MainScreenActivationTapX = 165;
     private const int MainScreenActivationTapY = 1032;
@@ -151,14 +148,12 @@ public partial class MainWindow : Window
     {
         var app = (App)Application.Current;
         app.ToggleTheme();
-        var themeConfig = SnapshotConfig();
-        themeConfig.IsDarkMode = app.IsDarkMode;
-        if (!_executionGate.IsHeld) _config = themeConfig;
+        if (!_executionGate.IsHeld) _config.IsDarkMode = app.IsDarkMode;
         UpdateThemeButton();
         // 切换即保存，退出或异常结束后也能恢复；未初始化的设计/测试窗口不写磁盘。
         if (_logger is not null)
         {
-            try { new ConfigService(_logger).Save(themeConfig, ConfigService.ResolvePath(DefaultConfigFile)); }
+            try { new ConfigService(_logger).Update(ConfigService.ResolvePath(DefaultConfigFile), latest => latest.IsDarkMode = app.IsDarkMode); }
             catch (Exception ex) { _logger.Warn(L.Format($"主题设置保存失败: {ex.GetType().Name}")); }
         }
     }
@@ -350,7 +345,11 @@ public partial class MainWindow : Window
             var configPath = Path.Combine(baseDir, DefaultConfigFile);
             _config = ((App)Application.Current).StartupConfig;
             // 首次启动及旧配置迁移均固定本次选择；以后不因系统语言变化而覆盖用户偏好。
-            try { new ConfigService(_logger).Save(_config, configPath); }
+            try
+            {
+                _config = new ConfigService(_logger).Update(configPath, latest =>
+                    latest.UiLanguage = UiLanguages.Resolve(latest.UiLanguage, System.Globalization.CultureInfo.CurrentUICulture));
+            }
             catch (Exception ex) { _logger.Warn(L.Format($"界面语言保存失败：{ex.Message}")); }
             ConfigService.ApplyResourceLanguage(_config);
             RestoreFierceEnemyDailyTask();
@@ -368,13 +367,18 @@ public partial class MainWindow : Window
                     _logger.Warn(L.Format($"自动检索 ADB 失败，请手动选择：{ex.Message}"));
                     candidates = Array.Empty<AdbCandidate>();
                 }
-                AdbDiscovery.Apply(_config, candidates);
-                if (string.IsNullOrWhiteSpace(_config.EmulatorPath))
+                void ApplyDiscovery(AppConfig latest)
                 {
-                    var type = EmulatorTypes.DetectFromAdbPath(_config.AdbPath) ?? EmulatorTypes.Custom;
-                    _config.EmulatorPath = AdbDiscovery.FindLauncher(_config.AdbPath, type) ?? "";
+                    if (latest.AdbDiscoveryCompleted) return;
+                    AdbDiscovery.Apply(latest, candidates);
+                    if (string.IsNullOrWhiteSpace(latest.EmulatorPath))
+                    {
+                        var type = EmulatorTypes.DetectFromAdbPath(latest.AdbPath) ?? EmulatorTypes.Custom;
+                        latest.EmulatorPath = AdbDiscovery.FindLauncher(latest.AdbPath, type) ?? "";
+                    }
                 }
-                try { new ConfigService(_logger).Save(_config, configPath); }
+                ApplyDiscovery(_config);
+                try { _config = new ConfigService(_logger).Update(configPath, ApplyDiscovery); }
                 catch (Exception ex) { _logger.Warn(L.Format($"ADB 检索结果保存失败，下次启动会重试：{ex.Message}")); }
                 if (candidates.Count == 0 && !File.Exists(_config.AdbPath))
                 {
@@ -397,33 +401,7 @@ public partial class MainWindow : Window
             ConfigService.ApplyResourceLanguage(_config);
 
             // 初始化服务
-            _adb = new AutomationDevice(new AdbService(_config.AdbPath, _logger, _config.CommandTimeoutMs, _config.ScreenshotTimeoutMs, _environmentDiagnostics, _config.EmulatorPath, _config.PreferMuMuNativeScreenshot, _config.GamePackage));
-            _deviceCompatibility = new DeviceCompatibilityService(_adb.Transport);
-            _connectionErrorDetector = CreateConnectionErrorDetector();
-            ConfigureExecutionMonitoring();
-            _automation = new AutomationService(_adb, _matcher, _logger, connectionErrorDetector: _connectionErrorDetector,
-                skipTemplatePath: ConfigService.ResolvePath(_config.LoginRewardSkipTemplate), textOcr: GetTextOcr());
-            _automation.CapacityWarning += ReportCapacityWarning;
-            _emulatorAdapter = EmulatorAdapterFactory.Create(_config.EmulatorType, _adb, _logger, mumuPathResolver: () => EmulatorLocator.ResolveMuMuManager(_config.AdbPath, _config.EmulatorPath));
-            _emulator = new EmulatorService(_emulatorAdapter);
-            _gameEntry = new GameEntryService(_automation, _logger);
-            _mainScreenNavigator = CreateMainScreenNavigator();
-            _uiLayoutService = new UiLayoutService(_logger);
-            ReloadLayouts();
-            _battleshipLocator = new BattleshipLocator(_adb, _matcher, _logger);
-            _personalBaseService = new PersonalBaseService(_automation, _battleshipLocator, _logger);
-            _shopService = new ShopService(_automation, new DiamondSafetyChecker(_adb, _matcher, _logger), _logger);
-            _giftService = new GiftService(_automation, _logger);
-            _developService = new DevelopService(_automation, _logger, _config.DevelopMsFixedScales);
-            ApplyEmulatorCapabilities();
-            _stageService = CreateStageService();
-            _upgradeStagesService = new UpgradeStagesService(_automation, CreateStageSkipService(forUpgradeStages: true), _logger);
-            _missionRewardService = new MissionRewardService(_automation, _logger);
-            _downloadDialogService = CreateDownloadDialogService();
-            _sortieFlowService = CreateSortieFlowService();
-            _apProfileService = new ApConsumptionProfileService(_logger);
-            LoadStageWorks();
-            LoadApProfiles();
+            InitializeTaskServices(_logger);
 
             UpdateFooterText();
             _logger.Info(L.Text("GGEA 启动完成"));
@@ -512,7 +490,7 @@ public partial class MainWindow : Window
             catch (Exception ex) { _logger.Warn($"插件清理失败（{ex.GetType().Name}），可在设置中停用，重启后生效。"); }
         }
         AcknowledgeStartupUpdate();
-        var settings = new SettingsWindow(SnapshotConfig(), _logger, allowUpdateInstall: true,
+        var settings = new SettingsWindow(new ConfigService(_logger).Load(ConfigService.ResolvePath(DefaultConfigFile)), _logger, allowUpdateInstall: true,
             availableUpdate: _startupUpdate, saveUpdatePreference: SaveUpdatePreference, plugins: _plugins) { Owner = this };
         var saved = settings.ShowDialog();
         if (settings.UpdateRequested)
@@ -533,37 +511,44 @@ public partial class MainWindow : Window
         _textOcr = null;
         ConfigService.ApplyResourceLanguage(_config);
         CompleteKnownEmulatorPaths();
-        _adb = new AutomationDevice(new AdbService(_config.AdbPath, _logger, _config.CommandTimeoutMs, _config.ScreenshotTimeoutMs, _environmentDiagnostics, _config.EmulatorPath, _config.PreferMuMuNativeScreenshot, _config.GamePackage));
-        _deviceCompatibility = new DeviceCompatibilityService(_adb.Transport);
-        _connectionErrorDetector = CreateConnectionErrorDetector();
-        ConfigureExecutionMonitoring();
-        _automation = new AutomationService(_adb, _matcher, _logger, connectionErrorDetector: _connectionErrorDetector,
-                skipTemplatePath: ConfigService.ResolvePath(_config.LoginRewardSkipTemplate), textOcr: GetTextOcr());
-        _automation.CapacityWarning += ReportCapacityWarning;
-        _emulatorAdapter = EmulatorAdapterFactory.Create(_config.EmulatorType, _adb, _logger, mumuPathResolver: () => EmulatorLocator.ResolveMuMuManager(_config.AdbPath, _config.EmulatorPath));
-        _emulator = new EmulatorService(_emulatorAdapter);
-        _gameEntry = new GameEntryService(_automation, _logger);
-        _mainScreenNavigator = CreateMainScreenNavigator();
-        ReloadLayouts();
-        _battleshipLocator = new BattleshipLocator(_adb, _matcher, _logger);
-        _personalBaseService = new PersonalBaseService(_automation, _battleshipLocator, _logger);
-        _shopService = new ShopService(_automation, new DiamondSafetyChecker(_adb, _matcher, _logger), _logger);
-        _giftService = new GiftService(_automation, _logger);
-        _developService = new DevelopService(_automation, _logger, _config.DevelopMsFixedScales);
-        ApplyEmulatorCapabilities();
-        _stageService = CreateStageService();
-        _upgradeStagesService = new UpgradeStagesService(_automation, CreateStageSkipService(forUpgradeStages: true), _logger);
-        _missionRewardService = new MissionRewardService(_automation, _logger);
-        _downloadDialogService = CreateDownloadDialogService();
-        _sortieFlowService = CreateSortieFlowService();
-        _apProfileService = new ApConsumptionProfileService(_logger);
-        LoadStageWorks();
-        LoadApProfiles();
+        InitializeTaskServices(_logger);
         UpdateFooterText();
         RefreshTemplateList();
         _logger.Info(L.Format($"设置已应用：区服 {_config.GameServer}，游戏语言 {_config.GameLanguage}，ADB 路径 {_config.AdbPath}"));
 
         await RefreshDevicesAsync();
+    }
+
+    /// <summary>启动和设置重建使用同一组任务服务，确保出击识别、设备通道和模板路径属于当前配置。</summary>
+    private void InitializeTaskServices(GgeaLogger log)
+    {
+        _adb = new AutomationDevice(new AdbService(_config.AdbPath, log, _config.CommandTimeoutMs, _config.ScreenshotTimeoutMs, _environmentDiagnostics, _config.EmulatorPath, _config.PreferMuMuNativeScreenshot, _config.GamePackage));
+        _deviceCompatibility = new DeviceCompatibilityService(_adb.Transport);
+        _connectionErrorDetector = CreateConnectionErrorDetector();
+        ConfigureExecutionMonitoring();
+        _automation = new AutomationService(_adb, _matcher, log, connectionErrorDetector: _connectionErrorDetector,
+                skipTemplatePath: ConfigService.ResolvePath(_config.LoginRewardSkipTemplate), textOcr: GetTextOcr());
+        _automation.CapacityWarning += ReportCapacityWarning;
+        _emulatorAdapter = EmulatorAdapterFactory.Create(_config.EmulatorType, _adb, log, mumuPathResolver: () => EmulatorLocator.ResolveMuMuManager(_config.AdbPath, _config.EmulatorPath));
+        _emulator = new EmulatorService(_emulatorAdapter);
+        _gameEntry = new GameEntryService(_automation, log);
+        _mainScreenNavigator = CreateMainScreenNavigator();
+        _uiLayoutService ??= new UiLayoutService(log);
+        ReloadLayouts();
+        _battleshipLocator = new BattleshipLocator(_adb, _matcher, log);
+        _personalBaseService = new PersonalBaseService(_automation, _battleshipLocator, log);
+        _shopService = new ShopService(_automation, new DiamondSafetyChecker(_adb, _matcher, log), log);
+        _giftService = new GiftService(_automation, log);
+        _developService = new DevelopService(_automation, log, _config.DevelopMsFixedScales);
+        ApplyEmulatorCapabilities();
+        _stageService = CreateStageService();
+        _upgradeStagesService = new UpgradeStagesService(_automation, CreateStageSkipService(forUpgradeStages: true), log);
+        _missionRewardService = new MissionRewardService(_automation, log);
+        _downloadDialogService = CreateDownloadDialogService();
+        _sortieFlowService = CreateSortieFlowService();
+        _apProfileService = new ApConsumptionProfileService(log);
+        LoadStageWorks();
+        LoadApProfiles();
     }
 
     /// <summary>
@@ -1780,154 +1765,14 @@ public partial class MainWindow : Window
             var rounds = int.TryParse(AutoFarmCountBox.Text?.Trim(), out var count)
                 ? Math.Clamp(count, 1, 999)
                 : 10;
-            var remaining = rounds;
-            var round = 0;
-
-            while (remaining > 0)
-            {
-                ct.ThrowIfCancellationRequested();
-                round++;
-                SortieFlowResult result;
-                if (round == 1)
-                {
-                    AutoFarmStatusText.Text = L.Format($"第 {round}/{rounds} 轮：正在识别出击按钮…");
-
-                    // 第一轮从出击准备页开始：匹配右下角出击按钮并点击
-                    var png = await _automation.ScreenshotAsync(serial, ct);
-                    var screen = ImageCodec.DecodePng(png);
-                    var roi = new Roi(
-                        (int)(screen.Width * 0.75),
-                        (int)(screen.Height * 0.75),
-                        (int)(screen.Width * 0.25),
-                        (int)(screen.Height * 0.25));
-                    var sortie = MatchTemplateInRoi(
-                        screen,
-                        ConfigService.ResolvePath(_config.SortieTemplate),
-                        roi);
-                    if (sortie is null)
-                    {
-                        _logger.Warn(L.Text("未识别到出击按钮，请确认当前处于出击准备页面"));
-                        await ReportAutoFarmFailureAsync(
-                            serial,
-                            L.Text("未识别到出击按钮，请确认处于出击准备页面。"),
-                            ct);
-                        return;
-                    }
-
-                    _logger.Info(
-                        L.Format($"识别到出击按钮: 中心 ({sortie.CenterX},{sortie.CenterY})，置信度 {sortie.Confidence:P1}"));
-                    AutoFarmStatusText.Text = L.Format($"第 {round}/{rounds} 轮：已识别出击按钮，正在点击…");
-                    await _automation.TapAsync(serial, sortie.CenterX, sortie.CenterY, ct);
-                    AutoFarmStatusText.Text = L.Format($"第 {round}/{rounds} 轮：等待关卡完成 × {rounds}");
-
-                    // 首轮完整流程：并发识别下载界面与 TAP TO NEXT，配置战斗图标
-                    result = await _sortieFlowService.ExecuteAfterSortieAsync(
-                        serial,
-                        allowDownload: _config.AllowGgeaDownload,
-                        allowEmptySlotSortie: EmptySlotSortieCheckBox.IsChecked == true,
-                        allowTerrainUnsuitableSortie: TerrainUnsuitableSortieCheckBox.IsChecked == true,
-                        moreRoundsRemaining: remaining > 1,
-                        ct: ct, recoverySortieTemplate: ConfigService.ResolvePath(_config.SortieTemplate));
-                }
-                else
-                {
-                    // 再次出击后的轮次：确认 TAP TO NEXT 或已进入战斗的同帧控件，沿用上轮图标配置。
-                    AutoFarmStatusText.Text = L.Format($"第 {round}/{rounds} 轮：等待关卡完成 × {rounds}");
-                    result = await _sortieFlowService.ExecuteNextRoundAsync(
-                        serial,
-                        moreRoundsRemaining: remaining > 1,
-                        ct: ct,
-                        allowDownload: _config.AllowGgeaDownload,
-                        allowEmptySlotSortie: EmptySlotSortieCheckBox.IsChecked == true,
-                        allowTerrainUnsuitableSortie: TerrainUnsuitableSortieCheckBox.IsChecked == true,
-                        recoverySortieTemplate: ConfigService.ResolvePath(_config.SortieTemplate));
-                }
-
-                // 只有真实结算结果才消耗本地轮次；异常返回准备页不代表本轮完成。
-                if (result is SortieFlowResult.RoundCompleted or SortieFlowResult.AllRoundsCompleted) remaining--;
-
-                switch (result)
-                {
-                    case SortieFlowResult.RoundCompleted:
-                        if (remaining > 0)
-                        {
-                            AutoFarmStatusText.Text = L.Format($"第 {round}/{rounds} 轮完成，已点击再次出击，等待下一轮…");
-                            continue;
-                        }
-
-                        AutoFarmStatusText.Text = L.Format($"全部 {rounds} 轮刷取完成。");
-                        endNotification.Succeeded = true;
-                        return;
-                    case SortieFlowResult.AllRoundsCompleted:
-                        AutoFarmStatusText.Text = L.Format($"全部 {rounds} 轮刷取完成，已退出。");
-                        endNotification.Succeeded = true;
-                        return;
-                    case SortieFlowResult.DownloadCancelled:
-                        AutoFarmStatusText.Text = L.Text("检测到下载界面，未允许下载，已点击取消。");
-                        return;
-                    case SortieFlowResult.UnexpectedPreparation:
-                        await ReportAutoFarmFailureAsync(serial, L.Text("结算尚未确认却回到出击准备页，已停止刷本；本轮未计完成，也未重新出击。"), ct);
-                        return;
-                    case SortieFlowResult.Stalled:
-                        // 不再进入失败后的额外诊断或恢复，保留未知画面供用户检查。
-                        AutoFarmStatusText.Text = L.Text("连续两次 2 分钟检查仍无正常流程进展，自动刷本已停止，保留当前画面。");
-                        return;
-                    case SortieFlowResult.TapToNextTimeout:
-                        await ReportAutoFarmFailureAsync(
-                            serial,
-                            L.Text("等待出击加载或关卡开场超时，流程中断；请检查下载进度、游戏画面及出击是否成功。"),
-                            ct);
-                        return;
-                    case SortieFlowResult.ContinueTimeout:
-                        await ReportAutoFarmFailureAsync(serial, L.Text("等待继续按钮超时，流程中断。"), ct);
-                        return;
-                    case SortieFlowResult.AgainTimeout:
-                        await ReportAutoFarmFailureAsync(serial, L.Text("等待再次出击按钮超时，流程中断。"), ct);
-                        return;
-                    case SortieFlowResult.FailureDetected:
-                        await ReportAutoFarmFailureAsync(
-                            serial,
-                            L.Text("自动刷本失败，已回到选择关卡，请调整部队配置。"),
-                            ct);
-                        return;
-                    case SortieFlowResult.EmptySlotCancelled:
-                        AutoFarmStatusText.Text = L.Text("出击阵容存在空位且未勾选空位出击，已点击取消。");
-                        return;
-                    case SortieFlowResult.EmptySlotTimeout:
-                        await ReportAutoFarmFailureAsync(
-                            serial,
-                            L.Text("未识别到空位出击对话框按钮，流程中断。"),
-                            ct);
-                        return;
-                    case SortieFlowResult.TerrainCancelled:
-                        AutoFarmStatusText.Text = L.Text("检测到地形适性提示且未勾选强制出击，已点击取消。");
-                        return;
-                    case SortieFlowResult.TerrainTimeout:
-                        await ReportAutoFarmFailureAsync(
-                            serial,
-                            L.Text("未识别到地形适性对话框按钮，流程中断。"),
-                            ct);
-                        return;
-                    case SortieFlowResult.NoAp:
-                        AutoFarmStatusText.Text = L.Text("AP 不足，无法继续刷本，已回到选择关卡。");
-                        return;
-                    case SortieFlowResult.NoApCancelled:
-                        AutoFarmStatusText.Text = L.Text("AP 不足，无法出击，已点击取消。");
-                        return;
-                    case SortieFlowResult.NoApTimeout:
-                        await ReportAutoFarmFailureAsync(
-                            serial,
-                            L.Text("未识别到 AP 不足对话框取消按钮，流程中断。"),
-                            ct);
-                        return;
-                    default:
-                        await ReportAutoFarmFailureAsync(
-                            serial,
-                            L.Text("出击后未识别到地形、空位、AP 不足、下载提示或 TAP TO NEXT，流程中断。"),
-                            ct);
-                        return;
-                }
-            }
+            var options = new AutoFarmOptions(rounds, ConfigService.ResolvePath(_config.SortieTemplate),
+                _config.AllowGgeaDownload, EmptySlotSortieCheckBox.IsChecked == true,
+                TerrainUnsuitableSortieCheckBox.IsChecked == true);
+            var result = await _sortieFlowService.RunFarmAsync(serial, options,
+                message => AutoFarmStatusText.Text = message, ct);
+            if (result.CheckConnection) await ReportAutoFarmFailureAsync(serial, result.Message, ct);
+            else AutoFarmStatusText.Text = result.Message;
+            endNotification.Succeeded = result.Succeeded;
         }
         catch (OperationCanceledException)
         {
@@ -1972,29 +1817,6 @@ public partial class MainWindow : Window
         if (await AbortTaskChainIfConnectionErrorAsync(serial, L.Text("自动刷本"), ct))
         {
             AutoFarmStatusText.Text = L.Text("检测到网络错误或游戏数据更新，自动刷本任务链已中止。");
-        }
-    }
-
-    /// <summary>在指定区域匹配模板；模板加载失败时返回 null。</summary>
-    private TemplateMatchResult? MatchTemplateInRoi(ScreenImage screen, string templatePath, Roi roi)
-    {
-        try
-        {
-            var template = ImageCodec.DecodePng(File.ReadAllBytes(templatePath));
-            return _matcher.Match(
-                screen.Bgra,
-                screen.Width,
-                screen.Height,
-                template.Bgra,
-                template.Width,
-                template.Height,
-                SortieTemplateThreshold,
-                roi);
-        }
-        catch (Exception ex)
-        {
-            _logger?.Warn(L.Format($"模板不可用，本次无法判断对应目标: {templatePath}: {ex.Message}"));
-            return null;
         }
     }
 
@@ -2854,10 +2676,15 @@ public partial class MainWindow : Window
 
         ApConsumptionPlanner.ApplyProfile(profile, _apWorkItems);
         ApProfileNameBox.Text = profile.Name;
-        _apProfiles.LastSelectedProfile = profile.Name;
         try
         {
-            _apProfileService.Save(_apProfiles, ConfigService.ResolvePath(_config.ApConsumptionProfilesFile));
+            _apProfiles = _apProfileService.Edit(ConfigService.ResolvePath(_config.ApConsumptionProfilesFile), latest =>
+            {
+                if (ApConsumptionProfileService.Find(latest, profile.Name) is null)
+                    throw new IOException(L.Text("此设置已被其他窗口修改，请重新打开后再保存。"));
+                latest.LastSelectedProfile = profile.Name;
+            });
+            RefreshApProfileCombo(profile.Name);
             ApPlanStatusText.Text = L.Format($"已切换配置：{profile.Name}");
         }
         catch (Exception ex)
@@ -2887,10 +2714,12 @@ public partial class MainWindow : Window
         try
         {
             var profile = ApConsumptionPlanner.CreateProfile(name, _apWorkItems);
-            _apProfileService.Upsert(_apProfiles, profile);
-            _apProfileService.Save(
-                _apProfiles,
-                ConfigService.ResolvePath(_config.ApConsumptionProfilesFile));
+            _apProfiles = _apProfileService.Edit(ConfigService.ResolvePath(_config.ApConsumptionProfilesFile), latest =>
+            {
+                ApConsumptionProfileService.CheckProfile(ApConsumptionProfileService.Find(_apProfiles, name),
+                    ApConsumptionProfileService.Find(latest, name));
+                _apProfileService.Upsert(latest, profile);
+            });
             RefreshApProfileCombo(profile.Name);
             ApPlanStatusText.Text = L.Format($"配置“{profile.Name}”已保存。");
         }
@@ -2914,18 +2743,15 @@ public partial class MainWindow : Window
 
         try
         {
-            _apProfiles.Profiles.Remove(profile);
-            if (string.Equals(
-                    _apProfiles.LastSelectedProfile,
-                    profile.Name,
-                    StringComparison.OrdinalIgnoreCase))
+            _apProfiles = _apProfileService.Edit(ConfigService.ResolvePath(_config.ApConsumptionProfilesFile), latest =>
             {
-                _apProfiles.LastSelectedProfile = string.Empty;
-            }
-
-            _apProfileService.Save(
-                _apProfiles,
-                ConfigService.ResolvePath(_config.ApConsumptionProfilesFile));
+                var current = ApConsumptionProfileService.Find(latest, profile.Name);
+                if (current is null) return;
+                ApConsumptionProfileService.CheckProfile(profile, current);
+                latest.Profiles.Remove(current);
+                if (string.Equals(latest.LastSelectedProfile, profile.Name, StringComparison.OrdinalIgnoreCase))
+                    latest.LastSelectedProfile = string.Empty;
+            });
             RefreshApProfileCombo(_apProfiles.LastSelectedProfile);
             ApPlanStatusText.Text = L.Format($"方案“{profile.Name}”已删除。");
             _logger?.Info(L.Format($"已删除 AP 消耗方案: {profile.Name}"));
@@ -3382,7 +3208,8 @@ public partial class MainWindow : Window
             {
                 Id = position.Id,
                 Work = names.GetValueOrDefault(position.Id, L.Format($"作品 {position.Id}")),
-                Position = position,
+                CanvasX = position.CanvasX,
+                CanvasY = position.CanvasY,
             });
         }
 
@@ -3420,26 +3247,21 @@ public partial class MainWindow : Window
 
         try
         {
-            var data = new StageWorkPositionsData();
+            var edited = new StageWorkPositionsData();
             foreach (var item in _stagePositionItems)
             {
-                var position = item.Position;
                 if (item.CanvasX <= 0 || item.CanvasY <= 0)
                 {
                     _logger.Warn(L.Format($"作品 {item.Id} 坐标无效，已跳过保存: ({item.CanvasX},{item.CanvasY})"));
                     continue;
                 }
-
-                position.CanvasX = item.CanvasX;
-                position.CanvasY = item.CanvasY;
-                data.Positions.Add(position);
+                edited.Positions.Add(new StageWorkPosition { Id = item.Id, CanvasX = item.CanvasX, CanvasY = item.CanvasY });
             }
-
-            new StageWorkPositionsService(_logger).Save(
-                data,
+            _stagePositions = new StageWorkPositionsService(_logger).SaveEdits(_stagePositions, edited,
                 ConfigService.ResolvePath(_config.StageWorkPositionsFile));
-            _logger.Info(L.Format($"已保存 {data.Positions.Count} 个作品位置"));
-            StagePositionStatusText.Text = L.Format($"已保存 {data.Positions.Count} 个作品位置。");
+            RefreshStagePositionItems();
+            _logger.Info(L.Format($"已保存 {_stagePositions.Positions.Count} 个作品位置"));
+            StagePositionStatusText.Text = L.Format($"已保存 {_stagePositions.Positions.Count} 个作品位置。");
         }
         catch (Exception ex)
         {
@@ -3453,19 +3275,8 @@ public partial class MainWindow : Window
     {
         public int Id { get; init; }
         public string Work { get; init; } = string.Empty;
-        public StageWorkPosition Position { get; init; } = new();
-
-        public int CanvasX
-        {
-            get => Position.CanvasX;
-            set => Position.CanvasX = value;
-        }
-
-        public int CanvasY
-        {
-            get => Position.CanvasY;
-            set => Position.CanvasY = value;
-        }
+        public int CanvasX { get; set; }
+        public int CanvasY { get; set; }
     }
 
     /// <summary>创建下载界面识别服务（下载/取消按钮在屏幕下方 30% 区域识别）。</summary>
@@ -3641,8 +3452,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>深拷贝执行配置，隔离设置窗口及调用方持有的可变集合。</summary>
-    private AppConfig SnapshotConfig() => System.Text.Json.JsonSerializer.Deserialize<AppConfig>(
-        System.Text.Json.JsonSerializer.Serialize(_config))!;
+    private AppConfig SnapshotConfig() => ConfigService.Snapshot(_config);
 
     /// <summary>
     /// UI 线程上的唯一执行入口，不排队重放用户动作。持有期间禁止设备切换与服务重建，

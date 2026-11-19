@@ -13,6 +13,34 @@ namespace GGEA.Tests;
 /// </summary>
 public class SortieFlowServiceTests
 {
+    // 从刷本入口回放准备页。右下角以外的同款按钮不能授权出击，出击后的失败也不能触发下一轮。
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task FarmEntry_OnlyStartsFromRecognizedCornerButton(bool inside)
+    {
+        using var temp = new TempDirectory();
+        var dialog = CreateDialogTemplates(temp);
+        var sortie = CreateSortieTemplates(temp);
+        var path = ConfigService.ResolvePath(new AppConfig().SortieTemplate);
+        var template = ImageCodec.DecodePng(File.ReadAllBytes(path));
+        var screen = TestImageFactory.CreateBgra(ScreenWidth, ScreenHeight, 20);
+        int x = inside ? ScreenWidth - template.Width - 20 : 100;
+        int y = ScreenHeight - template.Height - 20;
+        PasteTemplate(screen, template, x, y);
+        var adb = new FakeAdbService(ImageCodec.EncodePng(screen, ScreenWidth, ScreenHeight));
+        adb.EnqueueScreenshots(CreateFailedScreen());
+        var service = CreateService(adb, dialog.Download, dialog.Cancel, sortie.Tap, sortie.SpeedOn, sortie.SpeedOff,
+            sortie.Continue, sortie.Again, sortie.AgainClose, sortie.Failed, sortie.EmptySlotHint,
+            sortie.DialogSortie, sortie.DialogCancel, sortie.NoAp, sortie.PlayerLevelUp, sortie.Reward, sortie.TapToNextReward);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var result = await service.RunFarmAsync("serial", new AutoFarmOptions(2, path, false, false, false), _ => { }, timeout.Token);
+        Assert.False(result.Succeeded);
+        Assert.True(result.CheckConnection);
+        if (inside) Assert.Equal(new[] { (x + template.Width / 2, y + template.Height / 2), (1670, 980) }, adb.Taps);
+        else Assert.Empty(adb.Taps);
+    }
+
     /// <summary>回放雷电错误码100：首次继续按钮的十五分钟等待也必须在统一两分钟检查时中断。</summary>
     [Fact]
     public async Task LongBattleWait_GlobalMonitorDetectsActualNetworkError()

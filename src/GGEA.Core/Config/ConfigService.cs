@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using GGEA.App.Logging;
 using GGEA.App.Automation;
 
@@ -39,82 +40,87 @@ public sealed class ConfigService
             if (!File.Exists(path))
             {
                 _log.Warn($"配置文件不存在，使用默认配置: {path}");
-                return new AppConfig();
+                return Track(new AppConfig());
             }
 
             string json;
             using (var file = new SharedConfigFile(path)) json = file.Read();
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var config = JsonSerializer.Deserialize<AppConfig>(json, options);
-            // 旧区域右界裁掉了关卡页主画面按钮的完整匹配位置；仅迁移精确旧默认值。
-            if (config?.MainScreenButtonRoi is { X: 0, Y: 975, Width: 282, Height: 105 } homeRoi)
-                homeRoi.Width = 300;
-            // 旧默认模板仅含文字且已移除，迁移到完整价格栏；不改动用户自定义模板路径。
-            if (config?.ShopFreeTextTemplate?.Replace('\\', '/').Equals(
-                "resources/templates/shop/text_free.png", StringComparison.OrdinalIgnoreCase) == true)
-                config.ShopFreeTextTemplate = "resources/templates/shop/free.png";
-            // 两张随包旧截图已移除：逐项迁移，覆盖缺失另一字段、混合自定义及 Windows 分隔符的旧配置。
-            if (config is not null)
-            {
-                // 修复 1.1.6 的主界面五秒默认值叠加；精确迁移两项旧值，其他手动间隔保持不变。
-                if (config.MainScreenConfirmationIntervalMs == 5000)
-                    config.MainScreenConfirmationIntervalMs = GameTiming.ConfirmationIntervalMs;
-                if (config.MainScreenBackSettleDelayMs == 5000)
-                    config.MainScreenBackSettleDelayMs = GameTiming.ConfirmationIntervalMs;
-                // 其他动画时长保留用户值；只迁移识别总预算，不再把短动画自动延长。
-                if (config.DevelopTitleWaitMs == 10000)
-                    config.DevelopTitleWaitMs = GameTiming.ShortRecognitionTimeoutMs;
-                GameProfiles.Normalize(config);
-                config.AutoProgress ??= new AutoProgressSettings();
-                config.AutoProgress.Normalize();
-                config.DevelopExecuteTemplate = MigrateDevelopButtonPath(config.DevelopExecuteTemplate);
-                config.DevelopExecuteConfirmTemplate = MigrateDevelopButtonPath(config.DevelopExecuteConfirmTemplate);
-                // 替换随包批量开发按钮，兼容旧配置，但保留用户自定义素材。
-                const string oldBulk = "resources/templates/develop/button_develop_all.png";
-                var bulk = config.DevelopAllTemplate?.Replace('\\', '/');
-                if (string.Equals(bulk, oldBulk, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(bulk, Path.Combine(AppContext.BaseDirectory, oldBulk).Replace('\\', '/'), StringComparison.OrdinalIgnoreCase))
-                    config.DevelopAllTemplate = new AppConfig().DevelopAllTemplate;
-                // 仅迁移随包素材的精确旧路径，两字段独立处理，保留同名自定义文件。
-                config.DevelopMsTemplate = MigrateDevelopUnitPath(config.DevelopMsTemplate);
-                config.DevelopMsLargeTemplate = MigrateDevelopUnitPath(config.DevelopMsLargeTemplate);
-                if (IsRetiredDevelopTemplate(config.DevelopMsTemplate))
-                    config.DevelopMsTemplate = new AppConfig().DevelopMsTemplate;
-                if (IsRetiredDevelopTemplate(config.DevelopMsLargeTemplate))
-                    config.DevelopMsLargeTemplate = "";
-                var nativeOnly = string.Equals(config.DevelopMsTemplate?.Replace('\\', '/'),
-                    new AppConfig().DevelopMsTemplate, StringComparison.OrdinalIgnoreCase) &&
-                    string.IsNullOrEmpty(config.DevelopMsLargeTemplate);
-                // 原生素材的任务入口统一使用两档；只有自定义截图继续尊重显式识别策略。
-                using var document = JsonDocument.Parse(json);
-                if (nativeOnly || !document.RootElement.EnumerateObject().Any(property =>
-                        property.Name.Equals("developMsFixedScales", StringComparison.OrdinalIgnoreCase)))
-                    config.DevelopMsFixedScales = nativeOnly;
-            }
-            if (config is not null)
-            {
-                // 删除旧素材后逐项迁移，保留用户自定义路径。
-                config.HarvestOkTemplate = MigrateOkTemplate(config.HarvestOkTemplate);
-                config.ShopResultCloseTemplate = MigrateBundledTemplate(config.ShopResultCloseTemplate,
-                    "shop/button_result_close.png", "common/close.png");
-                config.ApRecoveryCloseTemplate = MigrateBundledTemplate(config.ApRecoveryCloseTemplate,
-                    "stage/ap_recovery_close.png", "common/close.png");
-                config.GiftCloseTemplate = MigrateBundledTemplate(config.GiftCloseTemplate,
-                    "gift/button_close.png", "common/close.png");
-                config.AgainCloseTemplate = MigrateBundledTemplate(config.AgainCloseTemplate,
-                    "stage/sortie/again_close.png", "stage/sortie/again_disabled.png");
-                config.StageWorkSelectCloseTemplate = MigrateBundledTemplate(config.StageWorkSelectCloseTemplate,
-                    "stage/select_close.png", "stage/select_disabled.png");
-                config.GiftOkTemplate = MigrateOkTemplate(config.GiftOkTemplate);
-                config.MissionClaimResultOkTemplate = MigrateOkTemplate(config.MissionClaimResultOkTemplate);
-            }
-            return config ?? new AppConfig();
+            return Track(ParseConfig(json));
         }
         catch (Exception ex)
         {
             _log.Warn($"读取配置失败，使用默认配置: {ex.Message}");
-            return new AppConfig();
+            return Track(new AppConfig());
         }
+    }
+
+    private static AppConfig ParseConfig(string json)
+    {
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var config = JsonSerializer.Deserialize<AppConfig>(json, options);
+        // 旧区域右界裁掉了关卡页主画面按钮的完整匹配位置；仅迁移精确旧默认值。
+        if (config?.MainScreenButtonRoi is { X: 0, Y: 975, Width: 282, Height: 105 } homeRoi)
+            homeRoi.Width = 300;
+        // 旧默认模板仅含文字且已移除，迁移到完整价格栏；不改动用户自定义模板路径。
+        if (config?.ShopFreeTextTemplate?.Replace('\\', '/').Equals(
+            "resources/templates/shop/text_free.png", StringComparison.OrdinalIgnoreCase) == true)
+            config.ShopFreeTextTemplate = "resources/templates/shop/free.png";
+        // 两张随包旧截图已移除：逐项迁移，覆盖缺失另一字段、混合自定义及 Windows 分隔符的旧配置。
+        if (config is not null)
+        {
+            // 修复 1.1.6 的主界面五秒默认值叠加；精确迁移两项旧值，其他手动间隔保持不变。
+            if (config.MainScreenConfirmationIntervalMs == 5000)
+                config.MainScreenConfirmationIntervalMs = GameTiming.ConfirmationIntervalMs;
+            if (config.MainScreenBackSettleDelayMs == 5000)
+                config.MainScreenBackSettleDelayMs = GameTiming.ConfirmationIntervalMs;
+            // 其他动画时长保留用户值；只迁移识别总预算，不再把短动画自动延长。
+            if (config.DevelopTitleWaitMs == 10000)
+                config.DevelopTitleWaitMs = GameTiming.ShortRecognitionTimeoutMs;
+            GameProfiles.Normalize(config);
+            config.AutoProgress ??= new AutoProgressSettings();
+            config.AutoProgress.Normalize();
+            config.DevelopExecuteTemplate = MigrateDevelopButtonPath(config.DevelopExecuteTemplate);
+            config.DevelopExecuteConfirmTemplate = MigrateDevelopButtonPath(config.DevelopExecuteConfirmTemplate);
+            // 替换随包批量开发按钮，兼容旧配置，但保留用户自定义素材。
+            const string oldBulk = "resources/templates/develop/button_develop_all.png";
+            var bulk = config.DevelopAllTemplate?.Replace('\\', '/');
+            if (string.Equals(bulk, oldBulk, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(bulk, Path.Combine(AppContext.BaseDirectory, oldBulk).Replace('\\', '/'), StringComparison.OrdinalIgnoreCase))
+                config.DevelopAllTemplate = new AppConfig().DevelopAllTemplate;
+            // 仅迁移随包素材的精确旧路径，两字段独立处理，保留同名自定义文件。
+            config.DevelopMsTemplate = MigrateDevelopUnitPath(config.DevelopMsTemplate);
+            config.DevelopMsLargeTemplate = MigrateDevelopUnitPath(config.DevelopMsLargeTemplate);
+            if (IsRetiredDevelopTemplate(config.DevelopMsTemplate))
+                config.DevelopMsTemplate = new AppConfig().DevelopMsTemplate;
+            if (IsRetiredDevelopTemplate(config.DevelopMsLargeTemplate))
+                config.DevelopMsLargeTemplate = "";
+            var nativeOnly = string.Equals(config.DevelopMsTemplate?.Replace('\\', '/'),
+                new AppConfig().DevelopMsTemplate, StringComparison.OrdinalIgnoreCase) &&
+                string.IsNullOrEmpty(config.DevelopMsLargeTemplate);
+            // 原生素材的任务入口统一使用两档；只有自定义截图继续尊重显式识别策略。
+            using var document = JsonDocument.Parse(json);
+            if (nativeOnly || !document.RootElement.EnumerateObject().Any(property =>
+                    property.Name.Equals("developMsFixedScales", StringComparison.OrdinalIgnoreCase)))
+                config.DevelopMsFixedScales = nativeOnly;
+        }
+        if (config is not null)
+        {
+            // 删除旧素材后逐项迁移，保留用户自定义路径。
+            config.HarvestOkTemplate = MigrateOkTemplate(config.HarvestOkTemplate);
+            config.ShopResultCloseTemplate = MigrateBundledTemplate(config.ShopResultCloseTemplate,
+                "shop/button_result_close.png", "common/close.png");
+            config.ApRecoveryCloseTemplate = MigrateBundledTemplate(config.ApRecoveryCloseTemplate,
+                "stage/ap_recovery_close.png", "common/close.png");
+            config.GiftCloseTemplate = MigrateBundledTemplate(config.GiftCloseTemplate,
+                "gift/button_close.png", "common/close.png");
+            config.AgainCloseTemplate = MigrateBundledTemplate(config.AgainCloseTemplate,
+                "stage/sortie/again_close.png", "stage/sortie/again_disabled.png");
+            config.StageWorkSelectCloseTemplate = MigrateBundledTemplate(config.StageWorkSelectCloseTemplate,
+                "stage/select_close.png", "stage/select_disabled.png");
+            config.GiftOkTemplate = MigrateOkTemplate(config.GiftOkTemplate);
+            config.MissionClaimResultOkTemplate = MigrateOkTemplate(config.MissionClaimResultOkTemplate);
+        }
+        return config ?? new AppConfig();
     }
 
     /// <summary>官方资源重命名兼容逻辑路径、语言路径及安装目录绝对路径；外部自定义文件不迁移。</summary>
@@ -197,19 +203,72 @@ public sealed class ConfigService
         return Resources.Resolve(path);
     }
 
-    /// <summary>
-    /// 将配置保存为 JSON 文件（camelCase，缩进格式），目录不存在时自动创建。
-    /// </summary>
-    public void Save(AppConfig config, string path)
+    private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        var options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        };
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
+        IgnoreReadOnlyProperties = true,
+        WriteIndented = true,
+    };
 
-        using var file = new SharedConfigFile(path);
-        file.Write(JsonSerializer.Serialize(config, options));
+    private static JsonObject Values(AppConfig config) => JsonSerializer.SerializeToNode(config, JsonOptions)!.AsObject();
+
+    private static AppConfig Track(AppConfig config)
+    {
+        config.SavedValues = Values(config);
+        return config;
     }
 
+    internal static AppConfig Snapshot(AppConfig config)
+    {
+        var values = Values(config);
+        var copy = values.Deserialize<AppConfig>(JsonOptions)!;
+        copy.SavedValues = values;
+        return copy;
+    }
+
+    /// <summary>在同一文件锁内应用当前动作，返回最新配置。用于无需编辑会话的即时开关及启动初始化。</summary>
+    internal AppConfig Update(string path, Action<AppConfig> change)
+    {
+        using var file = new SharedConfigFile(path);
+        var raw = ReadObject(file);
+        var config = ParseConfig(raw.ToJsonString());
+        change(config);
+        Write(file, raw, config);
+        return Track(config);
+    }
+
+    /// <summary>将编辑副本相对基线的改动合入磁盘最新值；冲突时保留原文件，供用户重新打开设置。</summary>
+    public void Save(AppConfig config, string path) => SaveEdited(config, path);
+
+    internal AppConfig SaveEdited(AppConfig config, string path)
+    {
+        using var file = new SharedConfigFile(path);
+        var raw = ReadObject(file);
+        var local = Values(config);
+        var latest = Values(ParseConfig(raw.ToJsonString()));
+        // Load 和界面编辑副本携带基线；直接传入新建配置保留原有完整写入契约。
+        if (file.Exists && config.SavedValues is { } baseline)
+            JsonSettingChanges.Apply(baseline, local, latest);
+        else
+            latest = local;
+        var merged = latest.Deserialize<AppConfig>(JsonOptions)!;
+        Write(file, raw, merged);
+        // 当前窗口仍使用自己的副本；若采用合并后的值作基线，下次保存会把其他窗口的改动反向覆盖。
+        config.SavedValues = local;
+        return Track(merged);
+    }
+
+    private static JsonObject ReadObject(SharedConfigFile file) => file.Exists
+        ? JsonNode.Parse(file.Read(), new JsonNodeOptions { PropertyNameCaseInsensitive = true }) as JsonObject
+            ?? throw new InvalidDataException("配置文件不是 JSON 对象。")
+        : new JsonObject();
+
+    private static void Write(SharedConfigFile file, JsonObject raw, AppConfig config)
+    {
+        GameProfiles.Normalize(config);
+        config.AutoProgress?.Normalize();
+        JsonSettingChanges.Overlay(raw, Values(config));
+        file.Write(raw.ToJsonString(JsonOptions));
+    }
 }

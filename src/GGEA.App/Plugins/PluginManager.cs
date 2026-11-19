@@ -175,8 +175,21 @@ public sealed class PluginManager : IAsyncDisposable
         var enabled = ids.Distinct(StringComparer.Ordinal).ToArray();
         if (enabled.Any(id => !_entries.Any(entry => entry.Manifest?.Id == id)))
             throw new InvalidDataException("未知插件标识。");
-        UpdateFiles.WriteJson(UpdateFiles.SafePath(_baseDirectory, "config/plugins/enabled.json"), enabled);
-        foreach (var entry in _entries) entry.EnabledNextStart = enabled.Contains(entry.Manifest?.Id);
+        var path = UpdateFiles.SafePath(_baseDirectory, "config/plugins/enabled.json");
+        using var file = new GGEA.App.Config.SharedConfigFile(path);
+        var current = file.Exists
+            ? new HashSet<string>(JsonSerializer.Deserialize<string[]>(file.Read()) ?? throw new InvalidDataException(), StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
+        foreach (var entry in _entries)
+        {
+            if (entry.Manifest is not { } manifest) continue;
+            bool selected = enabled.Contains(manifest.Id);
+            if (selected == entry.EnabledNextStart) continue;
+            if (selected) current.Add(manifest.Id);
+            else current.Remove(manifest.Id);
+        }
+        UpdateFiles.WriteJson(path, current.Order(StringComparer.Ordinal).ToArray());
+        foreach (var entry in _entries) entry.EnabledNextStart = entry.Manifest is { } manifest && current.Contains(manifest.Id);
     }
 
     private HashSet<string> ReadEnabled()
