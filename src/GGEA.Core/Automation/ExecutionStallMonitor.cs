@@ -15,6 +15,7 @@ internal sealed class ExecutionStallMonitor(
     private readonly SemaphoreSlim _inspectionGate = new(1, 1);
     private readonly Dictionary<string, DeviceState> _devices = new(StringComparer.Ordinal);
     private bool _active;
+    private bool _logRoutineChecks;
     private long _generation;
     private long _started;
 
@@ -29,9 +30,9 @@ internal sealed class ExecutionStallMonitor(
     }
 
     /// <summary>唯一执行租约开始时清空旧任务计时；空闲期间不检查、不启动后台截图。</summary>
-    internal void BeginSession()
+    internal void BeginSession(bool logRoutineChecks = true)
     {
-        lock (_sync) { _generation++; _devices.Clear(); _started = _time.GetTimestamp(); _active = true; }
+        lock (_sync) { _generation++; _devices.Clear(); _started = _time.GetTimestamp(); _active = true; _logRoutineChecks = logRoutineChecks; }
     }
 
     /// <summary>释放租约即撤销本轮观察；迟到的识别结果不能终止后续任务。</summary>
@@ -58,6 +59,7 @@ internal sealed class ExecutionStallMonitor(
         {
             long generation;
             double stalledSeconds;
+            bool logCheck;
             DeviceState state;
             lock (_sync)
             {
@@ -80,10 +82,11 @@ internal sealed class ExecutionStallMonitor(
                     return;
                 }
                 stalledSeconds = _time.GetElapsedTime(state.LastProgress, now).TotalSeconds;
+                logCheck = _logRoutineChecks;
                 state.LastInspection = now;
             }
             ct.ThrowIfCancellationRequested();
-            log.Info($"全局异常检测：连续 {stalledSeconds:F0} 秒未观察到输入后的页面推进，检查网络、数据更新及日期更新弹窗。");
+            if (logCheck) log.Info($"全局异常检测：连续 {stalledSeconds:F0} 秒未观察到输入后的页面推进，检查网络、数据更新及日期更新弹窗。");
             var found = await detectError(ImageCodec.DecodePng(png), ct);
             ct.ThrowIfCancellationRequested();
             lock (_sync)
@@ -92,7 +95,7 @@ internal sealed class ExecutionStallMonitor(
                 state.KnownError = found;
                 if (found) throw new ConnectionErrorException();
             }
-            log.Info("全局异常检测未发现已知错误，保留当前流程继续等待；未执行恢复点击。");
+            if (logCheck) log.Info("全局异常检测未发现已知错误，保留当前流程继续等待；未执行恢复点击。");
         }
         finally { _inspectionGate.Release(); }
     }
@@ -100,8 +103,11 @@ internal sealed class ExecutionStallMonitor(
     /// <summary>稀疏采样只用于诊断节流；小范围转圈、闪烁不能替代页面推进，更不能授权业务动作。</summary>
     private static bool HasSceneChange(byte[] before, byte[] current)
     {
-        var a = ImageCodec.DecodePng(before);
-        var b = ImageCodec.DecodePng(current);
+        return HasSceneChange(ImageCodec.DecodePng(before), ImageCodec.DecodePng(current));
+    }
+
+    internal static bool HasSceneChange(ScreenImage a, ScreenImage b)
+    {
         // 尺寸突变是兼容性问题，不能据此延后异常检查。
         if (a.Width != b.Width || a.Height != b.Height) return false;
         const int columns = 32, rows = 18;

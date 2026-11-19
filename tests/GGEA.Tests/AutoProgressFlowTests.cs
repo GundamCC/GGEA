@@ -839,7 +839,7 @@ public sealed partial class AutoProgressFlowTests
             => _service.ExecuteNextRoundAsync("test", moreRoundsRemaining: true,
                 tapToNextWaitTimeoutMs: openingTimeout, tapToNextPollIntervalMs: 1, tapToNextClickDelayMs: 1,
                 continueStartDelayMs: 1, continueClickDelayMs: 1, continuePollIntervalMs: 1,
-                continueWaitTimeoutMs: 20000, continueRepeatIntervalMs: 1, againStartDelayMs: 1,
+                continueWaitTimeoutMs: 900000, continueRepeatIntervalMs: 1, againStartDelayMs: 1,
                 againPollIntervalMs: 1, againWaitTimeoutMs: 20000, ct: ct, recoveryTimeProvider: clock);
 
         /// <summary>复用与窗口相同的单关入口及下载处理，保留公共取消与结算判定，不在测试中伪造下载成功。</summary>

@@ -99,9 +99,9 @@ public sealed class GlobalScreenHandler : IDisposable
     /// </summary>
     internal async Task<GlobalScreenResult> HandleContinuationAsync(string serial, byte[] png,
         CancellationToken ct, string? waitingMessage = null, bool allowSkip = true,
-        RecognitionRegion tapRegion = RecognitionRegion.BottomButtons)
+        RecognitionRegion tapRegion = RecognitionRegion.BottomButtons, bool sortieOpening = false)
     {
-        var match = await TapToNext.RecognizeAsync(png, ct, tapRegion);
+        var match = await TapToNext.RecognizeAsync(png, ct, tapRegion, sortieOpening);
         ct.ThrowIfCancellationRequested();
         // 登录奖励/继续目标优先于略过；一帧最多一个动作，不能把略过误报为继续目标完成。
         var skip = match is null && allowSkip ? await RecognizeSkipAsync(png, ct) : null;

@@ -11,6 +11,24 @@ public sealed class SortieTapToNextRecognitionTests : IDisposable
     private OnnxTapToNextRecognizer Recognizer => new(_ocr, new TestLog());
     public void Dispose() => _ocr.Dispose();
 
+    /// <summary>用既有开场素材模拟暗相位；两侧短横只能定位，缺少中间单词仍须拒绝。</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DimSortieOpening_RequiresCompleteText(bool missingWord)
+    {
+        var frame = ImageCodec.DecodePng(SortieTapToNextSamples.CreateFrame());
+        for (var i = 0; i < frame.Bgra.Length; i += 4)
+            for (var channel = 0; channel < 3; channel++)
+                frame.Bgra[i + channel] = (byte)(frame.Bgra[i + channel] * .58);
+        if (missingWord)
+            TestImageFactory.PasteBlock(frame.Bgra, frame.Width, 58, 46, 910, 946, 18);
+        Assert.Null(Recognizer.Recognize(frame));
+        var match = Recognizer.Recognize(frame, sortieOpening: true);
+        if (missingWord) Assert.Null(match);
+        else { Assert.NotNull(match); Assert.InRange(match.CenterX, 937, 944); }
+    }
+
     /// <summary>奖励机体的白色模型粘连 NEXT 笔画；正常略过与推图区域都必须识别完整文字。</summary>
     [Theory]
     [InlineData(RecognitionRegion.BottomButtons)]

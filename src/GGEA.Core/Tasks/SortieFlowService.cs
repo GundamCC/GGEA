@@ -89,6 +89,8 @@ public enum SortieFlowResult
 /// </summary>
 public sealed partial class SortieFlowService
 {
+    // 战斗 HUD 会透过开场遮罩显示。首次看到控件后至少再观察五张新帧，覆盖文字的亮暗变化。
+    private const int OpeningObservationFrames = 6;
     /// <summary>AUTO 按钮固定点击位置（当前设备 1920x1080 实测，位于二倍速按钮左侧）。</summary>
     private static readonly (int X, int Y) AutoButtonCenter = (1508, 50);
 
@@ -221,7 +223,7 @@ public sealed partial class SortieFlowService
         if (!forAutoProgress) _log.Info("已点击首轮出击，开始检查编制、下载、开场、战斗和结算页面。");
         var startedAt = Environment.TickCount64;
         var deadline = startedAt + Math.Max(0, downloadDetectTimeoutMs);
-        var recheckBattle = false;
+        var openingFrames = 0;
         Task<SortieFlowResult> CompleteRound() => CompleteRoundAsync(serial, moreRoundsRemaining,
             continueStartDelayMs, continueClickDelayMs, continuePollIntervalMs, continueWaitTimeoutMs,
             continueRepeatIntervalMs, againStartDelayMs, againPollIntervalMs, againWaitTimeoutMs, ct, recovery);
@@ -255,7 +257,7 @@ public sealed partial class SortieFlowService
                     return SortieFlowResult.TerrainTimeout;
                 }
 
-                recheckBattle = false;
+                openingFrames = 0;
                 await Task.Delay(delay, ct);
                 continue;
             }
@@ -275,7 +277,7 @@ public sealed partial class SortieFlowService
                 }
 
                 // 已点击空位出击确认：继续本循环识别后续提示。
-                recheckBattle = false;
+                openingFrames = 0;
                 await Task.Delay(delay, ct);
                 continue;
             }
@@ -319,7 +321,7 @@ public sealed partial class SortieFlowService
                 }
 
                 // 下载提示仍在但按钮尚未渲染完成：保持在下载处理阶段，不能越过提示去点击其它目标。
-                recheckBattle = false;
+                openingFrames = 0;
                 await Task.Delay(delay, ct);
                 continue;
             }
@@ -340,12 +342,12 @@ public sealed partial class SortieFlowService
                 }
                 else
                 {
-                    // 首轮允许 AUTO 处于关闭态，但须同帧确认速度控件；再取一帧给短暂开场文字优先权。
-                    var wasBattle = recheckBattle;
-                    recheckBattle = HasBattleControls(screen, allowClosedAuto: true);
-                    if (!wasBattle || !recheckBattle)
+                    var controls = HasBattleControls(screen, allowClosedAuto: true);
+                    if (controls || openingFrames > 0) openingFrames++;
+                    if (openingFrames < OpeningObservationFrames || !controls)
                     {
-                        await Task.Delay(recheckBattle ? Math.Min(delay, GameTiming.ConfirmationIntervalMs) : delay, ct);
+                        await Task.Delay(openingFrames is > 0 and < OpeningObservationFrames
+                            ? Math.Min(delay, GameTiming.ConfirmationIntervalMs) : delay, ct);
                         continue;
                     }
                     recovery.Watchdog.Observe(SortiePage.Battle);
@@ -426,7 +428,7 @@ public sealed partial class SortieFlowService
         var fastPollInterval = Math.Min(pollInterval, GameTiming.ConfirmationIntervalMs);
         var nextProgressAt = startedAt + 15000;
         TemplateMatchResult? tapToNext = null;
-        var recheckingOpening = false;
+        var openingFrames = 0;
         var battleReady = false;
         while (Environment.TickCount64 < deadline)
         {
@@ -435,25 +437,29 @@ public sealed partial class SortieFlowService
             if (await HandleTerminalStateAsync(serial, screen, ct) is { } terminal) return terminal;
             tapToNext = await MatchTapToNextAsync(screen, ct, recovery.ForAutoProgress);
             if (tapToNext is not null) { recovery.Watchdog.Observe(SortiePage.TapToNext); break; }
-            if (recheckingOpening)
+            if (openingFrames > 0) openingFrames++;
+            if (openingFrames > 0 && (IsSettlementPage(screen) ||
+                openingFrames >= OpeningObservationFrames && HasBattleControls(screen)))
             {
                 battleReady = true;
                 recovery.Watchdog.Observe(SortiePage.Battle);
-                _log.Info("再次出击后已识别到战斗图标，下一帧未识别到 TAP TO NEXT，继续等待本轮结算。");
+                _log.Info("再次出击后已识别到战斗图标，开场观察结束，开始处理本轮结算。");
                 break;
             }
 
             var recovered = await RecoverFarmIfStalledAsync(serial, screen, recovery, FarmRecoveryStage.NextBattle, ct);
             if (recovered.Terminal is { } recoveryTerminal) return recoveryTerminal;
             // 恢复操作改变了画面，只有未经操作的同帧战斗控件能触发下一帧复查。
-            recheckingOpening = !recovered.Acted && HasBattleControls(screen);
+            if (recovered.Acted) openingFrames = 0;
+            else if (openingFrames == 0 && HasBattleControls(screen)) openingFrames = 1;
             var now = Environment.TickCount64;
             if (now >= nextProgressAt)
             {
                 _log.Info($"再次出击后尚未确认新开场或战斗，继续等待（已等待 {(now - startedAt) / 1000}s，上限 {tapToNextWaitTimeoutMs / 1000}s）。");
                 nextProgressAt = now + 15000;
             }
-            var delay = recheckingOpening || now < fastPollUntil ? fastPollInterval : pollInterval;
+            var delay = openingFrames is > 0 and < OpeningObservationFrames || now < fastPollUntil
+                ? fastPollInterval : pollInterval;
             await Task.Delay((int)Math.Clamp(deadline - now, 0, delay), ct);
         }
         ct.ThrowIfCancellationRequested();
@@ -512,6 +518,7 @@ public sealed partial class SortieFlowService
         TemplateMatchResult? tapToNext = null;
         var battleReady = false;
         var settlementReady = false;
+        var openingFrames = 0;
         _log.Info("已点击下载，等待下载/加载完成，检查开场 TAP TO NEXT、战斗图标及结算页面…");
         while (Environment.TickCount64 < deadline)
         {
@@ -530,7 +537,9 @@ public sealed partial class SortieFlowService
                 _log.Info("下载后已识别到结算页面，接续本轮结算，不再等待开场 TAP TO NEXT。");
                 break;
             }
-            battleReady = HasBattleControls(screen);
+            var controls = HasBattleControls(screen);
+            if (controls || openingFrames > 0) openingFrames++;
+            battleReady = controls && (recovery.ForAutoProgress || openingFrames >= OpeningObservationFrames);
             if (battleReady)
             {
                 recovery.Watchdog.Observe(SortiePage.Battle);
@@ -543,7 +552,10 @@ public sealed partial class SortieFlowService
                 _log.Info($"下载/加载后尚未确认开场、战斗或结算页面，继续等待（已等待 {(now - startedAt) / 1000}s，上限 {timeoutMs / 1000}s）。");
                 nextProgressAt = now + 15000;
             }
-            await Task.Delay(Math.Max(1, tapToNextPollIntervalMs), ct);
+            var delay = Math.Max(1, tapToNextPollIntervalMs);
+            if (!recovery.ForAutoProgress && (now - startedAt < GameTiming.AnimationSettleMs ||
+                openingFrames is > 0 and < OpeningObservationFrames)) delay = Math.Min(delay, GameTiming.ConfirmationIntervalMs);
+            await Task.Delay(delay, ct);
         }
         ct.ThrowIfCancellationRequested();
         if (tapToNext is null && !battleReady && !settlementReady)
@@ -902,16 +914,19 @@ public sealed partial class SortieFlowService
 
         var screen = ImageCodec.DecodePng(await _automation.ScreenshotAsync(serial, ct));
         if (await HandleTerminalStateAsync(serial, screen, ct) is { } initialTerminal) return initialTerminal;
-        var deadline = Environment.TickCount64 + Math.Max(0, continueWaitTimeoutMs);
+        var waitBudget = TimeSpan.FromMilliseconds(Math.Max(0, continueWaitTimeoutMs));
+        var lastBattleProgress = recovery.Clock.GetTimestamp();
+        ScreenImage? previousAutoBattle = null;
 
-        while (Environment.TickCount64 < deadline)
+        while (recovery.Clock.GetElapsedTime(lastBattleProgress) < waitBudget)
         {
             ct.ThrowIfCancellationRequested();
 
             var fresh = ImageCodec.DecodePng(await _automation.ScreenshotAsync(serial, ct));
             if (await HandleTerminalStateAsync(serial, fresh, ct) is { } terminal) return terminal;
 
-            if (await HandleSettlementContinuationAsync(serial, fresh, ct, recovery.ForAutoProgress)) continue;
+            if (await HandleSettlementContinuationAsync(serial, fresh, ct, recovery.ForAutoProgress,
+                sortieOpening: !recovery.ForAutoProgress)) continue;
 
             var match = Match(fresh, _continueTemplatePath, ContinueButtonRoi(fresh), ContinueTemplateThreshold);
             // “选择关卡”与“继续”模板存在相似度；终局页双按钮命中时，只有选择关卡模板
@@ -950,6 +965,13 @@ public sealed partial class SortieFlowService
             // 等待首次结算也需要两分钟 AUTO 健康检查，蓝色继续等；未知动画不授权切换。
             var recoveryResult = await RecoverFarmIfStalledAsync(serial, fresh, recovery, FarmRecoveryStage.Battle, ct);
             if (recoveryResult.Terminal is { } recoveryTerminal) return recoveryTerminal;
+            if (recoveryResult.ObservedAutoBattle)
+            {
+                // 仅在两次低频检查均确认全部自动、速度控件且场景确实变化时续等。静止 HUD 不能无限续期。
+                if (previousAutoBattle is not null && ExecutionStallMonitor.HasSceneChange(previousAutoBattle, fresh))
+                    lastBattleProgress = recovery.Clock.GetTimestamp();
+                previousAutoBattle = fresh;
+            }
             if (recoveryResult.Acted) continue;
             await Task.Delay(Math.Max(1, continuePollIntervalMs), ct);
         }
@@ -1337,16 +1359,17 @@ public sealed partial class SortieFlowService
 
     /// <summary>结算等待复用会话级全局继续策略；终止检查后调用，遮罩命中或冷却中均丢弃旧帧。</summary>
     private async Task<bool> HandleSettlementContinuationAsync(string serial, ScreenImage screen, CancellationToken ct,
-        bool forAutoProgress = false)
+        bool forAutoProgress = false, bool sortieOpening = false)
         => await _automation.GlobalScreens.HandleContinuationAsync(serial,
             ImageCodec.EncodePng(screen.Bgra, screen.Width, screen.Height), ct, allowSkip: false,
-            tapRegion: forAutoProgress ? RecognitionRegion.ProgressTapToNext : RecognitionRegion.BottomButtons)
+            tapRegion: forAutoProgress ? RecognitionRegion.ProgressTapToNext : RecognitionRegion.BottomButtons,
+            sortieOpening: sortieOpening)
             != GlobalScreenResult.None;
 
     /// <summary>首次、再次与下载后入口共用底部 OCR；只读匹配不接管取消、安全检查或开场确认。</summary>
     private Task<TemplateMatchResult?> MatchTapToNextAsync(ScreenImage screen, CancellationToken ct, bool forAutoProgress = false)
         => Task.Run(() => _automation.TapToNext.Recognize(screen, ct,
-            forAutoProgress ? RecognitionRegion.ProgressTapToNext : RecognitionRegion.BottomButtons), ct);
+            forAutoProgress ? RecognitionRegion.ProgressTapToNext : RecognitionRegion.BottomButtons, sortieOpening: !forAutoProgress), ct);
 
     /// <summary>提示可能与剧情灰色背景相似；同帧确认左右按钮后才进入空位处理，避免跨帧借用其他弹窗。</summary>
     internal TemplateMatchResult? MatchEmptySlotDialog(ScreenImage screen)

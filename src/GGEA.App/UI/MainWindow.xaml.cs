@@ -1699,7 +1699,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        using var execution = TryBeginExecution();
+        using var execution = TryBeginExecution(logRoutineChecks: false);
         if (execution is null) return;
 
         if (_automation is null || _matcher is null || _logger is null || _sortieFlowService is null)
@@ -3600,7 +3600,7 @@ public partial class MainWindow : Window
     /// 因而业务的本地 serial、配置快照、ADB 路径和服务实例在整个 await/finally 链中保持一致。
     /// 取消只发信号，只有最外层事件完成清理后才释放租约；内部刷新不拥有释放权。
     /// </summary>
-    private IDisposable? TryBeginExecution()
+    private IDisposable? TryBeginExecution(bool logRoutineChecks = true)
     {
         if (_plugins?.HasDeviceFault == true)
         {
@@ -3608,11 +3608,11 @@ public partial class MainWindow : Window
             _logger?.Warn(L.Text("插件状态未恢复，已阻止新的设备操作。"));
             return null;
         }
-        return TryBeginHostOperation();
+        return TryBeginHostOperation(logRoutineChecks);
     }
 
     /// <summary>设置仍可在插件故障后访问；执行互斥、关窗和更新闸门保持一致。</summary>
-    private IDisposable? TryBeginHostOperation()
+    private IDisposable? TryBeginHostOperation(bool logRoutineChecks = true)
     {
         if (_windowTasks.IsStopping || _busy || _updatePending) return null;
         var lease = _executionGate.TryEnter(() =>
@@ -3625,7 +3625,7 @@ public partial class MainWindow : Window
         {
             _apStopNotification.Reset();
             _adb?.BeginOperation();
-            _executionMonitor?.BeginSession();
+            _executionMonitor?.BeginSession(logRoutineChecks);
             _config = SnapshotConfig();
             _config.IsDarkMode = ((App)Application.Current).IsDarkMode;
             UpdateBusyState();

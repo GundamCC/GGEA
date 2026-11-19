@@ -726,11 +726,16 @@ public class SortieFlowServiceTests
         var dialog = CreateDialogTemplates(temp);
         var sortie = CreateSortieTemplates(temp);
         var icons = CreateIconsScreen(AutoBlue, 70);
-        var adb = new FakeAdbService(CreateDownloadPromptScreen(true));
-        if (endsDuringConfiguration)
-            adb.EnqueueScreenshots(icons, CreateResultScreen(), CreateResultScreen(), CreateResultScreen(), CreateResultScreen());
-        else adb.EnqueueScreenshots(icons, icons, icons, CreateContinueScreen(), CreateContinueScreen(),
-            CreateResultScreen(), CreateResultScreen(), CreateResultScreen());
+        var download = CreateDownloadPromptScreen(true);
+        var score = CreateContinueScreen();
+        var resultPage = CreateResultScreen();
+        var adb = new FakeAdbService(download);
+        adb.ScreenshotProvider = () =>
+        {
+            if (adb.Taps.Count == 0) return download;
+            if (adb.ScreenshotCount <= (endsDuringConfiguration ? 7 : 9)) return icons;
+            return endsDuringConfiguration || adb.Taps.Contains((1731, 1011)) ? resultPage : score;
+        };
         var service = CreateService(adb, dialog.Download, dialog.Cancel, sortie.Tap, sortie.SpeedOn, sortie.SpeedOff,
             sortie.Continue, sortie.Again, sortie.AgainClose, sortie.Failed, sortie.EmptySlotHint,
             sortie.DialogSortie, sortie.DialogCancel, sortie.NoAp, sortie.PlayerLevelUp, sortie.Reward,
@@ -925,12 +930,13 @@ public class SortieFlowServiceTests
         var score = CreateContinueScreen();
         var resultPage = CreateResultScreen();
         var adb = new FakeAdbService(closed);
-        adb.ScreenshotProvider = () => adb.ScreenshotCount switch
+        var autoConfirmed = false;
+        adb.ScreenshotProvider = () =>
         {
-            2 when openingOnRecheck => opening,
-            <= 3 => closed,
-            4 => active,
-            _ => adb.Taps.Contains((1731, 1011)) ? resultPage : score,
+            if (!adb.Taps.Contains((1508, 50)))
+                return openingOnRecheck && adb.ScreenshotCount == 5 ? opening : closed;
+            if (!autoConfirmed) { autoConfirmed = true; return active; }
+            return adb.Taps.Contains((1731, 1011)) ? resultPage : score;
         };
         var service = CreateService(adb, dialog.Download, dialog.Cancel, sortie.Tap, sortie.SpeedOn, sortie.SpeedOff,
             sortie.Continue, sortie.Again, sortie.AgainClose, sortie.Failed, sortie.EmptySlotHint, sortie.DialogSortie,
@@ -958,6 +964,42 @@ public class SortieFlowServiceTests
             downloadDetectTimeoutMs: 500, pollIntervalMs: 10);
         Assert.Equal(SortieFlowResult.TapToNextTimeout, result);
         Assert.Empty(adb.Taps);
+    }
+
+    /// <summary>用单调时钟回放超过十五分钟的关卡：仅有地图变化的自动战斗可延长结算等待。</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task LongFarmBattle_OnlyMovingAutoBattleExtendsSettlementWait(bool moving)
+    {
+        using var temp = new TempDirectory();
+        var dialog = CreateDialogTemplates(temp);
+        var sortie = CreateSortieTemplates(temp);
+        var clock = new ManualProgressTime();
+        var opening = CreateTapToNextScreen();
+        var battle = CreateIconsScreen(AutoBlue, 70);
+        var changed = ImageCodec.DecodePng(battle);
+        TestImageFactory.PasteBlock(changed.Bgra, changed.Width, 1000, 500, 450, 300, 130);
+        var otherBattle = ImageCodec.EncodePng(changed.Bgra, changed.Width, changed.Height);
+        var score = CreateContinueScreen();
+        var end = CreateResultScreen();
+        var frames = 0;
+        var adb = new FakeAdbService(opening);
+        adb.ScreenshotProvider = () =>
+        {
+            if (adb.Taps.Count == 0) return opening;
+            if (adb.Taps.Count > 1) return end;
+            clock.Advance(120);
+            if (++frames >= 12) return score;
+            return moving && frames % 2 == 0 ? otherBattle : battle;
+        };
+        var service = CreateService(adb, dialog.Download, dialog.Cancel, sortie.Tap, sortie.SpeedOn, sortie.SpeedOff,
+            sortie.Continue, sortie.Again, sortie.AgainClose, sortie.Failed, sortie.EmptySlotHint, sortie.DialogSortie,
+            sortie.DialogCancel, sortie.NoAp, sortie.PlayerLevelUp, sortie.Reward, sortie.TapToNextReward, sortie.SelectStage);
+        var result = await service.ExecuteNextRoundAsync("serial", true, continueStartDelayMs: 1, continuePollIntervalMs: 1,
+            continueClickDelayMs: 1, continueRepeatIntervalMs: 1, againStartDelayMs: 1, recoveryTimeProvider: clock);
+        Assert.Equal(moving ? SortieFlowResult.RoundCompleted : SortieFlowResult.ContinueTimeout, result);
+        Assert.Equal(moving ? 3 : 1, adb.Taps.Count);
     }
 
     [Fact]
@@ -997,8 +1039,8 @@ public class SortieFlowServiceTests
         adb.ScreenshotProvider = () =>
         {
             if (adb.Taps.Count > 0) return adb.Taps.Count == 1 ? score : resultPage;
-            if (afterBattleIcons && adb.ScreenshotCount == 2) return icons;
-            return adb.ScreenshotCount == (afterBattleIcons ? 3 : 1) ? opening : plain;
+            if (afterBattleIcons && adb.ScreenshotCount is >= 2 and <= 4) return icons;
+            return adb.ScreenshotCount == (afterBattleIcons ? 5 : 1) ? opening : plain;
         };
         var service = CreateService(adb, dialog.Download, dialog.Cancel, sortie.Tap, sortie.SpeedOn, sortie.SpeedOff,
             sortie.Continue, sortie.Again, sortie.AgainClose, sortie.Failed, sortie.EmptySlotHint, sortie.DialogSortie,
@@ -1013,6 +1055,38 @@ public class SortieFlowServiceTests
     }
 
     /// <summary>漏过开场后，同帧彩色 AUTO 和速度控件可确认新战斗，之后正常处理实机成绩按钮。</summary>
+    [Fact]
+    public async Task ExecuteNextRoundAsync_DimOpeningAfterBattleObservation_ClicksBeforeSettlement()
+    {
+        using var temp = new TempDirectory();
+        var dialog = CreateDialogTemplates(temp);
+        var sortie = CreateSortieTemplates(temp);
+        var dim = ImageCodec.DecodePng(SortieTapToNextSamples.CreateFrame());
+        for (var i = 0; i < dim.Bgra.Length; i += 4)
+            for (var c = 0; c < 3; c++) dim.Bgra[i + c] = (byte)(dim.Bgra[i + c] * .58);
+        var opening = ImageCodec.EncodePng(dim.Bgra, dim.Width, dim.Height);
+        var battle = CreateIconsScreen(AutoBlue, 70);
+        var score = CreateContinueScreen();
+        var resultPage = CreateResultScreen();
+        var adb = new FakeAdbService(battle);
+        adb.ScreenshotProvider = () => adb.Taps.Count switch
+        {
+            0 => adb.ScreenshotCount <= 9 ? battle : opening,
+            1 => score,
+            _ => resultPage,
+        };
+        var log = new TestLog();
+        var service = CreateService(adb, dialog.Download, dialog.Cancel, sortie.Tap, sortie.SpeedOn, sortie.SpeedOff,
+            sortie.Continue, sortie.Again, sortie.AgainClose, sortie.Failed, sortie.EmptySlotHint, sortie.DialogSortie,
+            sortie.DialogCancel, sortie.NoAp, sortie.PlayerLevelUp, sortie.Reward, sortie.TapToNextReward, sortie.SelectStage, testLog: log);
+        Assert.Equal(SortieFlowResult.RoundCompleted, await RunNextRoundAsync(service, adb, true));
+        Assert.Contains(log.Entries, e => e.Message.Contains("全局检测到 TAP TO NEXT"));
+        Assert.Equal(3, adb.Taps.Count);
+        Assert.InRange(adb.Taps[0].X, 937, 944);
+        Assert.InRange(adb.Taps[0].Y, 966, 976);
+    }
+
+    /// <summary>已有战斗证据后出现实际成绩按钮时接续结算。</summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

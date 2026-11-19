@@ -14,6 +14,7 @@ public sealed partial class SortieFlowService
         bool forAutoProgress = false)
     {
         internal SortieStallWatchdog Watchdog { get; } = new(time);
+        internal TimeProvider Clock { get; } = time ?? TimeProvider.System;
         internal bool AllowDownload { get; } = allowDownload;
         internal bool AllowEmpty { get; } = allowEmpty;
         internal bool AllowTerrain { get; } = allowTerrain;
@@ -30,7 +31,8 @@ public sealed partial class SortieFlowService
     }
 
     /// <summary>只允许调用方重新识别并补点继续；没有任何恢复分支可直接返回“本轮完成”。</summary>
-    private sealed record FarmRecoveryResult(bool Acted = false, bool RetryContinue = false, SortieFlowResult? Terminal = null);
+    private sealed record FarmRecoveryResult(bool Acted = false, bool RetryContinue = false,
+        SortieFlowResult? Terminal = null, bool ObservedAutoBattle = false);
 
     /// <summary>刷本的两分钟恢复入口；停滞后先诊断错误弹窗再恢复，点击后必须重新截图。</summary>
     private async Task<FarmRecoveryResult> RecoverFarmIfStalledAsync(string serial, ScreenImage screen,
@@ -42,11 +44,13 @@ public sealed partial class SortieFlowService
                 Match(screen, _continueTemplatePath, ContinueButtonRoi(screen), ContinueTemplateThreshold), out _, out _))
         {
             if (!recovery.Watchdog.TryInspect()) return new();
-            _log.Info("自动刷本连续 2 分钟无阶段进展，检查 AUTO 是否为蓝色全部自动。");
+            _log.Info("自动刷本等待战斗结束，定期检查 AUTO 是否为蓝色全部自动。");
             var configured = await EnsureAllAutoAsync(serial, screen, recovery.Auto(_matcher),
                 GGEA.App.Automation.GameTiming.RecognitionIntervalMs, ct);
             if (configured.Confirmed) recovery.Watchdog.ConfirmProgress();
-            return new(Acted: configured.Acted, Terminal: configured.Terminal);
+            return new(Acted: configured.Acted, Terminal: configured.Terminal,
+                ObservedAutoBattle: stage == FarmRecoveryStage.Battle && !recovery.ForAutoProgress &&
+                    configured.Confirmed && !configured.Acted && HasBattleControls(screen));
         }
         if (!recovery.Watchdog.TryInspect()) return new();
         _log.Info("自动刷本连续 2 分钟无阶段进展，重新检测当前画面以恢复运行；保持本轮与剩余次数。");

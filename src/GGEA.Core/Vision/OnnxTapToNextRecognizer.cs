@@ -14,12 +14,12 @@ public sealed class OnnxTapToNextRecognizer(OnnxTextRecognizer ocr, IGgeaLog log
 
     /// <summary>缺省仍用底部 200 像素；推图调用方可指定专用 300 像素区域，完整文字与置信度约束不变。</summary>
     public Task<TemplateMatchResult?> RecognizeAsync(byte[] png, CancellationToken ct = default,
-        RecognitionRegion region = RecognitionRegion.BottomButtons)
-        => Task.Run(() => Recognize(ImageCodec.DecodePng(png), ct, region), ct);
+        RecognitionRegion region = RecognitionRegion.BottomButtons, bool sortieOpening = false)
+        => Task.Run(() => Recognize(ImageCodec.DecodePng(png), ct, region, sortieOpening), ct);
 
     /// <summary>复用已完成安全检查的同一帧，返回文字外接框中心，避免额外截图改变判断依据。</summary>
     public TemplateMatchResult? Recognize(ScreenImage screen, CancellationToken ct = default,
-        RecognitionRegion region = RecognitionRegion.BottomButtons)
+        RecognitionRegion region = RecognitionRegion.BottomButtons, bool sortieOpening = false)
     {
         ct.ThrowIfCancellationRequested();
         var roi = RecognitionRegions.Resolve(region, screen.Width, screen.Height);
@@ -40,11 +40,59 @@ public sealed class OnnxTapToNextRecognizer(OnnxTextRecognizer ocr, IGgeaLog log
             }
             matches.Add(new(new Roi(roi.X + bounds.X, roi.Y + bounds.Y, bounds.Width, bounds.Height), text.Confidence));
         }
+        if (sortieOpening && matches.Count == 0)
+            FindDimOpening(screen, roi, matches, ct);
         ct.ThrowIfCancellationRequested();
         if (matches.Count != 1) return null;
         var match = matches[0];
         log.Info($"OCR 识别 TAP TO NEXT，置信度 {match.Confidence:P1}，区域 {match.Region}，中心 ({match.CenterX},{match.CenterY})");
         return match;
+    }
+
+    /// <summary>开场文字会变暗，光束也可能切断字形。用两侧短横定位完整文字行，仍由 OCR 逐字确认。</summary>
+    private void FindDimOpening(ScreenImage screen, Roi roi, List<TemplateMatchResult> matches, CancellationToken ct)
+    {
+        var ink = new byte[roi.Width * roi.Height];
+        for (var y = 0; y < roi.Height; y++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var offset = ((roi.Y + y) * screen.Width + roi.X) * 4;
+            for (var x = 0; x < roi.Width; x++, offset += 4)
+            {
+                var minimum = Math.Min(screen.Bgra[offset], Math.Min(screen.Bgra[offset + 1], screen.Bgra[offset + 2]));
+                ink[y * roi.Width + x] = minimum >= 80 ? (byte)255 : (byte)0;
+            }
+        }
+        using var mask = Mat.FromPixelData(roi.Height, roi.Width, MatType.CV_8UC1, ink);
+        using var labels = new Mat(); using var stats = new Mat(); using var centers = new Mat();
+        var count = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centers);
+        var dashes = new List<Roi>();
+        for (var i = 1; i < count; i++)
+        {
+            var w = stats.At<int>(i, 2); var h = stats.At<int>(i, 3);
+            if (w is >= 10 and <= 19 && h is >= 3 and <= 9 && w >= 2 * h && stats.At<int>(i, 4) >= w * h * .70)
+                dashes.Add(new Roi(stats.At<int>(i, 0), stats.At<int>(i, 1), w, h));
+        }
+        // 在统一的 1080p 基准画面中，开场模板两端短横中心相距 262 像素。
+        dashes.Sort((a, b) => a.CenterX.CompareTo(b.CenterX));
+        for (var i = 0; i < dashes.Count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var left = dashes[i];
+            for (var j = i + 1; j < dashes.Count; j++)
+            {
+                var right = dashes[j];
+                var span = right.CenterX - left.CenterX;
+                if (span > 275) break;
+                if (span < 250 || Math.Abs(left.CenterY - right.CenterY) > 2) continue;
+                var bounds = new Roi(left.CenterX + 18, left.CenterY - 22, span - 36, 42);
+                if (bounds.Y < 0 || bounds.Y + bounds.Height > roi.Height) continue;
+                var text = ocr.Recognize(ink, roi.Width, bounds, ct);
+                if (!IsAccepted(text)) continue;
+                matches.Add(new(new Roi(roi.X + bounds.X, roi.Y + bounds.Y, bounds.Width, bounds.Height), text.Confidence));
+                if (matches.Count > 1) return;
+            }
+        }
     }
 
     /// <summary>在同一候选位置保留低饱和亮度的连续层次，避免白色模型背景吞掉半透明文字的抗锯齿。</summary>

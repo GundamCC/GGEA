@@ -7,6 +7,23 @@ namespace GGEA.Tests;
 /// <summary>以单调时钟验证统一设备入口，不缩短两分钟生产阈值，也不依赖某段流程主动检测。</summary>
 public sealed class ExecutionStallMonitorTests
 {
+    [Fact]
+    public async Task FarmWait_SilentlyChecksHealthyFramesAndStopsOnActualError()
+    {
+        var clock = new ManualProgressTime();
+        var log = new TestLog();
+        var checks = 0;
+        var monitor = new ExecutionStallMonitor((_, _) => Task.FromResult(++checks == 2), log, clock);
+        var frame = Frame(20);
+        monitor.BeginSession(logRoutineChecks: false);
+        await monitor.OnScreenshotAsync("farm", frame, default);
+        clock.Advance(123);
+        await monitor.OnScreenshotAsync("farm", frame, default);
+        Assert.Empty(log.Entries);
+        clock.Advance(120);
+        await Assert.ThrowsAsync<ConnectionErrorException>(() => monitor.OnScreenshotAsync("farm", frame, default));
+        Assert.Equal(2, checks);
+    }
     /// <summary>简中实机更新弹窗通过默认资源路径进入全局停滞诊断，正常取帧不扫描或点击。</summary>
     [Fact]
     public async Task ChineseDataUpdate_UsesGlobalStallDiagnostics()
