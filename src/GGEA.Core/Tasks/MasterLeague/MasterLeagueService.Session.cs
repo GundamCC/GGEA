@@ -127,6 +127,14 @@ public sealed partial class MasterLeagueService
         ScreenImage screen, IMasterLeagueVision vision, LeagueSession state, bool retryDefeated, CancellationToken ct,
         Func<CancellationToken, Task<bool>>? recoverKnownHome, bool inspectRecovery, BattleObservation? observation)
     {
+        var checkNavigation = state.Phase is not (LeaguePhase.Refreshing or LeaguePhase.OpeningRefresh) &&
+            (inspectRecovery || state.Idle == 5 || state.Idle > 5 && state.Idle % 15 == 0);
+        if ((checkNavigation || state.Phase is LeaguePhase.Reading or LeaguePhase.Selecting or LeaguePhase.Returning) &&
+            await HandleRoundStageInfoAsync(serial, screen, ct))
+        {
+            state.Previous = null;
+            return (null, false, "等待本回关卡情报关闭，随后重新确认联盟页面…");
+        }
         if (state.Phase is LeaguePhase.Reading or LeaguePhase.Selecting or LeaguePhase.Returning ||
             inspectRecovery && state.Phase is not (LeaguePhase.Refreshing or LeaguePhase.OpeningRefresh))
         {
@@ -357,8 +365,7 @@ public sealed partial class MasterLeagueService
         else state.Previous = null;
 
         // 只在未处于消费结果等待时修复已知导航页；未知画面不发送中心点击。
-        if (state.Phase is not (LeaguePhase.Refreshing or LeaguePhase.OpeningRefresh) &&
-            (inspectRecovery || state.Idle == 5 || state.Idle > 5 && state.Idle % 15 == 0))
+        if (checkNavigation)
         {
             if (await MatchTitleAsync(screen, ct) is not null)
             {

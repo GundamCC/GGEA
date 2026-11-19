@@ -55,8 +55,13 @@ public partial class MainWindow
                 try
                 {
                     var screen = await _automation.CaptureScreenAsync(serial, ct, retryOnFailure: false);
-                    if (!autoFormation && await Task.Run(() => vision.ReadOpponents(screen, ct), ct) is not null) break;
-                    if (await EnsureDeviceCompatibilityAsync(serial, ct) && await EnsureMainScreenAsync(serial, ct))
+                    if (await service.IsRoundStageInfoAsync(screen, ct))
+                    {
+                        var entered = await service.ConfirmAndEnterFormationAsync(serial, autoFormation, ct);
+                        if (entered.Success) break;
+                    }
+                    else if (!autoFormation && await Task.Run(() => vision.ReadOpponents(screen, ct), ct) is not null) break;
+                    else if (await EnsureDeviceCompatibilityAsync(serial, ct) && await EnsureMainScreenAsync(serial, ct))
                     {
                         var entered = await service.OpenFromHomeAsync(serial, _mainLayout, autoFormation, ct);
                         if (entered.Success) break;
@@ -70,7 +75,7 @@ public partial class MainWindow
             MasterLeagueStatusText.Text = L.Text("正在挑战大师联盟…");
             var progress = new Progress<string>(message =>
             {
-                if (_masterLeagueCts is not null && !ct.IsCancellationRequested) MasterLeagueStatusText.Text = message;
+                if (_masterLeagueCts is not null && !ct.IsCancellationRequested) MasterLeagueStatusText.Text = L.Text(message);
             });
             var homeDetector = CreateMainScreenDetector();
             var result = await service.RunChallengesAsync(serial, vision, resultRecognizer, retryDefeated, ct, progress,

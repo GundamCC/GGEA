@@ -3963,6 +3963,16 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/zh-CN/templates/stage/pvp/title_round_stage_info.png",
+      "sha256": "adeeccb1113225bf9e60a53394e138c959cb82dbe8b7facb005e52b46b7a565a",
+      "width": 568,
+      "height": 63,
+      "category": "recognition-resource",
+      "source": "2026-11-20 MuMu ADB capture of the Simplified Chinese Master League round stage information title",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "title-only-crop-no-account-data"
+    },
+    {
       "path": "resources/zh-CN/templates/stage/pvp/title_select_opponent.png",
       "sha256": "25459b8afc7f1961b4f469126d1b8bc7aa94adbec7c06a2cbe0b15562c841377",
       "width": 392,

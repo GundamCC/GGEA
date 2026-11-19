@@ -59,7 +59,7 @@ public sealed class MasterLeagueServiceTests
         Assert.False(result.Success);
         Assert.Equal(Enumerable.Repeat((960, 540), 15), adb.Taps);
         Assert.Equal(Enumerable.Repeat(1200, 15), delays);
-        Assert.Equal(7, adb.ScreenshotCount);
+        Assert.Equal(16, adb.ScreenshotCount);
     }
 
     /// <summary>标题在第十至十五次出现时立即停止中心点击，不补齐剩余次数。</summary>
@@ -81,7 +81,7 @@ public sealed class MasterLeagueServiceTests
         Assert.True(result.Success);
         Assert.Equal(Enumerable.Repeat((960, 540), afterTaps).Append((1646, 893)), adb.Taps);
         Assert.Equal(Enumerable.Repeat(1200, afterTaps), delays);
-        Assert.Equal(afterTaps - 7, adb.ScreenshotCount);
+        Assert.Equal(afterTaps + 2, adb.ScreenshotCount);
     }
 
     /// <summary>十次点击后才复查；进入编制后复用推图弹窗，确定编制并确认返回联盟。</summary>
@@ -177,7 +177,7 @@ public sealed class MasterLeagueServiceTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             service.ConfirmAndEnterFormationAsync("serial", false, cancel.Token));
         Assert.Equal(3, adb.Taps.Count);
-        Assert.Equal(1, adb.ScreenshotCount);
+        Assert.Equal(3, adb.ScreenshotCount);
     }
 
     /// <summary>不兼容分辨率必须在首次中心点击前停止。</summary>
@@ -279,6 +279,36 @@ public sealed class MasterLeagueServiceTests
         ? Frame((MasterLeagueService.TitleTemplate, 218, 20), (MasterLeagueService.FormationButtonTemplate, 1082, 833),
             (MasterLeagueService.SelectOpponentTemplate, 1466, 833))
         : Frame((MasterLeagueService.TitleTemplate, 218, 20), (MasterLeagueService.SelectOpponentTemplate, 1466, 833));
+
+    /// <summary>情报可在入口演出中或准备选择对手时出现；即使背景按钮可识别也只能关闭一次。</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RoundStageInfo_ClosesOnceThenResumesFromFreshFrame(bool duringIntro)
+    {
+        var overlay = Frame((MasterLeagueService.RoundStageInfoTemplate, 676, 156),
+            (MasterLeagueService.TitleTemplate, 218, 20), (MasterLeagueService.SelectOpponentTemplate, 1466, 833));
+        var first = duringIntro ? Frame() : LeagueFrame();
+        var ready = LeagueFrame();
+        var adb = new FakeAdbService(first);
+        var frames = new Queue<byte[]>([first, overlay, overlay, ready]);
+        adb.ScreenshotProvider = () => frames.TryDequeue(out var frame) ? frame : ready;
+        var result = await Service(adb, []).ConfirmAndEnterFormationAsync("serial", false);
+        Assert.True(result.Success, result.Message);
+        var expected = duringIntro ? new[] { (960, 540), (1547, 188), (1646, 893) } : [(1547, 188), (1646, 893)];
+        Assert.Equal(expected, adb.Taps);
+    }
+
+    [Fact]
+    public async Task RoundStageInfo_RemainsVisible_BlocksFormationAndOpponentSelection()
+    {
+        var adb = new FakeAdbService(Frame((MasterLeagueService.RoundStageInfoTemplate, 676, 156),
+            (MasterLeagueService.TitleTemplate, 218, 20), (MasterLeagueService.FormationButtonTemplate, 1082, 833),
+            (MasterLeagueService.SelectOpponentTemplate, 1466, 833)));
+        var result = await Service(adb, []).ConfirmAndEnterFormationAsync("serial", true);
+        Assert.False(result.Success);
+        Assert.Equal(new[] { (1547, 188) }, adb.Taps);
+    }
 
     /// <summary>对战编制页同时包含页面标题、自动编制和确定编制按钮。</summary>
     private static byte[] FormationFrame() => Frame(

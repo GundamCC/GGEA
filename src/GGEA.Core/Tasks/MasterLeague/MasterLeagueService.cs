@@ -20,6 +20,9 @@ public sealed partial class MasterLeagueService
     public const string EmptyFormationHintTemplate = "resources/templates/dialog/empty_unit_slot_hint.png";
     public const string ConfirmEmptyFormationTemplate = "resources/templates/stage/pvp/button_confirm_empty_formation.png";
     public const string SelectOpponentTemplate = "resources/templates/stage/pvp/button_select_opponent.png";
+    internal const string RoundStageInfoTemplate = "resources/templates/stage/pvp/title_round_stage_info.png";
+    private static readonly WaitOptions RoundStageInfoOptions = new()
+    { Roi = new Roi(668, 148, 584, 79), Threshold = .90, AllowGlobalContinuation = false };
     public const string BattlePreparationTitleTemplate = "resources/templates/stage/pvp/title_battle_preparation.png";
     public const string ResultSelectOpponentTemplate = "resources/templates/stage/pvp/button_result_select_opponent.png";
     public const string SelectOpponentTitleTemplate = "resources/templates/stage/pvp/title_select_opponent.png";
@@ -41,6 +44,8 @@ public sealed partial class MasterLeagueService
     private readonly DownloadDialogService _downloadDialog;
     private readonly string _downloadHintPath;
     private readonly bool _allowDownload;
+    // 每次窗口任务创建独立服务；入口重试和会话恢复共用同一次关闭记录。
+    private bool _roundStageInfoCloseSent;
 
     /// <summary>生产环境使用可取消的真实延时，测试通过内部构造器记录等待而不消耗十秒。</summary>
     public MasterLeagueService(AutomationService automation, IGgeaLog log, AppConfig? config = null)
@@ -69,8 +74,8 @@ public sealed partial class MasterLeagueService
     {
         var paths = autoFormation
             ? new[] { TitleTemplate, FormationButtonTemplate, FormationTitleTemplate, ConfirmFormationTemplate,
-                EmptyFormationHintTemplate, ConfirmEmptyFormationTemplate, SelectOpponentTemplate }
-            : new[] { TitleTemplate, SelectOpponentTemplate };
+                EmptyFormationHintTemplate, ConfirmEmptyFormationTemplate, SelectOpponentTemplate, RoundStageInfoTemplate }
+            : new[] { TitleTemplate, SelectOpponentTemplate, RoundStageInfoTemplate };
         foreach (var path in paths)
             ImageCodec.DecodePng(File.ReadAllBytes(ConfigService.ResolvePath(path)));
         if (autoFormation) _formation.ValidateDialog();
@@ -97,24 +102,28 @@ public sealed partial class MasterLeagueService
         ct.ThrowIfCancellationRequested();
         Validate(autoFormation);
         var screen = await CaptureAsync(serial, ct);
-        if (await MatchTitleAsync(screen, ct) is null)
+        var centerTaps = 0;
+        var infoFrames = 0;
+        while (true)
         {
-            _log.Info("大师联盟标题未命中，最多点击屏幕中心十五次，每次间隔 1.2 秒；第十次起逐次识别标题。");
-            // 坐标仅在标准横屏截图确认后计算；取消和 ADB 异常立即中断，不补齐剩余点击。
-            var titleConfirmed = false;
-            for (var index = 0; index < 15; index++)
+            if (await HandleRoundStageInfoAsync(serial, screen, ct))
             {
+                if (++infoFrames >= 20) return Fail("本回关卡情报仍在显示，已停止本轮联盟入口操作。");
+                await _delay(1000, ct);
+            }
+            else
+            {
+                // 情报消失时立即复核首页；正常入口演出沿用第十次起复核联盟标题的节奏。
+                if ((centerTaps == 0 || centerTaps >= 10 || infoFrames > 0) && await MatchTitleAsync(screen, ct) is not null)
+                    break;
+                if (centerTaps == 15) return Fail("十五次点击后仍未识别到大师联盟标题，已停止大师联盟流程。");
+                infoFrames = 0;
                 ct.ThrowIfCancellationRequested();
                 await _automation.TapAsync(serial, screen.Width / 2, screen.Height / 2, ct);
+                centerTaps++;
                 await _delay(1200, ct);
-                // 前十次用于清除入口演出；此后每次重新截图，标题出现便停止补点。
-                if (index < 9) continue;
-                screen = await CaptureAsync(serial, ct);
-                titleConfirmed = await MatchTitleAsync(screen, ct) is not null;
-                if (titleConfirmed) break;
             }
-            if (!titleConfirmed)
-                return Fail("十五次点击后仍未识别到大师联盟标题，已停止大师联盟流程。");
+            screen = await CaptureAsync(serial, ct);
         }
         _log.Info("已识别左上角大师联盟标题，确认进入大师联盟界面。");
         if (!autoFormation) return await WaitForLeagueAndSelectOpponentAsync(serial, false, ct);
@@ -170,6 +179,11 @@ public sealed partial class MasterLeagueService
         {
             ct.ThrowIfCancellationRequested();
             var screen = await CaptureAsync(serial, ct);
+            if (await HandleRoundStageInfoAsync(serial, screen, ct))
+            {
+                if (poll < 19) await _delay(1000, ct);
+                continue;
+            }
             if (allowEmptyConfirmation && await _automation.MatchImageAsync(screen,
                 ConfigService.ResolvePath(EmptyFormationHintTemplate), EmptyHintOptions, ct) is not null)
             {
@@ -322,6 +336,29 @@ public sealed partial class MasterLeagueService
     /// <summary>只在左上角标题区域匹配，避免页面其他位置的同名文字误判。</summary>
     private Task<TemplateMatchResult?> MatchTitleAsync(ScreenImage screen, CancellationToken ct)
         => _automation.MatchImageAsync(screen, ConfigService.ResolvePath(TitleTemplate), TitleOptions, ct);
+
+    internal async Task<bool> IsRoundStageInfoAsync(ScreenImage screen, CancellationToken ct)
+        => screen.Width == GameResolution.BaseWidth && screen.Height == GameResolution.BaseHeight &&
+           await _automation.MatchImageAsync(screen, ConfigService.ResolvePath(RoundStageInfoTemplate), RoundStageInfoOptions, ct) is not null;
+
+    /// <summary>标题命中的整帧由弹窗独占。先记录输入意图，避免弹层残留或 ADB 回执丢失时再次点按。</summary>
+    private async Task<bool> HandleRoundStageInfoAsync(string serial, ScreenImage screen, CancellationToken ct)
+    {
+        if (!await IsRoundStageInfoAsync(screen, ct))
+        {
+            _roundStageInfoCloseSent = false;
+            return false;
+        }
+        if (!_roundStageInfoCloseSent)
+        {
+            ct.ThrowIfCancellationRequested();
+            _roundStageInfoCloseSent = true;
+            // MuMu 1280×720 的关闭中心 (1031,125) 投影到任务的 1920×1080 基准坐标。
+            await _automation.TapAsync(serial, 1547, 188, ct);
+            _log.Info("已识别本回关卡情报＆增幅信息，已点击右上角关闭按钮。");
+        }
+        return true;
+    }
 
     /// <summary>识别证据不足时报告当前任务停止，不改变其他任务的状态。</summary>
     private MasterLeagueResult Fail(string message)
