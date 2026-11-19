@@ -61,6 +61,23 @@ public static class EmulatorAdapterFactory
 /// <summary>设备刷新只保留已有目标；列表顺序不能代表用户的账号选择。</summary>
 internal static class EmulatorDeviceSelector
 {
+    /// <summary>只核验明确选中的地址和已知启动身份，不使用刷新时的别名匹配。</summary>
+    internal static async Task<string?> GetStartIssueAsync(IAdbService adb, AdbDevice selected, CancellationToken ct)
+    {
+        var devices = await adb.ListDevicesAsync(ct);
+        var current = devices.FirstOrDefault(device => device.Serial == selected.Serial);
+        if (current is null)
+            return L.Format($"设备 {selected.Serial} 已从 ADB 列表消失，可能已关闭或地址已变化。请确认模拟器已启动，再选择在线设备。");
+        if (!current.IsAvailable)
+            return L.Format($"设备 {selected.Serial} 当前不可用（{current.State}）。请恢复连接，再选择在线设备。");
+        if (!selected.IsAvailable)
+            return L.Format($"设备 {selected.Serial} 已恢复在线，请重新选择该设备后开始。");
+        if (selected.BootId != Guid.Empty &&
+            (!Guid.TryParse(await adb.GetBootIdAsync(selected.Serial, ct), out var bootId) || bootId != selected.BootId))
+            return L.Format($"设备 {selected.Serial} 的启动身份已变化或无法确认，请重新选择目标设备。");
+        return null;
+    }
+
     /// <summary>没有明确选择或原目标离线时保持未选择，不切换到其他在线账号。</summary>
     internal static AdbDevice? SelectForRefresh(
         IReadOnlyList<AdbDevice> devices,

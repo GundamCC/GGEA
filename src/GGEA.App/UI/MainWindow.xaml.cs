@@ -653,16 +653,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        // 离线目标不能进入默认实例启动分支；直接说明可执行的恢复操作。
-        if (DeviceCombo.SelectedItem is AdbDevice unavailable && !unavailable.IsAvailable)
-        {
-            UpdateSelectedDeviceState(unavailable);
-            _logger?.Warn(L.Format($"所选设备不可用 [{unavailable.Serial}, {unavailable.State}]；请先恢复连接"));
-            return;
-        }
-
-        // 当前选中的可用设备优先：直接在该模拟器上打开游戏，不再启动默认 MuMu0。
-        if (DeviceCombo.SelectedItem is AdbDevice selectedDevice && selectedDevice.IsAvailable)
+        // 曾经选过的目标必须重新核验，不能因设备关闭而进入默认实例启动分支。
+        if (DeviceCombo.SelectedItem is AdbDevice selectedDevice)
         {
             _starting = true;
             _startCts = CancellationTokenSource.CreateLinkedTokenSource(_windowTasks.Token);
@@ -672,13 +664,7 @@ public partial class MainWindow : Window
             ConnectionStateText.Text = L.Format($"正在打开游戏: {selectedDevice.Serial}");
             try
             {
-                // 列表是上次刷新的快照；操作前重新确认目标在线，绝不回退其他设备。
-                if (!(await _adb.ListDevicesAsync(ct)).Any(device =>
-                        device.IsAvailable && device.Serial == selectedDevice.Serial))
-                    throw new AdbException(L.Text("所选设备已离线，请刷新并确认目标设备；未切换其他实例"));
-                if (selectedDevice.BootId != Guid.Empty &&
-                    (!Guid.TryParse(await _adb.GetBootIdAsync(selectedDevice.Serial, ct), out var bootId) || bootId != selectedDevice.BootId))
-                    throw new AdbException(L.Text("所选设备已重启或身份发生变化，请刷新并重新选择目标设备"));
+                if (await GetOnlineTaskSerialAsync(ConnectionStateText, ct) is null) return;
                 await SyncDeviceServicesAsync(selectedDevice.Serial, ct: ct);
                 await _adb.LaunchAppAsync(selectedDevice.Serial, _config.GamePackage, ct);
                 _preferredDeviceSerial = selectedDevice.Serial;
@@ -1135,11 +1121,13 @@ public partial class MainWindow : Window
         }
         using var execution = TryBeginExecution();
         if (execution is null) return;
-        if (_automation is null || !TryGetDeviceSerial(out var serial))
+        if (_automation is null)
         {
             ScoutStatusText.Text = L.Text("请先连接并选择模拟器。");
             return;
         }
+        var serial = await GetOnlineTaskSerialAsync(ScoutStatusText, _windowTasks.Token);
+        if (serial is null) return;
         _scoutRunning = true;
         _scoutCts = CancellationTokenSource.CreateLinkedTokenSource(_windowTasks.Token);
         var ct = _scoutCts.Token;
@@ -1564,6 +1552,48 @@ public partial class MainWindow : Window
         DrawOverlay();
     }
 
+    /// <summary>开始时核对用户选择的实例，失效后刷新列表，交由用户重新选择。</summary>
+    private async Task<string?> GetOnlineTaskSerialAsync(TextBlock taskStatus, CancellationToken ct)
+    {
+        void Report(string message)
+        {
+            taskStatus.Text = message;
+            AccountStatusText.Text = message;
+            _logger?.Warn(message);
+        }
+
+        if (_adb is null || DeviceCombo.SelectedItem is not AdbDevice selected)
+        {
+            Report(L.Text("请先刷新并选择可用的模拟器设备"));
+            return null;
+        }
+
+        string? issue;
+        try
+        {
+            issue = await EmulatorDeviceSelector.GetStartIssueAsync(_adb, selected, ct);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            Report(L.Format($"无法核验设备 {selected.Serial}，请检查 ADB 连接后重试。详情：{ex.Message}"));
+            return null;
+        }
+        if (issue is null) return selected.Serial;
+
+        // 先撤销旧选择。即使重新发现设备失败，旧行也不能继续作为有效目标。
+        _refreshingDeviceSelection = true;
+        try { DeviceCombo.ItemsSource = null; }
+        finally { _refreshingDeviceSelection = false; }
+        UpdateSelectedDeviceState(null);
+        Report(issue);
+        await SyncDeviceServicesAsync(null, ct);
+        await RefreshDevicesAsync(ct, preserveSelection: false);
+        taskStatus.Text = issue;
+        AccountStatusText.Text = issue;
+        return null;
+    }
+
     /// <summary>获取当前选中的设备序列号。</summary>
     private bool TryGetDeviceSerial(out string serial)
     {
@@ -1708,10 +1738,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!TryGetDeviceSerial(out var serial))
-        {
-            return;
-        }
+        var serial = await GetOnlineTaskSerialAsync(AutoFarmStatusText, _windowTasks.Token);
+        if (serial is null) return;
 
         _autoFarmRunning = true;
         _autoFarmCts = CancellationTokenSource.CreateLinkedTokenSource(_windowTasks.Token);
@@ -1992,11 +2020,13 @@ public partial class MainWindow : Window
         using var execution = TryBeginExecution();
         if (execution is null) return;
         CommitBallFactoryGp();
-        if (_automation is null || _logger is null || !TryGetDeviceSerial(out var serial))
+        if (_automation is null || _logger is null)
         {
             BallFactoryStatusText.Text = L.Text("请先连接并选择模拟器。");
             return;
         }
+        var serial = await GetOnlineTaskSerialAsync(BallFactoryStatusText, _windowTasks.Token);
+        if (serial is null) return;
         var targetGp = _ballFactoryTargetGp;
         _ballFactoryRunning = true;
         _ballFactoryCts = CancellationTokenSource.CreateLinkedTokenSource(_windowTasks.Token);
@@ -2169,10 +2199,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!TryGetDeviceSerial(out var serial))
-        {
-            return;
-        }
+        var serial = await GetOnlineTaskSerialAsync(AccountStatusText, _windowTasks.Token);
+        if (serial is null) return;
 
         // 领取每日使命奖励：勾选后随“领取奖励”任务按队列顺序执行一次，
         // 并在每日任务队列最后再执行一次（共两次）；不勾选“领取奖励”时不自动执行。

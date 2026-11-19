@@ -5,6 +5,44 @@ namespace GGEA.Tests;
 /// <summary>真实地址和跨品牌共存回归；使用独立进程边界替身，不触碰用户账号。</summary>
 public sealed class EmulatorCompatibilityRegressionTests
 {
+    // 旧行仍显示在线时，用本次 ADB 枚举判定；其他在线实例不能代替用户的选择。
+    [Theory]
+    [InlineData(null)]
+    [InlineData("offline")]
+    [InlineData("unauthorized")]
+    public async Task TaskStart_ReportsStaleSelectionEvenWithAnotherOnlineDevice(string? state)
+    {
+        var selected = new AdbDevice("old-target", "device", "");
+        var devices = new List<AdbDevice> { new("other-target", "device", "") };
+        if (state is not null) devices.Add(selected with { State = state });
+        var adb = new FakeAdbService([])
+        {
+            ListDevicesOverride = _ => Task.FromResult<IReadOnlyList<AdbDevice>>(devices)
+        };
+
+        var issue = await EmulatorDeviceSelector.GetStartIssueAsync(adb, selected, default);
+
+        Assert.Contains(selected.Serial, issue);
+        if (state is not null) Assert.Contains(state, issue);
+        Assert.DoesNotContain("other-target", issue);
+    }
+
+    [Fact]
+    public async Task TaskStart_RequiresSameBootWhenIdentityWasKnown()
+    {
+        var adb = new FakeAdbService([], ["target"]);
+        var selected = new AdbDevice("target", "device", "");
+        Assert.Null(await EmulatorDeviceSelector.GetStartIssueAsync(adb, selected, default));
+
+        selected = selected with { BootId = Guid.NewGuid() };
+        Assert.NotNull(await EmulatorDeviceSelector.GetStartIssueAsync(adb, selected, default));
+        adb.BootIds[selected.Serial] = Guid.NewGuid().ToString();
+        Assert.NotNull(await EmulatorDeviceSelector.GetStartIssueAsync(adb, selected, default));
+        adb.BootIds[selected.Serial] = selected.BootId.ToString();
+        Assert.Null(await EmulatorDeviceSelector.GetStartIssueAsync(adb, selected, default));
+        Assert.NotNull(await EmulatorDeviceSelector.GetStartIssueAsync(adb, selected with { State = "offline" }, default));
+    }
+
     /// <summary>发现和原生截图使用同一端点规范，旧版 localhost 与 IPv6 地址不会产生不同实例映射。</summary>
     [Theory]
     [InlineData("localhost", "127.0.0.1:16384")]

@@ -25,8 +25,10 @@ public partial class MainWindow
         }
         using var execution = TryBeginExecution();
         if (execution is null) return;
-        if (_automation is null || _logger is null || !TryGetDeviceSerial(out var serial))
+        if (_automation is null || _logger is null)
         { MasterLeagueStatusText.Text = L.Text("请先连接并选择模拟器。"); return; }
+        var serial = await GetOnlineTaskSerialAsync(MasterLeagueStatusText, _windowTasks.Token);
+        if (serial is null) return;
         if (_config.GameLanguage != "zh-CN")
         { MasterLeagueStatusText.Text = L.Text("大师联盟当前仅支持简体中文游戏界面。"); return; }
         var autoFormation = MasterLeagueAutoFormationCheck.IsChecked == true;

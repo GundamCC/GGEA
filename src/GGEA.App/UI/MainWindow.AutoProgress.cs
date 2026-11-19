@@ -93,9 +93,10 @@ public partial class MainWindow
         }
         using var execution = TryBeginExecution();
         if (execution is null) return;
-        if (_automation is null || _stageService is null || _sortieFlowService is null || _logger is null ||
-            !TryGetDeviceSerial(out var serial))
+        if (_automation is null || _stageService is null || _sortieFlowService is null || _logger is null)
         { AutoProgressStatusText.Text = L.Text("请先连接并选择模拟器。"); return; }
+        var serial = await GetOnlineTaskSerialAsync(AutoProgressStatusText, _windowTasks.Token);
+        if (serial is null) return;
         var targets = AvailableAutoProgressTargets();
         if (targets.Length == 0)
         { AutoProgressStatusText.Text = L.Text("请先添加推图目标。"); return; }

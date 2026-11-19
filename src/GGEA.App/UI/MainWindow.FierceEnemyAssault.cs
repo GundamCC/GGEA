@@ -121,8 +121,10 @@ public partial class MainWindow
         }
         using var execution = TryBeginExecution();
         if (execution is null) return;
-        if (_automation is null || _logger is null || !TryGetDeviceSerial(out var serial))
+        if (_automation is null || _logger is null)
         { FierceEnemyAssaultStatusText.Text = L.Text("请先连接并选择模拟器。"); return; }
+        var serial = await GetOnlineTaskSerialAsync(FierceEnemyAssaultStatusText, _windowTasks.Token);
+        if (serial is null) return;
         if (FierceEnemyUnitBox.SelectedItem is not FierceEnemyUnit unit ||
             FierceEnemyDifficultyBox.SelectedItem is not FierceEnemyDifficulty difficulty)
         { FierceEnemyAssaultStatusText.Text = L.Text("请先选择强敌单位和难度。"); return; }
