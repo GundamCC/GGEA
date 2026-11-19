@@ -241,6 +241,33 @@ public sealed partial class OnlineUpdateTests
         Assert.True(next.CanWrite);
     }
 
+    /// <summary>两窗口可同时运行，只有最后一个能交接；失败后仍能继续多开并重试。</summary>
+    [Fact]
+    public async Task RunningWindows_ShareInstallation_UntilUpdateHandoff()
+    {
+        using var temp = new TempDirectory();
+        using (var first = new RunningInstallation(temp.Path))
+        {
+            var handedOff = false;
+            Task Handoff() { handedOff = true; return Task.CompletedTask; }
+            using (var second = new RunningInstallation(temp.Path))
+            {
+                await Assert.ThrowsAsync<IOException>(() => first.StartUpdateAsync(Handoff));
+                Assert.False(handedOff);
+            }
+            Assert.Throws<IOException>(() => UpdateFiles.AcquireLock(temp.Path));
+            await Assert.ThrowsAsync<OperationCanceledException>(() =>
+                first.StartUpdateAsync(() => Task.FromException(new OperationCanceledException())));
+            using (new RunningInstallation(temp.Path)) { }
+            await first.StartUpdateAsync(Handoff);
+            Assert.True(handedOff);
+            Assert.Throws<IOException>(() => new RunningInstallation(temp.Path));
+            Assert.Throws<IOException>(() => UpdateFiles.AcquireLock(temp.Path));
+        }
+        using var updating = UpdateFiles.AcquireLock(temp.Path);
+        Assert.Throws<IOException>(() => new RunningInstallation(temp.Path));
+    }
+
     /// <summary>普通包无正式清单也能升级，保留未知文件，并可继续安装下一正式版本。</summary>
     [Fact]
     public void Install_LocalBuild_CanUpgradeTwice()

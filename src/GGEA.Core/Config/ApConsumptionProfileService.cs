@@ -55,7 +55,8 @@ public sealed class ApConsumptionProfileService
                 return new ApConsumptionProfilesData();
             }
 
-            var json = File.ReadAllText(path);
+            string json;
+            using (var file = new SharedConfigFile(path)) json = file.Read();
             return JsonSerializer.Deserialize<ApConsumptionProfilesData>(json)
                 ?? new ApConsumptionProfilesData();
         }
@@ -88,14 +89,9 @@ public sealed class ApConsumptionProfileService
     /// <summary>以缩进 JSON 保存全部方案，目录不存在时自动创建。</summary>
     public void Save(ApConsumptionProfilesData data, string path)
     {
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrWhiteSpace(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
         var options = new JsonSerializerOptions { WriteIndented = true };
-        File.WriteAllText(path, JsonSerializer.Serialize(data, options));
+        using var file = new SharedConfigFile(path);
+        file.Write(JsonSerializer.Serialize(data, options));
         _log.Info($"AP 消耗配置已保存: {path}");
     }
 }

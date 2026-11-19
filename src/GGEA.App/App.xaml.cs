@@ -1,15 +1,12 @@
 using GGEA.App.Localization;
-using System.Configuration;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows;
 
 namespace GGEA.App;
 
 /// <summary>
 /// 应用入口。
-/// 开发版允许多开；发布版通过命名互斥量保持单实例，重复启动时激活已有窗口。
+/// 每个进程创建独立窗口，安装更新前确认同目录其他窗口已退出。
 /// </summary>
 public partial class App : Application
 {
@@ -41,59 +38,36 @@ public partial class App : Application
         IsDarkMode = nextDarkMode;
     }
 
-    /// <summary>单实例互斥量名称（Local 命名空间按登录会话隔离）。</summary>
-    private const string SingleInstanceMutexName = @"Local\GGEA.SingleInstance";
+    private Updater.RunningInstallation? _installation;
 
-    /// <summary>标记持有互斥量的窗口，避免开发版并存时激活错误的窗口。</summary>
-    private static readonly string InstanceScope = File.Exists(Path.Combine(AppContext.BaseDirectory, "local-build-info.json"))
-        ? "." + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(AppContext.BaseDirectory)).ToUpperInvariant())))
-        : "";
-    private static readonly string SingleInstanceWindowProperty = "GGEA.SingleInstanceWindow" + InstanceScope;
-
-    /// <summary>窗口句柄创建后登记单实例窗口；窗口销毁时 Windows 自动清理属性。</summary>
-    internal static void RegisterSingleInstanceWindow(IntPtr handle)
+    /// <summary>在当前安装的独占保护下向更新器交接，失败时恢复当前窗口的共享运行状态。</summary>
+    internal async Task StartUpdateAsync(string? package, string? version, bool recover, CancellationToken ct)
     {
-        if (_singleInstanceMutex is not null)
-            _ = SetProp(handle, SingleInstanceWindowProperty, new IntPtr(1));
+        if (_installation is null) throw new InvalidOperationException(L.Text("当前目录不支持在线安装。"));
+        try
+        {
+            await _installation.StartUpdateAsync(() =>
+                Updates.UpdateLauncher.StartAsync(AppContext.BaseDirectory, package, version, recover, ct));
+        }
+        catch (IOException ex) when ((ex.HResult & 0xffff) == 32)
+        {
+            throw new IOException(L.Text("请先关闭同一目录中的其他 GGEA 窗口，再重试更新。"), ex);
+        }
     }
 
-    /// <summary>当前实例持有的单实例互斥量；非首个实例时为空。</summary>
-    private static Mutex? _singleInstanceMutex;
-    /// <summary>正式安装生命周期锁，更新器只在主进程完全退出后获得写权限。</summary>
-    private FileStream? _installationLock;
-
-    /// <summary>Win32 恢复窗口命令：显示并还原（不强制最大化）。</summary>
-    private const int SwRestore = 9;
-
-    /// <summary>
-    /// 启动入口：开发版直接启动，发布版先尝试成为唯一实例。
-    /// 若已有实例在运行，则激活其窗口并退出，不创建任何窗口。
-    /// </summary>
     protected override void OnStartup(StartupEventArgs e)
     {
-        // 原生截图在独立进程执行，先于单实例和窗口初始化，避免影响正在运行的主程序。
+        // 原生截图在独立进程执行，先于安装锁和窗口初始化，避免影响正在运行的主程序。
         if (e.Args.Length > 0 && e.Args[0] == "--mumu-capture")
         {
             Shutdown(Device.MuMuNativeCapture.Run(e.Args));
             return;
         }
 
-        // 发布自检先于单实例与主窗口启动，禁止连接设备或触发任何游戏操作。
+        // 发布自检先于安装锁与主窗口启动，禁止连接设备或触发任何游戏操作。
         if (e.Args.Length == 1 && e.Args[0] == "--verify-release")
         {
             Shutdown(ReleaseVerification.Run());
-            return;
-        }
-
-        if (!TryAcquireSingleInstance(SingleInstanceMutexName + InstanceScope))
-        {
-            if (!ActivateExistingInstance())
-            {
-                L.Initialize(null);
-                MessageBox.Show(L.Text("GGEA 已在运行，请切换到已有窗口。"), "GGEA", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            Shutdown();
             return;
         }
 
@@ -115,16 +89,17 @@ public partial class App : Application
 
         // 先检查恢复标记再创建主窗口，禁止在半更新的资源集合上运行自动化。
         if (File.Exists(Path.Combine(AppContext.BaseDirectory, "build-info.json")) ||
+            File.Exists(Path.Combine(AppContext.BaseDirectory, "local-build-info.json")) ||
             File.Exists(Path.Combine(AppContext.BaseDirectory, Updater.UpdateFiles.JournalName)))
         {
             try
             {
-                _installationLock = Updater.UpdateFiles.AcquireLock(AppContext.BaseDirectory);
+                _installation = new Updater.RunningInstallation(AppContext.BaseDirectory);
                 if (File.Exists(Updater.UpdateFiles.SafePath(AppContext.BaseDirectory, Updater.UpdateFiles.JournalName)))
                 {
                     if (MessageBox.Show(L.Text("上次更新未完成，需先恢复旧版再使用。是否现在恢复？"), L.Text("GGEA 更新恢复"),
                             MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
-                        Task.Run(() => Updates.UpdateLauncher.StartAsync(AppContext.BaseDirectory, null, null, true, CancellationToken.None)).GetAwaiter().GetResult();
+                        Task.Run(() => StartUpdateAsync(null, null, true, CancellationToken.None)).GetAwaiter().GetResult();
                     Shutdown();
                     return;
                 }
@@ -147,154 +122,12 @@ public partial class App : Application
         base.OnStartup(e);
     }
 
-    /// <summary>
-    /// 应用退出时释放单实例互斥量，保证下一次启动可以正常成为唯一实例。
-    /// </summary>
+    /// <summary>退出时释放本进程的图像线程和安装目录占用。</summary>
     protected override void OnExit(ExitEventArgs e)
     {
         // 原生截图助手与主窗口共用此入口；必须在 CLR ProcessExit 前释放图像线程。
         Vision.ImageCodecThread.Shutdown();
-        _installationLock?.Dispose();
-        ReleaseSingleInstance();
+        _installation?.Dispose();
         base.OnExit(e);
     }
-
-    /// <summary>
-    /// 尝试取得单实例互斥量所有权。
-    /// 处理“已有实例异常退出导致互斥量被遗弃”的情况：被遗弃的互斥量可以由新实例接管。
-    /// </summary>
-    /// <returns>当前进程是否为唯一实例。</returns>
-    private static bool TryAcquireSingleInstance(string mutexName = SingleInstanceMutexName)
-    {
-#if DEBUG
-        // 开发版不占用正式版互斥量，支持两种构建并存。
-        return true;
-#else
-        // 普通验收包按安装目录隔离；同目录重开必须在写启动日志前完成单实例仲裁。
-        var mutex = new Mutex(initiallyOwned: true, mutexName, out var createdNew);
-
-        if (!createdNew)
-        {
-            // 互斥量已存在：若持有者已崩溃（被遗弃），WaitOne 会抛 AbandonedMutexException，
-            // 此时所有权已转移给当前进程，可以继续启动。
-            try
-            {
-                if (mutex.WaitOne(0))
-                {
-                    createdNew = true;
-                }
-            }
-            catch (AbandonedMutexException)
-            {
-                createdNew = true;
-            }
-        }
-
-        if (!createdNew)
-        {
-            mutex.Dispose();
-            return false;
-        }
-
-        _singleInstanceMutex = mutex;
-        return true;
-#endif
-    }
-
-    /// <summary>释放单实例互斥量。</summary>
-    private static void ReleaseSingleInstance()
-    {
-        if (_singleInstanceMutex is null)
-        {
-            return;
-        }
-
-        try
-        {
-            _singleInstanceMutex.ReleaseMutex();
-        }
-        catch (ApplicationException)
-        {
-            // 退出时互斥量可能已被释放，忽略即可
-        }
-
-        _singleInstanceMutex.Dispose();
-        _singleInstanceMutex = null;
-    }
-
-    /// <summary>
-    /// 找到已运行的 GGEA 主窗口，最小化时先还原，再置为前台。
-    /// 通过 EnumWindows 按进程与窗口类名精确查找可见主窗口，
-    /// 避免 Process.MainWindowHandle 可能指向隐藏辅助窗口导致激活失效。
-    /// 激活失败不影响后续逻辑（新实例直接退出即可）。
-    /// </summary>
-    private static bool ActivateExistingInstance()
-    {
-        try
-        {
-            var currentId = (uint)Environment.ProcessId;
-            IntPtr? target = null;
-
-            _ = EnumWindows((hWnd, lParam) =>
-            {
-                _ = GetWindowThreadProcessId(hWnd, out var processId);
-                if (processId == currentId || !IsWindowVisible(hWnd) ||
-                    GetProp(hWnd, SingleInstanceWindowProperty) == IntPtr.Zero)
-                {
-                    return true;
-                }
-
-                var className = new StringBuilder(256);
-                _ = GetClassName(hWnd, className, className.Capacity);
-                if (className.ToString().StartsWith("HwndWrapper[GGEA", StringComparison.Ordinal))
-                {
-                    // 找到目标窗口后停止枚举
-                    target = hWnd;
-                    return false;
-                }
-
-                return true;
-            }, IntPtr.Zero);
-
-            if (target is null) return false;
-
-            if (IsIconic(target.Value)) ShowWindowAsync(target.Value, SwRestore);
-            return SetForegroundWindow(target.Value);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-
-    /// <summary>为发布版窗口登记跨进程可识别的属性。</summary>
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    private static extern bool SetProp(IntPtr hWnd, string name, IntPtr value);
-
-    /// <summary>读取窗口属性，排除没有持有单实例锁的开发版窗口。</summary>
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    private static extern IntPtr GetProp(IntPtr hWnd, string name);
-
-    [DllImport("user32.dll")]
-    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-
-    [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
-
-    [DllImport("user32.dll")]
-    private static extern bool IsIconic(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    private static extern bool IsWindowVisible(IntPtr hWnd);
-
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
-
-    [DllImport("user32.dll")]
-    private static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
-
-    [DllImport("user32.dll")]
-    private static extern bool SetForegroundWindow(IntPtr hWnd);
 }

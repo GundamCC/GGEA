@@ -42,7 +42,8 @@ public sealed class ConfigService
                 return new AppConfig();
             }
 
-            var json = File.ReadAllText(path);
+            string json;
+            using (var file = new SharedConfigFile(path)) json = file.Read();
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var config = JsonSerializer.Deserialize<AppConfig>(json, options);
             // 旧区域右界裁掉了关卡页主画面按钮的完整匹配位置；仅迁移精确旧默认值。
@@ -207,13 +208,8 @@ public sealed class ConfigService
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
 
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        File.WriteAllText(path, JsonSerializer.Serialize(config, options));
+        using var file = new SharedConfigFile(path);
+        file.Write(JsonSerializer.Serialize(config, options));
     }
 
 }

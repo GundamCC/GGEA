@@ -3,7 +3,7 @@ using System.IO;
 namespace GGEA.App.Logging;
 
 /// <summary>
-/// 默认日志实现：写入当日文件，开发版按进程隔离，同时向界面广播事件。
+/// 默认日志实现：写入当日文件，按进程隔离，同时向界面广播事件。
 /// </summary>
 public sealed class GgeaLogger : IGgeaLog, IDisposable
 {
@@ -12,15 +12,11 @@ public sealed class GgeaLogger : IGgeaLog, IDisposable
 
     public event EventHandler<LogEntry>? Logged;
 
-    /// <summary>创建日志文件；开发版多进程不能共同持有同一个写入流。</summary>
+    /// <summary>创建日志文件；多进程不能共同持有同一个写入流。</summary>
     public GgeaLogger(string logDirectory)
     {
         Directory.CreateDirectory(logDirectory);
-#if DEBUG
         var filePath = Path.Combine(logDirectory, $"ggea-{DateTime.Now:yyyyMMdd}-{Environment.ProcessId}.log");
-#else
-        var filePath = Path.Combine(logDirectory, $"ggea-{DateTime.Now:yyyyMMdd}.log");
-#endif
         _writer = new StreamWriter(filePath, append: true) { AutoFlush = true };
     }
 

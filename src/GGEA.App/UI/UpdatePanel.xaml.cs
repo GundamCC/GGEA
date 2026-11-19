@@ -147,7 +147,7 @@ public partial class UpdatePanel : UserControl
         cancellationToken.ThrowIfCancellationRequested();
         if (_updateClosed || !_allowUpdateInstall) throw new OperationCanceledException(cancellationToken);
         UpdateStatusText.Text = L.Text("下载与校验完成，正在启动更新器并准备重启…");
-        await UpdateLauncher.StartAsync(AppContext.BaseDirectory, package, _availableUpdate!.Version.ToString(4), false, cancellationToken);
+        await ((App)Application.Current).StartUpdateAsync(package, _availableUpdate!.Version.ToString(4), false, cancellationToken);
         UpdateRequested = true;
         InstallationReady?.Invoke(this, EventArgs.Empty);
     }

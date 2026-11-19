@@ -29,7 +29,8 @@ public sealed class StageWorkPositionsService
                 return data;
             }
 
-            var json = File.ReadAllText(path);
+            string json;
+            using (var file = new SharedConfigFile(path)) json = file.Read();
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var parsed = JsonSerializer.Deserialize<StageWorkPositionsData>(json, options);
             if (parsed is null)
@@ -66,12 +67,7 @@ public sealed class StageWorkPositionsService
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
 
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        File.WriteAllText(path, JsonSerializer.Serialize(data, options));
+        using var file = new SharedConfigFile(path);
+        file.Write(JsonSerializer.Serialize(data, options));
     }
 }

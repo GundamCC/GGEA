@@ -201,9 +201,6 @@ public partial class MainWindow : Window
         InitializeComponent();
         AutoProgressQueueList.ItemsSource = _autoProgressQueue;
         LoadAutoProgressSettings();
-        // 仅锁的持有者登记窗口身份，重复启动发布版时不会选中并存的开发版。
-        SourceInitialized += (_, _) => App.RegisterSingleInstanceWindow(
-            new System.Windows.Interop.WindowInteropHelper(this).Handle);
         CopyrightText.Text = AppCopyright;
         ApWorkList.ItemsSource = _apWorkItems;
         DailyTaskList.ItemsSource = _dailyTasks;

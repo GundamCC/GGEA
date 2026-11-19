@@ -8,6 +8,21 @@ namespace GGEA.Tests;
 /// </summary>
 public class ConfigServiceTests
 {
+    [Fact]
+    public void ConcurrentWindows_ReadOnlyCompleteSavedSettings()
+    {
+        using var temp = new TempDirectory();
+        var path = Path.Combine(temp.Path, "shared.json");
+        var service = new ConfigService(new TestLog());
+        service.Save(new AppConfig { AdbPath = "window-0" }, path);
+        Parallel.For(0, 30, index =>
+        {
+            service.Save(new AppConfig { AdbPath = $"window-{index}" }, path);
+            Assert.StartsWith("window-", service.Load(path).AdbPath);
+        });
+        Assert.Single(Directory.GetFiles(temp.Path));
+    }
+
     /// <summary>宿主保存配置不能丢弃尚未由独立扩展导入的数据。</summary>
     [Fact]
     public void UnknownExtensionData_SurvivesLoadAndSave()

@@ -88,14 +88,18 @@ public static class UpdateFiles
     {
         RejectLinks(path);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var temporary = path + ".tmp";
+        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         RejectLinks(temporary);
-        using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+        try
         {
-            JsonSerializer.Serialize(stream, value, typeInfo);
-            stream.Flush(true);
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                JsonSerializer.Serialize(stream, value, typeInfo);
+                stream.Flush(true);
+            }
+            File.Move(temporary, path, true);
         }
-        File.Move(temporary, path, true);
+        finally { File.Delete(temporary); }
     }
 
     /// <summary>同卷暂存并刷盘后替换单个文件，避免断电留下被截断的 EXE；整套版本仍由事务记录恢复。</summary>
@@ -118,11 +122,18 @@ public static class UpdateFiles
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
-    /// <summary>主程序和更新器持有同一目录锁；禁止多实例对同一安装并发读写。</summary>
+    /// <summary>更新器写入前须独占安装目录，且不能与主窗口的锁切换交错。</summary>
     public static FileStream AcquireLock(string root)
     {
-        var path = SafePath(root, StateDirectory + "/installation.lock");
+        using var transition = OpenLock(root, "handoff.lock", exclusive: true);
+        return OpenLock(root, "installation.lock", exclusive: true);
+    }
+
+    internal static FileStream OpenLock(string root, string name, bool exclusive)
+    {
+        var path = SafePath(root, StateDirectory + "/" + name);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        return new FileStream(path, FileMode.OpenOrCreate, exclusive ? FileAccess.ReadWrite : FileAccess.Read,
+            exclusive ? FileShare.None : FileShare.Read);
     }
 }
