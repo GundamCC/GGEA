@@ -19,6 +19,16 @@ internal static class TemplateFallback
         return null;
     }
 
+    /// <summary>在同一帧的指定区域匹配完整模板，由调用方决定模板的加载和缓存策略。</summary>
+    public static TemplateMatchResult? MatchImage(string path, ScreenImage screen, Roi roi, double threshold,
+        TemplateMatcher matcher, Func<string, ScreenImage> load, CancellationToken ct = default)
+        => Match(path, candidate =>
+        {
+            var template = load(candidate);
+            return matcher.Match(screen.Bgra, screen.Width, screen.Height, template.Bgra,
+                template.Width, template.Height, threshold, roi, ct: ct);
+        }, ct);
+
     /// <summary>布尔观察遵循相同短路顺序；用于标题和风险检测，不解释业务授权。</summary>
     public static bool Any(string path, Func<string, bool> match, CancellationToken ct = default)
     {

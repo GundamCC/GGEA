@@ -204,8 +204,9 @@ public sealed class DevelopConfirmationTests
         using var screen = new Mat(1080, 1920, MatType.CV_8UC3, new Scalar(20, 20, 20));
         using (var region = new Mat(screen, new Rect(centered ? 963 : 1450, 315, scaled.Width, scaled.Height))) color.CopyTo(region, alpha);
         var adb = new FakeAdbService(screen.ToBytes(".png"));
+        // 成功场景必须跨过两次识别之间的五秒间隔，才有机会验证两帧中心位置。
         var match = await BallFactoryService.WaitForCenteredUnitAsync(new AutomationService(adb, new TemplateMatcher(), new TestLog(), textOcr: TapToNextOcrSamples.SharedOcr),
-            "device", centered ? 3000 : 100);
+            "device", centered ? GameTiming.RecognitionTimeoutMs : 100);
         Assert.Equal(centered, match is not null);
         if (centered) Assert.True(adb.ScreenshotCount >= 2);
         Assert.Empty(adb.Taps); Assert.Empty(adb.Swipes);

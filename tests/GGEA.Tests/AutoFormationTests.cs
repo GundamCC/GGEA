@@ -159,7 +159,7 @@ public sealed class AutoFormationTests
         Assert.Equal(new[] { (145, 445), Scene.AutoButton, Scene.ConfirmButton }, scene.Adb.Taps);
     }
 
-    /// <summary>只有自由部队被允许或系列部队无目标时，才切换自由部队并等待整整一秒。</summary>
+    /// <summary>只有自由部队被允许或系列部队无目标时，才切换自由部队并等待统一的画面识别间隔。</summary>
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -171,7 +171,7 @@ public sealed class AutoFormationTests
         Assert.Equal(allowSeries
             ? new[] { (145, 445), (145, 680), Scene.AutoButton, Scene.ConfirmButton }
             : new[] { (145, 680), Scene.AutoButton, Scene.ConfirmButton }, scene.Adb.Taps);
-        Assert.Equal(1000, scene.Delays[0]);
+        Assert.Equal(GameTiming.RecognitionIntervalMs, scene.Delays[0]);
     }
 
     /// <summary>未允许自由部队时不能通过切换来寻找目标；全部撤权时连截图都不需要。</summary>

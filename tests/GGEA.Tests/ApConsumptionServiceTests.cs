@@ -124,7 +124,16 @@ public class ApConsumptionServiceTests
     [Fact]
     public async Task ExecuteAsync_FiltersUnlockedTargets()
     {
-        var adb = new FakeAdbService(CreateStageMenuPng());
+        var menu = CreateStageMenuPng();
+        var resultPath = ConfigService.ResolvePath("resources/templates/stage/skip/skip_result.png");
+        var title = ImageCodec.DecodePng(File.ReadAllBytes(resultPath));
+        var resultPixels = TestImageFactory.CreateBgra(1920, 1080, 20);
+        for (var row = 0; row < title.Height; row++)
+            Buffer.BlockCopy(title.Bgra, row * title.Width * 4, resultPixels, ((30 + row) * 1920 + 820) * 4, title.Width * 4);
+        var resultPage = ImageCodec.EncodePng(resultPixels, 1920, 1080);
+        var adb = new FakeAdbService(menu);
+        // 执行略过后才出示结果标题，结果 OK 后恢复关卡画面。
+        adb.ScreenshotProvider = () => adb.Taps.LastOrDefault() == (1150, 850) ? resultPage : menu;
         var log = new TestLog();
         var workRecognizer = new FakeStageWorkRecognizer();
         workRecognizer.EnqueueFindResults(
@@ -138,7 +147,7 @@ public class ApConsumptionServiceTests
         var skipService = new StageSkipService(
             new AutomationService(adb, new TemplateMatcher(), log),
             log,
-            new StageSkipOptions { SkipDialogWaitMs = 0, SettleAfterOkMs = 0 });
+            new StageSkipOptions { SkipDialogWaitMs = 0, SettleAfterOkMs = 0, SkipResultTemplatePath = resultPath });
         var service = new ApConsumptionService(stageService, skipService, log);
 
         var plan = new[]
@@ -609,6 +618,7 @@ public class ApConsumptionServiceTests
             new() { Name = "stageSkip", X = 1594, Y = 678, Width = 160, Height = 64 },
             new() { Name = "skipDialogCancel", X = 710, Y = 820, Width = 120, Height = 60 },
             new() { Name = "skipDialogExecute", X = 1090, Y = 820, Width = 120, Height = 60 },
+            new() { Name = "skipResultTitle", X = 820, Y = 30, Width = 330, Height = 80 },
             new() { Name = "skipResultOk", X = 1640, Y = 960, Width = 72, Height = 56 },
             new() { Name = "skipCountLimit", X = 1590, Y = 680, Width = 160, Height = 60 },
             new() { Name = "apRecoveryClose", X = 910, Y = 960, Width = 110, Height = 70 },

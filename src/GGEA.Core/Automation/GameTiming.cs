@@ -3,6 +3,9 @@ namespace GGEA.App.Automation;
 /// <summary>游戏画面等待的统一默认值；检测放慢时同时保留加载预算，取消令牌仍即时中断等待。</summary>
 public static class GameTiming
 {
+    internal static Task DelayIfPositiveAsync(int milliseconds, CancellationToken ct)
+        => milliseconds <= 0 ? Task.CompletedTask : Task.Delay(milliseconds, ct);
+
     /// <summary>已发现候选后的新帧复核间隔；只控制采样频率，不代表等待到时就可点击。</summary>
     public const int ConfirmationIntervalMs = 500;
     /// <summary>尚无目标时的默认重试间隔；候选复核使用短间隔，不能用此值替代就绪判断。</summary>

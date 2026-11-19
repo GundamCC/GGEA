@@ -2,6 +2,23 @@
 
 以下命令均在桌面程序仓库根目录执行。
 
+## 任务代码
+
+[任务源码](../src/GGEA.Core/Tasks) 按功能分目录，现有任务类型沿用 `GGEA.App.Tasks` 命名空间。
+
+| 维护内容 | 目录 |
+| --- | --- |
+| 每日队列、商店、奖励、个人基地 | `Daily/`，后三项各有子目录 |
+| AP 消耗、招募、游戏启动、自动编成 | `ApConsumption/`、`Recruitment/`、`GameEntry/`、`Formation/` |
+| 开发路线图、铁球工厂、分解 | `Development/`、`Development/BallFactory/`、`Development/Dismantle/` |
+| 关卡选择、地图移动和略过 | `Stages/`、`Stages/Skip/` |
+| 开场、再次出击和结算 | `Sortie/` |
+| 自动推图队列、历史关卡、推图中的单关战斗 | `AutoProgress/`、`AutoProgress/History/`、`Sortie/AutoProgress/` |
+| 强敌来袭、大师联盟 | `FierceEnemy/`、`MasterLeague/` |
+| 跨任务导航操作、列表属性变更通知、下载弹窗 | `Shared/`、`Shared/Downloads/` |
+
+按钮识别后点击和返回主页的共用动作在 `TaskNavigationActions`。所需布局锚点通过 `UiLayout.Require` 获取；同一帧按语言素材回退匹配完整模板使用 `TemplateFallback.MatchImage`。各任务负责决定何时进入下一步、何时重试或终止。
+
 ## 构建与测试
 
 ```powershell

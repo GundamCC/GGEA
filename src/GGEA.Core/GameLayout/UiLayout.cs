@@ -21,6 +21,10 @@ public sealed class UiLayout
     [JsonPropertyName("anchors")]
     public List<UiAnchor> Anchors { get; set; } = new();
 
+    /// <summary>读取任务必需的锚点，缺失时由调用方提供具体的布局诊断。</summary>
+    internal UiAnchor Require(string name, string error)
+        => Find(name) ?? throw new InvalidOperationException(error);
+
     /// <summary>按名称查找锚点。</summary>
     public UiAnchor? Find(string name)
         => Anchors.FirstOrDefault(a => string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase));

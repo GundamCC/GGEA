@@ -244,7 +244,7 @@ public class DevelopServiceTests
         Assert.Equal(750, match!.CenterX);
         Assert.Equal(450, match.CenterY);
         Assert.Empty(fakeAdb.PinchInDurations);
-        Assert.Equal(new[] { (0, 250), (0, 250), (850, 0), (850, 0), (-850, 0) },
+        Assert.Equal(new[] { (0, 250), (0, 250), (490, 0), (490, 0), (-490, 0) },
             fakeAdb.Swipes.Select(s => (s.X2 - s.X1, s.Y2 - s.Y1)));
     }
 
@@ -279,7 +279,7 @@ public class DevelopServiceTests
         Assert.Null(match);
         Assert.Empty(fakeAdb.PinchInDurations);
         // 每个方向均换起点复核一次：下、右（归位）、左（扫描）、上（下一行）。
-        Assert.Equal(new[] { (0, 250), (0, 250), (850, 0), (850, 0), (-850, 0), (-850, 0), (0, -250), (0, -250) },
+        Assert.Equal(new[] { (0, 250), (0, 250), (490, 0), (490, 0), (-490, 0), (-490, 0), (0, -250), (0, -250) },
             fakeAdb.Swipes.Select(s => (s.X2 - s.X1, s.Y2 - s.Y1)));
         Assert.Equal(new[] { (714, 977), (629, 339) }, fakeAdb.Taps);
     }
