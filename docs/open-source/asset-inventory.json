@@ -3964,11 +3964,11 @@
     },
     {
       "path": "resources/zh-CN/templates/stage/pvp/title_round_stage_info.png",
-      "sha256": "adeeccb1113225bf9e60a53394e138c959cb82dbe8b7facb005e52b46b7a565a",
+      "sha256": "3dd2c634320d872e160745de8ce4bb0d60e40f90a69f2edca30f55800a9021b2",
       "width": 568,
       "height": 63,
       "category": "recognition-resource",
-      "source": "2026-11-20 MuMu ADB capture of the Simplified Chinese Master League round stage information title",
+      "source": "2026-11-20 MuMu native 1920x1080 ADB screenshot, cropped to the Simplified Chinese Master League round stage information title",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "title-only-crop-no-account-data"
     },
