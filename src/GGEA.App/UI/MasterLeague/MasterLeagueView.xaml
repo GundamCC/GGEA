@@ -1,0 +1,26 @@
+<StackPanel x:Class="GGEA.App.UI.MasterLeagueView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:GGEA.App.Localization"
+        Margin="0,14,0,0">
+    <TextBlock Text="{loc:Text Source='请在非战斗界面使用'}" Style="{StaticResource HintText}" TextWrapping="Wrap"/>
+    <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+        <CheckBox x:Name="MasterLeagueAutoFormationCheck" IsChecked="False" Style="{StaticResource TaskCheckBox}"
+                  AutomationProperties.Name="{loc:Text Source='进行自动编制'}"/>
+        <Label Content="{loc:Text Source='进行自动编制'}" Target="{Binding ElementName=MasterLeagueAutoFormationCheck}"
+               Foreground="{DynamicResource Brush.Text}" Margin="8,0,0,0"/>
+    </StackPanel>
+    <!-- 刷新会舍弃原对手积分，只在五人均已挑战时执行。 -->
+    <StackPanel Orientation="Horizontal" Margin="0,8,0,0"
+                ToolTip="{loc:Text Source='五名对手均已挑战时，刷新败北对手并重新挑战；刷新会舍弃该对手原积分。'}">
+        <CheckBox x:Name="MasterLeagueRetryDefeatedCheck" IsChecked="False" Style="{StaticResource TaskCheckBox}"
+                  AutomationProperties.Name="{loc:Text Source='刷新挑战失败的对手'}"/>
+        <Label Content="{loc:Text Source='刷新挑战失败的对手'}" Target="{Binding ElementName=MasterLeagueRetryDefeatedCheck}"
+               Foreground="{DynamicResource Brush.Text}" Margin="8,0,0,0"/>
+    </StackPanel>
+    <Button x:Name="MasterLeagueStartButton" Content="{loc:Text Source='开始大师联盟'}"
+            HorizontalAlignment="Left" MinWidth="140" Height="34" Margin="0,20,0,0"
+            Style="{StaticResource ButtonPrimary}"/>
+    <TextBlock x:Name="MasterLeagueStatusText" Text="{loc:Text Source='尚未开始。'}" Margin="0,12,0,0"
+               Style="{StaticResource StatusText}" TextWrapping="Wrap"/>
+</StackPanel>

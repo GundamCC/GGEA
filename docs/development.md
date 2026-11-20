@@ -21,6 +21,22 @@
 
 自动刷本的开始按钮取得设备租约后调用 `SortieFlowService.RunFarmAsync`。`AutoFarmRunner` 按结算结果推进轮次，开场控件确认和再次出击识别由出击服务处理。
 
+## 桌面界面代码
+
+[主窗口](../src/GGEA.App/UI/MainWindow.xaml) 定义页眉、侧栏、标签顺序和日志区。主窗口构造函数连接各面板，加载与关闭事件管理窗口生命周期。修改一个功能时，可以在 [UI 目录](../src/GGEA.App/UI) 找到同目录的视图和事件处理。
+
+| 维护内容 | 入口 |
+| --- | --- |
+| 设备列表、重连和游戏启动 | `Devices/` |
+| 全窗口执行互斥、取消、控件可用状态和通知 | `Execution/`、`Notifications/` |
+| 每日队列、奖励与 AP 方案 | `Daily/`、`ApConsumption/` |
+| 刷本、推图、招募、强敌、大师联盟和铁球工厂 | `AutoFarm/`、`AutoProgress/`、`Scout/`、`FierceEnemy/`、`MasterLeague/`、`BallFactory/` |
+| 开发版截图、模板采集和作品坐标 | `Developer/` |
+| 服务装配、页眉与设置 | `Shell/`、`Settings/` |
+| 列表排序、悬停反馈与共享样式 | `Components/`、`Themes/` |
+
+功能面板的命名控件由各自的 XAML 管理。窗口通过面板字段连接事件，模板中动态生成的按钮通过面板事件上报。每日任务与 AP 作品列表共用 `ListReorder<T>`，各自持有排序状态。
+
 ## 构建与测试
 
 ```powershell

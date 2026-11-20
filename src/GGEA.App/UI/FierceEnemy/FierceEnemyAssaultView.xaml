@@ -1,0 +1,29 @@
+<StackPanel x:Class="GGEA.App.UI.FierceEnemyAssaultView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:GGEA.App.Localization"
+        Margin="0,14,0,0">
+    <TextBlock Text="{loc:Text Source='请在非战斗界面使用'}" Style="{StaticResource HintText}" TextWrapping="Wrap"/>
+    <TextBlock Text="{loc:Text Source='选择单位与难度，添加到每日任务后自动查找关卡并略过。'}"
+               Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+    <Grid x:Name="FierceEnemySelectionPanel" Margin="0,18,0,0">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <StackPanel Margin="0,0,12,0">
+            <TextBlock Text="{loc:Text Source='强敌单位'}" Style="{StaticResource HintText}" Margin="0,0,0,6"/>
+            <ComboBox x:Name="FierceEnemyUnitBox" DisplayMemberPath="Name" Height="34" Style="{StaticResource ComboBoxDark}"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1" Margin="0,0,12,0">
+            <TextBlock Text="{loc:Text Source='难度'}" Style="{StaticResource HintText}" Margin="0,0,0,6"/>
+            <ComboBox x:Name="FierceEnemyDifficultyBox" Height="34" Style="{StaticResource ComboBoxDark}"/>
+        </StackPanel>
+        <Button Grid.Column="2" x:Name="FierceEnemyAddButton" Content="{loc:Text Source='添加到每日任务'}" Height="34" VerticalAlignment="Bottom"
+                Style="{StaticResource ButtonPrimary}"/>
+    </Grid>
+    <TextBlock Text="{loc:Text Source='CHALLENGE 不支持略过。首次添加在消耗 AP 之前，再次添加替换现有强敌任务。'}"
+               Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,10,0,0"/>
+    <Button x:Name="FierceEnemyAssaultStartButton" Content="{loc:Text Source='执行单次略过'}"
+            HorizontalAlignment="Left" MinWidth="140" Height="34" Margin="0,20,0,0"
+            Style="{StaticResource ButtonPrimary}"/>
+    <TextBlock x:Name="FierceEnemyAssaultStatusText" Text="{loc:Text Source='尚未开始。'}" Margin="0,12,0,0"
+               Style="{StaticResource StatusText}" TextWrapping="Wrap"/>
+</StackPanel>

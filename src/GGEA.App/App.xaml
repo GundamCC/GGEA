@@ -8,6 +8,8 @@
         <ResourceDictionary.MergedDictionaries>
             <!-- 默认夜间模式；运行期间仅替换此配色字典，保留所有控件与绑定。 -->
             <ResourceDictionary Source="UI/Themes/Dark.xaml"/>
+            <ResourceDictionary Source="UI/Themes/TaskLists.xaml"/>
+            <ResourceDictionary Source="UI/Shell/HeaderStyles.xaml"/>
         </ResourceDictionary.MergedDictionaries>
 
         <Style x:Key="SectionIndex" TargetType="TextBlock">
@@ -466,57 +468,6 @@
             </Setter>
         </Style>
 
-        <!-- 作品列表与日志使用相同浅色表面，禁用时保留可读性。 -->
-        <Style x:Key="ApPlanList" TargetType="ListBox">
-            <Setter Property="Background" Value="{DynamicResource Brush.Card}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Foreground" Value="{DynamicResource Brush.Text}"/>
-            <Setter Property="Padding" Value="5"/>
-            <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ListBox">
-                        <Border x:Name="ListBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
-                            <ScrollViewer Focusable="False" Padding="1">
-                                <ItemsPresenter/>
-                            </ScrollViewer>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="ListBorder" Property="Background" Value="{DynamicResource Brush.Background}"/>
-                                <Setter TargetName="ListBorder" Property="BorderBrush" Value="{DynamicResource Brush.Border}"/>
-                                <Setter Property="Opacity" Value="0.62"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- 日志列表 -->
-        <Style x:Key="LogList" TargetType="ListBox">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource Brush.TextDim}"/>
-            <Setter Property="FontFamily" Value="Consolas"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
-            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
-            <Setter Property="ItemTemplate">
-                <Setter.Value>
-                    <DataTemplate>
-                        <!-- 自动换行：避免出现横向滚动条，从而消除右下角系统浅色滚动条交叉角 -->
-                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,1"/>
-                    </DataTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

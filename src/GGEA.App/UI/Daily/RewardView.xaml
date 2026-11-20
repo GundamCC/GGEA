@@ -1,0 +1,102 @@
+<Grid x:Class="GGEA.App.UI.RewardView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:GGEA.App.Localization"
+        xmlns:ui="clr-namespace:GGEA.App.UI"
+        Margin="0,14,0,0">
+    <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock Grid.Row="0"
+               Text="{loc:Text Source='勾选需要自动领取的奖励；每日任务中的“领取奖励”会按以下顺序执行。'}"
+               Style="{StaticResource HintText}"
+               Margin="0,0,0,10"/>
+
+    <ListBox x:Name="RewardTaskList"
+             ItemContainerStyle="{StaticResource SelectableTaskRow}"
+             Grid.Row="1"
+             Style="{StaticResource ApPlanList}"
+             Background="Transparent"
+             BorderThickness="0"
+             ScrollViewer.VerticalScrollBarVisibility="Auto"
+             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+        <ListBox.ItemTemplate>
+            <DataTemplate>
+                <Border Background="{DynamicResource Brush.CardAlt}"
+                        BorderBrush="{DynamicResource Brush.Border}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="12,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid Grid.Column="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding Name}"
+                                       Foreground="{DynamicResource Brush.Text}"
+                                       FontSize="12"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock x:Name="MissionHelpMark"
+                                       Grid.Column="1"
+                                       Text="?"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       Margin="6,0,0,0"
+                                       Cursor="Help"
+                                       VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextDim}"/>
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasHelp}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Popup x:Name="MissionHelpPopup"
+                                   PlacementTarget="{Binding ElementName=MissionHelpMark}"
+                                   Placement="Bottom"
+                                   AllowsTransparency="True"
+                                   StaysOpen="True"
+                                   IsOpen="{Binding ElementName=MissionHelpMark, Path=(ui:HoverFeedback.IsActive), Mode=OneWay}">
+                                <Border Background="{DynamicResource Brush.Toolbar}"
+                                        BorderBrush="{DynamicResource Brush.Border}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="12,10"
+                                        MaxWidth="320">
+                                    <TextBlock Text="{loc:Text Source='领取每日使命奖励会在每日任务队列最后再执行一次。'}"
+                                               Foreground="{DynamicResource Brush.Text}"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"/>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <CheckBox Grid.Column="1"
+                                  Style="{StaticResource TaskCheckBox}"
+                                  IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ListBox.ItemTemplate>
+    </ListBox>
+
+    <TextBlock x:Name="RewardPlanStatusText"
+               Grid.Row="2"
+               Style="{StaticResource StatusText}"
+               Text="{loc:Text Source='在左侧每日任务中勾选“领取奖励”，然后点击开始。'}"/>
+</Grid>

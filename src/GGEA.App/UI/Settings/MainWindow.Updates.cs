@@ -10,6 +10,9 @@ namespace GGEA.App.UI;
 
 public partial class MainWindow
 {
+    /// <summary>更新交接后禁止新业务；关闭仍通过窗口任务收尾和插件释放流程。</summary>
+    private bool _updatePending;
+
     private bool _startupUpdateChecked;
     private bool _startupUpdateAcknowledged;
     private UpdateRelease? _startupUpdate;

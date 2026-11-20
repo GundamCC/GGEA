@@ -8,6 +8,12 @@ namespace GGEA.App.UI;
 /// <summary>强敌来袭入口共用窗口任务生命周期与设备互斥，关闭窗口或中止均可取消。</summary>
 public partial class MainWindow
 {
+    private void ConnectFierceEnemyAssaultView()
+    {
+        FierceEnemyAssaultView.FierceEnemyAddButton.Click += FierceEnemyAddButton_Click;
+        FierceEnemyAssaultView.FierceEnemyAssaultStartButton.Click += FierceEnemyAssaultStartButton_Click;
+    }
+
     /// <summary>启动配置加载后恢复动态任务；失败保留原配置并告知用户，不替换为默认单位。</summary>
     private void RestoreFierceEnemyDailyTask()
     {
@@ -21,7 +27,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            FierceEnemyAssaultStatusText.Text = L.Text("恢复强敌每日任务失败，请检查单位目录或重新添加任务。");
+            FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = L.Text("恢复强敌每日任务失败，请检查单位目录或重新添加任务。");
             _logger?.Warn(L.Format($"恢复强敌每日任务失败: {ex.GetType().Name}"));
         }
     }
@@ -44,7 +50,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            FierceEnemyAssaultStatusText.Text = L.Text("每日任务已在当前窗口更新，但保存失败，重启后可能丢失，请检查配置目录。");
+            FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = L.Text("每日任务已在当前窗口更新，但保存失败，重启后可能丢失，请检查配置目录。");
             _logger.Warn(L.Format($"强敌每日任务保存失败: {ex.GetType().Name}"));
         }
     }
@@ -53,18 +59,18 @@ public partial class MainWindow
     /// <summary>目录错误在当前页显示，不影响其他每日任务使用。</summary>
     private void InitializeFierceEnemySelection()
     {
-        FierceEnemyDifficultyBox.ItemsSource = Enum.GetValues<FierceEnemyDifficulty>();
-        FierceEnemyDifficultyBox.SelectedIndex = 0;
+        FierceEnemyAssaultView.FierceEnemyDifficultyBox.ItemsSource = Enum.GetValues<FierceEnemyDifficulty>();
+        FierceEnemyAssaultView.FierceEnemyDifficultyBox.SelectedIndex = 0;
         try
         {
             var units = FierceEnemyUnit.Load();
-            FierceEnemyUnitBox.ItemsSource = new[] { FierceEnemyUnit.Latest }.Concat(units).ToArray();
-            FierceEnemyUnitBox.SelectedItem = units.MaxBy(unit => unit.Id);
+            FierceEnemyAssaultView.FierceEnemyUnitBox.ItemsSource = new[] { FierceEnemyUnit.Latest }.Concat(units).ToArray();
+            FierceEnemyAssaultView.FierceEnemyUnitBox.SelectedItem = units.MaxBy(unit => unit.Id);
         }
         catch (Exception ex)
         {
-            FierceEnemySelectionPanel.IsEnabled = false;
-            FierceEnemyAssaultStatusText.Text = L.Format($"无法加载强敌单位：{ex.Message}");
+            FierceEnemyAssaultView.FierceEnemySelectionPanel.IsEnabled = false;
+            FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = L.Format($"无法加载强敌单位：{ex.Message}");
         }
     }
 
@@ -73,8 +79,8 @@ public partial class MainWindow
     {
         if (!FierceEnemyAvailable) return;
         if (_busy || _windowTasks.IsStopping) return;
-        if (FierceEnemyUnitBox.SelectedItem is not FierceEnemyUnit unit ||
-            FierceEnemyDifficultyBox.SelectedItem is not FierceEnemyDifficulty difficulty) return;
+        if (FierceEnemyAssaultView.FierceEnemyUnitBox.SelectedItem is not FierceEnemyUnit unit ||
+            FierceEnemyAssaultView.FierceEnemyDifficultyBox.SelectedItem is not FierceEnemyDifficulty difficulty) return;
         var existing = _dailyTasks.FirstOrDefault(t => t.Kind == DailyTaskKind.FierceEnemySkip);
         var item = new DailyTaskItem { Kind = DailyTaskKind.FierceEnemySkip, Name = L.Text("强敌来袭略过"),
             FierceEnemySelection = new(unit, difficulty), IsChecked = true };
@@ -90,20 +96,19 @@ public partial class MainWindow
             var ap = _dailyTasks.FirstOrDefault(t => t.Kind == DailyTaskKind.ConsumeAp);
             _dailyTasks.Insert(ap is null ? _dailyTasks.Count : _dailyTasks.IndexOf(ap), item);
         }
-        FierceEnemyAssaultStatusText.Text = $"{(existing is null ? L.Text("已添加") : L.Text("已替换"))}：{unit.Name} / {difficulty}。";
+        FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = $"{(existing is null ? L.Text("已添加") : L.Text("已替换"))}：{unit.Name} / {difficulty}。";
         SaveFierceEnemyDailyTask();
         UpdateDailySelectAllState();
         UpdateBusyState();
     }
 
     /// <summary>仅允许移除动态强敌任务；解除事件订阅，执行期间不允许改动队列。</summary>
-    private void FierceEnemyRemoveButton_Click(object sender, RoutedEventArgs e)
+    private void RemoveFierceEnemyTask(DailyTaskItem item)
     {
-        e.Handled = true;
-        if (_busy || _windowTasks.IsStopping || (sender as FrameworkElement)?.DataContext is not DailyTaskItem item ||
+        if (_busy || _windowTasks.IsStopping ||
             item.Kind != DailyTaskKind.FierceEnemySkip || !_dailyTasks.Remove(item)) return;
         item.PropertyChanged -= DailyTask_StateChanged;
-        FierceEnemyAssaultStatusText.Text = L.Text("已删除每日任务中的强敌来袭略过。");
+        FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = L.Text("已删除每日任务中的强敌来袭略过。");
         SaveFierceEnemyDailyTask();
         UpdateDailySelectAllState();
         UpdateBusyState();
@@ -120,47 +125,47 @@ public partial class MainWindow
         if (_fierceEnemyAssaultCts is not null)
         {
             _fierceEnemyAssaultCts.Cancel();
-            FierceEnemyAssaultStartButton.Content = L.Text("正在停止…");
+            FierceEnemyAssaultView.FierceEnemyAssaultStartButton.Content = L.Text("正在停止…");
             UpdateBusyState();
             return;
         }
         using var execution = TryBeginExecution();
         if (execution is null) return;
         if (_automation is null || _logger is null)
-        { FierceEnemyAssaultStatusText.Text = L.Text("请先连接并选择模拟器。"); return; }
-        var serial = await GetOnlineTaskSerialAsync(execution, FierceEnemyAssaultStatusText, _windowTasks.Token);
+        { FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = L.Text("请先连接并选择模拟器。"); return; }
+        var serial = await GetOnlineTaskSerialAsync(execution, FierceEnemyAssaultView.FierceEnemyAssaultStatusText, _windowTasks.Token);
         if (serial is null) return;
-        if (FierceEnemyUnitBox.SelectedItem is not FierceEnemyUnit unit ||
-            FierceEnemyDifficultyBox.SelectedItem is not FierceEnemyDifficulty difficulty)
-        { FierceEnemyAssaultStatusText.Text = L.Text("请先选择强敌单位和难度。"); return; }
+        if (FierceEnemyAssaultView.FierceEnemyUnitBox.SelectedItem is not FierceEnemyUnit unit ||
+            FierceEnemyAssaultView.FierceEnemyDifficultyBox.SelectedItem is not FierceEnemyDifficulty difficulty)
+        { FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = L.Text("请先选择强敌单位和难度。"); return; }
         var selection = new FierceEnemySkipSelection(unit, difficulty);
         _fierceEnemyAssaultCts = CancellationTokenSource.CreateLinkedTokenSource(_windowTasks.Token);
         var ct = _fierceEnemyAssaultCts.Token;
-        FierceEnemyAssaultStartButton.Content = L.Text("中止略过");
-        FierceEnemyAssaultStatusText.Text = L.Text("正在确认主界面并进入事件…");
+        FierceEnemyAssaultView.FierceEnemyAssaultStartButton.Content = L.Text("中止略过");
+        FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = L.Text("正在确认主界面并进入事件…");
         UpdateBusyState();
         try
         {
             if (!await EnsureDeviceCompatibilityAsync(serial, ct))
-            { FierceEnemyAssaultStatusText.Text = L.Text("设备画面不兼容，已停止略过。"); return; }
+            { FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = L.Text("设备画面不兼容，已停止略过。"); return; }
             if (!await EnsureMainScreenAsync(serial, ct))
-            { FierceEnemyAssaultStatusText.Text = L.Text("未确认主界面，已停止略过。"); return; }
+            { FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = L.Text("未确认主界面，已停止略过。"); return; }
             var result = await new FierceEnemySkipService(_automation, _logger, GetTextOcr(),
                 confirm => CreateStageSkipService(false, confirm), GetRecognitionEvidence()).ExecuteAsync(serial, _mainLayout,
                     _stageLayout, selection, ct);
-            FierceEnemyAssaultStatusText.Text = result.Message;
+            FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = result.Message;
             if (result.Success || result.IsUnavailable) _logger.Info(result.Message);
             else _logger.Warn(result.Message);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        { FierceEnemyAssaultStatusText.Text = L.Text("强敌来袭略过已中止。"); _logger.Info(FierceEnemyAssaultStatusText.Text); }
+        { FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = L.Text("强敌来袭略过已中止。"); _logger.Info(FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text); }
         catch (Exception ex)
-        { FierceEnemyAssaultStatusText.Text = L.Format($"强敌来袭略过已停止：{ex.Message}"); _logger.Error(FierceEnemyAssaultStatusText.Text); }
+        { FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = L.Format($"强敌来袭略过已停止：{ex.Message}"); _logger.Error(FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text); }
         finally
         {
             _fierceEnemyAssaultCts.Dispose();
             _fierceEnemyAssaultCts = null;
-            FierceEnemyAssaultStartButton.Content = L.Text("执行单次略过");
+            FierceEnemyAssaultView.FierceEnemyAssaultStartButton.Content = L.Text("执行单次略过");
             UpdateBusyState();
         }
     }

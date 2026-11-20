@@ -7,6 +7,11 @@ namespace GGEA.App.UI;
 /// <summary>大师联盟页共用窗口任务生命周期和设备互斥；任务选项仅属于本次窗口会话。</summary>
 public partial class MainWindow
 {
+    private void ConnectMasterLeagueView()
+    {
+        MasterLeagueView.MasterLeagueStartButton.Click += MasterLeagueStartButton_Click;
+    }
+
     private CancellationTokenSource? _masterLeagueCts;
 
     /// <summary>注册到窗口任务集合，关闭窗口会取消并等待清理。</summary>
@@ -19,24 +24,24 @@ public partial class MainWindow
         if (_masterLeagueCts is not null)
         {
             _masterLeagueCts.Cancel();
-            MasterLeagueStartButton.Content = L.Text("正在停止…");
+            MasterLeagueView.MasterLeagueStartButton.Content = L.Text("正在停止…");
             UpdateBusyState();
             return;
         }
         using var execution = TryBeginExecution();
         if (execution is null) return;
         if (_automation is null || _logger is null)
-        { MasterLeagueStatusText.Text = L.Text("请先连接并选择模拟器。"); return; }
-        var serial = await GetOnlineTaskSerialAsync(execution, MasterLeagueStatusText, _windowTasks.Token);
+        { MasterLeagueView.MasterLeagueStatusText.Text = L.Text("请先连接并选择模拟器。"); return; }
+        var serial = await GetOnlineTaskSerialAsync(execution, MasterLeagueView.MasterLeagueStatusText, _windowTasks.Token);
         if (serial is null) return;
         if (_config.GameLanguage != "zh-CN")
-        { MasterLeagueStatusText.Text = L.Text("大师联盟当前仅支持简体中文游戏界面。"); return; }
-        var autoFormation = MasterLeagueAutoFormationCheck.IsChecked == true;
-        var retryDefeated = MasterLeagueRetryDefeatedCheck.IsChecked == true;
+        { MasterLeagueView.MasterLeagueStatusText.Text = L.Text("大师联盟当前仅支持简体中文游戏界面。"); return; }
+        var autoFormation = MasterLeagueView.MasterLeagueAutoFormationCheck.IsChecked == true;
+        var retryDefeated = MasterLeagueView.MasterLeagueRetryDefeatedCheck.IsChecked == true;
         _masterLeagueCts = CancellationTokenSource.CreateLinkedTokenSource(_windowTasks.Token);
         var ct = _masterLeagueCts.Token;
-        MasterLeagueStartButton.Content = L.Text("中止");
-        MasterLeagueStatusText.Text = L.Text("正在进入大师联盟…");
+        MasterLeagueView.MasterLeagueStartButton.Content = L.Text("中止");
+        MasterLeagueView.MasterLeagueStatusText.Text = L.Text("正在进入大师联盟…");
         UpdateBusyState();
         try
         {
@@ -69,13 +74,13 @@ public partial class MainWindow
                 }
                 catch (Exception ex) when (MasterLeagueService.IsRecoverableDeviceError(ex, ct))
                 { _logger.Info("大师联盟入口暂不可用，等待原设备或网络恢复后重新确认。"); }
-                MasterLeagueStatusText.Text = "正在等待设备或入口恢复，任务仍在运行，可中止。";
+                MasterLeagueView.MasterLeagueStatusText.Text = "正在等待设备或入口恢复，任务仍在运行，可中止。";
                 await Task.Delay(5000, ct);
             }
-            MasterLeagueStatusText.Text = L.Text("正在挑战大师联盟…");
+            MasterLeagueView.MasterLeagueStatusText.Text = L.Text("正在挑战大师联盟…");
             var progress = new Progress<string>(message =>
             {
-                if (_masterLeagueCts is not null && !ct.IsCancellationRequested) MasterLeagueStatusText.Text = L.Text(message);
+                if (_masterLeagueCts is not null && !ct.IsCancellationRequested) MasterLeagueView.MasterLeagueStatusText.Text = L.Text(message);
             });
             var homeDetector = CreateMainScreenDetector();
             var result = await service.RunChallengesAsync(serial, vision, resultRecognizer, retryDefeated, ct, progress,
@@ -85,18 +90,18 @@ public partial class MainWindow
                     if (!await homeDetector.IsMainScreenAsync(serial, token)) return false;
                     return (await service.OpenFromHomeAsync(serial, _mainLayout, false, token)).Success;
                 });
-            MasterLeagueStatusText.Text = L.Text(result.Message);
+            MasterLeagueView.MasterLeagueStatusText.Text = L.Text(result.Message);
             _logger.Info(result.Message);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        { MasterLeagueStatusText.Text = L.Text("大师联盟流程已中止。"); _logger.Info(MasterLeagueStatusText.Text); }
+        { MasterLeagueView.MasterLeagueStatusText.Text = L.Text("大师联盟流程已中止。"); _logger.Info(MasterLeagueView.MasterLeagueStatusText.Text); }
         catch (Exception ex)
-        { MasterLeagueStatusText.Text = L.Format($"大师联盟流程已停止：{ex.Message}"); _logger.Error(MasterLeagueStatusText.Text); }
+        { MasterLeagueView.MasterLeagueStatusText.Text = L.Format($"大师联盟流程已停止：{ex.Message}"); _logger.Error(MasterLeagueView.MasterLeagueStatusText.Text); }
         finally
         {
             _masterLeagueCts.Dispose();
             _masterLeagueCts = null;
-            MasterLeagueStartButton.Content = L.Text("开始大师联盟");
+            MasterLeagueView.MasterLeagueStartButton.Content = L.Text("开始大师联盟");
             UpdateBusyState();
         }
     }

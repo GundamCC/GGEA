@@ -33,8 +33,8 @@ public sealed class ThemeTests
                 VerifyOfflineDeviceRecovery(window);
                 VerifyJapanFierceEnemyVisibility();
                 var toggle = (Button)window.FindName("ThemeToggleButton");
-                var input = (TextBox)window.FindName("AutoFarmCountBox");
-                var tasks = (ListBox)window.FindName("DailyTaskList");
+                var input = window.AutoFarmView.AutoFarmCountBox;
+                var tasks = window.DailyView.DailyTaskList;
                 var firstTask = tasks.Items[0];
                 input.Text = "27";
                 Assert.True(app.IsDarkMode);
@@ -242,7 +242,7 @@ public sealed class ThemeTests
             var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
             var start = (Task)typeof(MainWindow).GetMethod("StartBallFactoryAsync", flags)!.Invoke(window, null)!;
             Assert.True(start.IsCompletedSuccessfully);
-            Assert.Equal("先にエミュレーターを接続・選択してください。", ((TextBlock)window.FindName("BallFactoryStatusText")).Text);
+            Assert.Equal("先にエミュレーターを接続・選択してください。", window.BallFactoryView.BallFactoryStatusText.Text);
             var tabs = (TabControl)window.FindName("MainTabControl");
             tabs.SelectedItem = window.FindName("AutoProgressTab");
             RenderLocalizationPreview(window, 1280, 780, "main-ja-offscreen");
@@ -318,8 +318,8 @@ public sealed class ThemeTests
         daily.Add(dailyEnemy);
         var tabs = (TabControl)window.FindName("MainTabControl");
         var enemyTab = (TabItem)window.FindName("FierceEnemyAssaultTab");
-        var type = (ComboBox)window.FindName("AutoProgressTypeCombo");
-        var enemyType = (ComboBoxItem)window.FindName("AutoProgressFierceEnemyTypeItem");
+        var type = window.AutoProgressView.AutoProgressTypeCombo;
+        var enemyType = window.AutoProgressView.AutoProgressFierceEnemyTypeItem;
         tabs.SelectedItem = enemyTab;
         type.SelectedIndex = 2;
         config.GameServer = "japan";
@@ -330,19 +330,19 @@ public sealed class ThemeTests
         Assert.False(enemyType.IsEnabled);
         Assert.Equal(0, type.SelectedIndex);
         Assert.Same(window.FindName("AutoProgressTab"), tabs.SelectedItem);
-        var shownQueue = (ListBox)window.FindName("AutoProgressQueueList");
-        var shownDaily = (ListBox)window.FindName("DailyTaskList");
+        var shownQueue = window.AutoProgressView.AutoProgressQueueList;
+        var shownDaily = window.DailyView.DailyTaskList;
         Assert.Same(main, Assert.Single(shownQueue.Items.Cast<object>()));
         Assert.DoesNotContain(dailyEnemy, shownDaily.Items.Cast<object>());
         Assert.Same(main, Assert.Single((GGEA.App.Tasks.AutoProgressTarget[])Invoke("AvailableAutoProgressTargets")!));
         Assert.False((bool)typeof(MainWindow).GetMethod("IsDailyTaskAvailable", flags)!.Invoke(window, [dailyEnemy])!);
-        Assert.DoesNotContain("强敌", ((TextBlock)window.FindName("AutoProgressStatusText")).Text);
-        var selectAll = (CheckBox)window.FindName("DailySelectAllCheckBox");
+        Assert.DoesNotContain("强敌", window.AutoProgressView.AutoProgressStatusText.Text);
+        var selectAll = window.DailyView.DailySelectAllCheckBox;
         selectAll.IsChecked = false;
         selectAll.RaiseEvent(new RoutedEventArgs(CheckBox.ClickEvent));
         Assert.True(dailyEnemy.IsChecked); // 隐藏项不参与日服全选，也不能被取消勾选后写回配置。
         var count = daily.Count;
-        ((Button)window.FindName("FierceEnemyAddButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        window.FierceEnemyAssaultView.FierceEnemyAddButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Assert.Equal(count, daily.Count);
         Assert.Same(dailyEnemy, daily.Last());
         RenderServerFeaturePreview(window, "japan");
@@ -446,7 +446,7 @@ public sealed class ThemeTests
         var tabs = (TabControl)window.FindName("MainTabControl");
         var previous = tabs.SelectedItem;
         tabs.SelectedItem = window.FindName("AutoProgressTab");
-        var combo = (ComboBox)window.FindName("AutoProgressWorkCombo");
+        var combo = window.AutoProgressView.AutoProgressWorkCombo;
         var works = new[]
         {
             new GGEA.App.Tasks.AutoProgressTarget(new GGEA.App.Config.HardStageEntry { Id = 20, Work = "Victory Gundam", NormalCount = 20, HardCount = 3 }, null),
@@ -481,10 +481,10 @@ public sealed class ThemeTests
         host.UpdateLayout();
         Assert.Same(works[1], combo.SelectedItem);
         Assert.Contains(Descendants(combo).OfType<TextBlock>(), text => text.Text == works[1].Work);
-        var add = (Button)window.FindName("AutoProgressAddButton");
+        var add = window.AutoProgressView.AutoProgressAddButton;
         add.IsEnabled = true;
         add.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        var queue = (ListBox)window.FindName("AutoProgressQueueList");
+        var queue = window.AutoProgressView.AutoProgressQueueList;
         Assert.Same(works[1], Assert.Single(queue.Items.Cast<object>()));
         host.UpdateLayout();
         Assert.Contains(Descendants(queue).OfType<TextBlock>(), text => text.Text == "主线 · 普通（含 BOSS）14 关 · 支线 0 关 · HARD 3 关");
@@ -520,11 +520,11 @@ public sealed class ThemeTests
     /// <summary>在真实控件上操作多选权限，确认两种策略即时回退且重选后不会恢复旧的自动授权。</summary>
     private static void VerifyAutoProgressOptions(MainWindow window)
     {
-        var series = (CheckBox)window.FindName("AutoProgressSeriesCheck");
-        var free = (CheckBox)window.FindName("AutoProgressFreeCheck");
-        var empty = (ComboBox)window.FindName("AutoProgressEmptyActionCombo");
-        var terrain = (ComboBox)window.FindName("AutoProgressTerrainActionCombo");
-        var teams = (System.Windows.Controls.Primitives.ToggleButton)window.FindName("AutoProgressTeamsButton");
+        var series = window.AutoProgressView.AutoProgressSeriesCheck;
+        var free = window.AutoProgressView.AutoProgressFreeCheck;
+        var empty = window.AutoProgressView.AutoProgressEmptyActionCombo;
+        var terrain = window.AutoProgressView.AutoProgressTerrainActionCombo;
+        var teams = window.AutoProgressView.AutoProgressTeamsButton;
         Assert.True(series.IsChecked);
         Assert.True(free.IsChecked);
         Assert.Equal(1, empty.SelectedIndex);
@@ -566,7 +566,7 @@ public sealed class ThemeTests
             restarted = new MainWindow();
             field.SetValue(restarted, service.Load(path));
             typeof(MainWindow).GetMethod("RestoreFierceEnemyDailyTask", flags)!.Invoke(restarted, null);
-            var list = (ListBox)restarted.FindName("DailyTaskList");
+            var list = restarted.DailyView.DailyTaskList;
             var tasks = list.Items.Cast<GGEA.App.Tasks.DailyTaskItem>().Where(task => task.CanRemove);
             if (expected is null)
             {
@@ -590,14 +590,14 @@ public sealed class ThemeTests
     /// <summary>实际按钮验证强敌任务唯一替换、默认勾选、队列位置和删除，不调用 ADB。</summary>
     private static void VerifyFierceEnemyTasks(MainWindow window)
     {
-        var list = (ListBox)window.FindName("DailyTaskList");
-        var units = (ComboBox)window.FindName("FierceEnemyUnitBox");
-        var difficulty = (ComboBox)window.FindName("FierceEnemyDifficultyBox");
+        var list = window.DailyView.DailyTaskList;
+        var units = window.FierceEnemyAssaultView.FierceEnemyUnitBox;
+        var difficulty = window.FierceEnemyAssaultView.FierceEnemyDifficultyBox;
         Assert.Equal(GGEA.App.Tasks.FierceEnemyUnit.Latest, units.Items[0]);
         Assert.Equal(GGEA.App.Tasks.FierceEnemyUnit.Load().Max(u => u.Id), ((GGEA.App.Tasks.FierceEnemyUnit)units.SelectedItem).Id);
-        var add = (Button)window.FindName("FierceEnemyAddButton");
-        var status = (TextBlock)window.FindName("FierceEnemyAssaultStatusText");
-        Assert.Equal("执行单次略过", ((Button)window.FindName("FierceEnemyAssaultStartButton")).Content);
+        var add = window.FierceEnemyAssaultView.FierceEnemyAddButton;
+        var status = window.FierceEnemyAssaultView.FierceEnemyAssaultStatusText;
+        Assert.Equal("执行单次略过", window.FierceEnemyAssaultView.FierceEnemyAssaultStartButton.Content);
         add.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         var first = Assert.Single(list.Items.Cast<GGEA.App.Tasks.DailyTaskItem>(), t => t.CanRemove);
         var index = list.Items.IndexOf(first);
@@ -639,7 +639,7 @@ public sealed class ThemeTests
         Assert.DoesNotContain(list.Items.Cast<GGEA.App.Tasks.DailyTaskItem>(), t => t.CanRemove);
         Assert.Contains("已删除", status.Text);
         VerifyFierceEnemyRestart(window, null, 0);
-        Assert.True(((CheckBox)window.FindName("DailySelectAllCheckBox")).IsChecked);
+        Assert.True(window.DailyView.DailySelectAllCheckBox.IsChecked);
     }
 
     /// <summary>用实际 WPF 控件验证工厂页签顺序、切换和窄窗口布局；可选导出离屏渲染供视觉检查。</summary>
@@ -703,8 +703,8 @@ public sealed class ThemeTests
     /// <summary>验证真实输入控件的默认值、上下限、非法输入反馈及提交恢复，不启动游戏操作。</summary>
     private static void VerifyBallFactoryGpInput(MainWindow window)
     {
-        var input = (TextBox)window.FindName("BallFactoryGpBox");
-        var hint = (TextBlock)window.FindName("BallFactoryGpHint");
+        var input = window.BallFactoryView.BallFactoryGpBox;
+        var hint = window.BallFactoryView.BallFactoryGpHint;
         Assert.Equal("30000", input.Text);
         foreach (var (text, expected) in new[]
         {
@@ -746,13 +746,13 @@ public sealed class ThemeTests
         var tabs = (TabControl)window.FindName("MainTabControl");
         var previous = tabs.SelectedItem ?? tabs.Items[0];
         var league = (TabItem)window.FindName("MasterLeagueTab");
-        var check = (CheckBox)window.FindName("MasterLeagueAutoFormationCheck");
-        var retry = (CheckBox)window.FindName("MasterLeagueRetryDefeatedCheck");
+        var check = window.MasterLeagueView.MasterLeagueAutoFormationCheck;
+        var retry = window.MasterLeagueView.MasterLeagueRetryDefeatedCheck;
         Assert.False(retry.IsChecked);
         retry.IsChecked = true;
         Assert.True(retry.IsChecked);
         retry.IsChecked = false;
-        var button = (Button)window.FindName("MasterLeagueStartButton");
+        var button = window.MasterLeagueView.MasterLeagueStartButton;
         var panel = (StackPanel)league.Content;
         Assert.False(check.IsChecked);
         Assert.Equal("请在非战斗界面使用", ((TextBlock)panel.Children[0]).Text);
@@ -797,8 +797,8 @@ public sealed class ThemeTests
         void Set(string name, object? value) => typeof(MainWindow).GetField(name, flags)!.SetValue(window, value);
         // 未连接设备时只更新提示；其他任务持有租约时禁止新的联盟操作。
         Assert.True(((Task)Invoke("StartMasterLeagueAsync")!).IsCompletedSuccessfully);
-        Assert.Contains("连接", ((TextBlock)window.FindName("MasterLeagueStatusText")).Text);
-        using (var lease = (IDisposable)Invoke("TryBeginExecution")!)
+        Assert.Contains("连接", window.MasterLeagueView.MasterLeagueStatusText.Text);
+        using (var lease = TryBeginExecution(window)!)
         {
             Assert.False(check.IsEnabled);
             Assert.False(retry.IsEnabled);
@@ -807,18 +807,23 @@ public sealed class ThemeTests
             Set("_masterLeagueCts", cancel);
             Invoke("UpdateBusyState");
             Assert.True(button.IsEnabled);
-            Assert.False(((Button)window.FindName("FierceEnemyAssaultStartButton")).IsEnabled);
+            Assert.False(window.FierceEnemyAssaultView.FierceEnemyAssaultStartButton.IsEnabled);
             Assert.True(((Task)Invoke("StartMasterLeagueAsync")!).IsCompletedSuccessfully);
             Assert.True(cancel.IsCancellationRequested);
             Assert.False(button.IsEnabled);
             Set("_masterLeagueCts", null);
         }
         button.Content = "开始大师联盟";
-        ((TextBlock)window.FindName("MasterLeagueStatusText")).Text = "尚未开始。";
+        window.MasterLeagueView.MasterLeagueStatusText.Text = "尚未开始。";
         Assert.True(check.IsEnabled);
         Assert.True(button.IsEnabled);
         tabs.SelectedItem = previous;
     }
+
+    // 反射调用须显式传入可选参数，沿用窗口默认的设备诊断行为。
+    private static IDisposable? TryBeginExecution(MainWindow window) =>
+        (IDisposable?)typeof(MainWindow).GetMethod("TryBeginExecution",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(window, [true]);
 
     /// <summary>真实入口验证缺少设备、任务互斥及中止；不接触游戏或启动额外执行。</summary>
     private static void VerifyBallFactoryEntrySafety()
@@ -827,15 +832,15 @@ public sealed class ThemeTests
         var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
         object? Invoke(string name) => typeof(MainWindow).GetMethod(name, flags)!.Invoke(window, null);
         void Set(string name, object? value) => typeof(MainWindow).GetField(name, flags)!.SetValue(window, value);
-        var input = (TextBox)window.FindName("BallFactoryGpBox");
-        var button = (Button)window.FindName("BallFactoryStartButton");
-        var status = (TextBlock)window.FindName("BallFactoryStatusText");
+        var input = window.BallFactoryView.BallFactoryGpBox;
+        var button = window.BallFactoryView.BallFactoryStartButton;
+        var status = window.BallFactoryView.BallFactoryStatusText;
         input.Text = "30010";
         Assert.True(((Task)Invoke("StartBallFactoryAsync")!).IsCompletedSuccessfully);
         Assert.Equal("30020", input.Text);
         Assert.Contains("连接", status.Text);
         Assert.True(button.IsEnabled);
-        using (var lease = (IDisposable)Invoke("TryBeginExecution")!)
+        using (var lease = TryBeginExecution(window)!)
         {
             Assert.False(input.IsEnabled);
             Assert.False(button.IsEnabled);
@@ -847,8 +852,8 @@ public sealed class ThemeTests
             Set("_ballFactoryCts", cancel);
             Invoke("UpdateBusyState");
             Assert.True(button.IsEnabled);
-            Assert.False(((Button)window.FindName("DailyStartButton")).IsEnabled);
-            Assert.False(((Button)window.FindName("ScoutStartButton")).IsEnabled);
+            Assert.False(window.DailyView.DailyStartButton.IsEnabled);
+            Assert.False(window.ScoutView.ScoutStartButton.IsEnabled);
             Assert.True(((Task)Invoke("StartBallFactoryAsync")!).IsCompletedSuccessfully);
             Assert.True(cancel.IsCancellationRequested);
             Assert.Equal("正在停止…", button.Content);
@@ -877,7 +882,7 @@ public sealed class ThemeTests
         combo.ItemsSource = devices;
         combo.SelectedItem = devices[0];
         var originalConfig = (GGEA.App.Config.AppConfig)Get("_config")!;
-        using (var lease = (IDisposable)Invoke("TryBeginExecution")!)
+        using (var lease = TryBeginExecution(window)!)
         {
             var snapshot = (GGEA.App.Config.AppConfig)Get("_config")!;
             Assert.NotSame(originalConfig, snapshot);
@@ -885,8 +890,8 @@ public sealed class ThemeTests
             Assert.NotEqual(originalConfig.AdbPath, snapshot.AdbPath);
             Assert.False(combo.IsEnabled);
             Assert.False(((Button)window.FindName("SettingsButton")).IsEnabled);
-            Assert.False(((Button)window.FindName("AutoProgressStartButton")).IsEnabled);
-            Assert.False(((Grid)window.FindName("AutoProgressOptionsPanel")).IsEnabled);
+            Assert.False(window.AutoProgressView.AutoProgressStartButton.IsEnabled);
+            Assert.False(window.AutoProgressView.AutoProgressOptionsPanel.IsEnabled);
             Assert.True(((Task)Invoke("StartAutoProgressAsync")!).IsCompletedSuccessfully);
             Assert.True(((Button)window.FindName("ThemeToggleButton")).IsEnabled);
             combo.SelectedItem = devices[1];
@@ -902,16 +907,19 @@ public sealed class ThemeTests
             }
             // 内部刷新/收尾更新 UI 不拥有租约，不能提前开放自动化入口。
             Invoke("UpdateBusyState");
-            Assert.Null(Invoke("TryBeginExecution"));
-            Assert.False(((Button)window.FindName("DailyStartButton")).IsEnabled);
+            Assert.Null(TryBeginExecution(window));
+            Assert.False(window.DailyView.DailyStartButton.IsEnabled);
             ((Button)window.FindName("ThemeToggleButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Assert.Same(snapshot, Get("_config"));
         }
         Assert.True(combo.IsEnabled);
         Assert.True(((Button)window.FindName("SettingsButton")).IsEnabled);
-        using var next = (IDisposable?)Invoke("TryBeginExecution");
+        using var next = TryBeginExecution(window);
         Assert.NotNull(next);
     }
+
+    private static GGEA.App.Device.AutomationDevice CreateOfflineDevice() =>
+        new(new GGEA.App.Device.AdbService("must-not-run.exe", new TestLog()));
 
     /// <summary>原目标消失后，真实按钮入口必须保留目标意图并拒绝默认启动，不能接触其他实例。</summary>
     private static void VerifyMissingTargetBlocksDefaultLaunch()
@@ -921,7 +929,7 @@ public sealed class ThemeTests
         void Set(string name, object value) => typeof(MainWindow).GetField(name, flags)!.SetValue(window, value);
         var adb = new FakeAdbService([]);
         var launched = false;
-        Set("_adb", new GGEA.App.Device.AdbService("must-not-run.exe", new TestLog()));
+        Set("_adb", CreateOfflineDevice());
         Set("_emulator", new GGEA.App.Device.EmulatorService(adb, new TestLog(), (_, _) => launched = true));
         Set("_preferredDeviceSerial", "missing-target");
         var task = (Task)typeof(MainWindow).GetMethod("StartGameButton_ClickCoreAsync", flags)!
@@ -956,7 +964,7 @@ public sealed class ThemeTests
                 Set("_autoFarmCts", farm);
                 Set("_startCts", start);
                 Set("_dailyRunning", true);
-                var button = (Button)window.FindName("DailyStartButton");
+                var button = window.DailyView.DailyStartButton;
                 button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Assert.True(daily.IsCancellationRequested);
                 Assert.Equal("正在停止…", button.Content);
@@ -1036,7 +1044,7 @@ public sealed class ThemeTests
     private static void VerifyDeviceSelectionState(MainWindow window)
     {
         var combo = (ComboBox)window.FindName("DeviceCombo");
-        var task = ((ListBox)window.FindName("DailyTaskList")).Items.Cast<GGEA.App.Tasks.DailyTaskItem>()
+        var task = window.DailyView.DailyTaskList.Items.Cast<GGEA.App.Tasks.DailyTaskItem>()
             .Single(item => item.Kind == GGEA.App.Tasks.DailyTaskKind.DevelopOnce);
         Assert.True(task.IsChecked);
         Assert.True(task.IsSupported);
@@ -1074,16 +1082,19 @@ public sealed class ThemeTests
         Assert.Contains("设备离线", ((TextBlock)window.FindName("ConnectionStateText")).Text);
         Assert.Contains("重连", ((TextBlock)window.FindName("DeviceStatusText")).Text);
         Assert.True(reconnect.IsEnabled);
-        using ((IDisposable)Invoke("TryBeginExecution")!)
+        using (TryBeginExecution(window)!)
         {
             Assert.False(reconnect.IsEnabled);
             Assert.True(((Task)Invoke("ReconnectButton_ClickCoreAsync", window, new RoutedEventArgs())!).IsCompletedSuccessfully);
             Assert.Same(offline, combo.SelectedItem);
         }
         Assert.True(reconnect.IsEnabled);
-        typeof(MainWindow).GetField("_adb", flags)!.SetValue(window, new GGEA.App.Device.AdbService("must-not-run.exe", new TestLog()));
+        typeof(MainWindow).GetField("_adb", flags)!.SetValue(window, CreateOfflineDevice());
         Assert.True(((Task)Invoke("StartGameButton_ClickCoreAsync", window, new RoutedEventArgs())!).IsCompletedSuccessfully);
-        Assert.Contains("设备离线", ((TextBlock)window.FindName("ConnectionStateText")).Text);
+        // 列表记录是离线状态；开始时 ADB 不可用，窗口应显示本次核验失败及具体目标。
+        Assert.StartsWith($"无法核验设备 {offline.Serial}，请检查 ADB 连接后重试。", window.ConnectionStateText.Text);
+        Assert.Same(offline, combo.SelectedItem);
+        Assert.True(reconnect.IsEnabled);
         typeof(MainWindow).GetField("_adb", flags)!.SetValue(window, null);
 
         // 导出真实 WPF 设备卡片，检查按钮加入后的宽度与错误提示；不访问模拟器。
@@ -1143,7 +1154,7 @@ public sealed class ThemeTests
     /// <summary>长短列表及不同窗口宽度下，表头与每一列的实际勾选框中心应保持一致。</summary>
     private static void VerifyHardColumnAlignment(MainWindow window)
     {
-        var list = (ListBox)window.FindName("ApWorkList");
+        var list = window.ApConsumptionView.ApWorkList;
         var originalItems = list.ItemsSource;
         var content = (FrameworkElement)window.Content;
         foreach (var width in new[] { 1080, 1280 })

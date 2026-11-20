@@ -11,6 +11,20 @@ namespace GGEA.App.UI;
 /// <summary>自动推图的界面队列、持久化编制设置与独占设备执行入口。</summary>
 public partial class MainWindow
 {
+    private void ConnectAutoProgressView()
+    {
+        AutoProgressView.AutoProgressTypeCombo.SelectionChanged += AutoProgressTypeChanged;
+        AutoProgressView.AutoProgressAddButton.Click += AutoProgressAddButton_Click;
+        AutoProgressView.AutoProgressSeriesCheck.Checked += AutoProgressOptionsChanged;
+        AutoProgressView.AutoProgressSeriesCheck.Unchecked += AutoProgressOptionsChanged;
+        AutoProgressView.AutoProgressFreeCheck.Checked += AutoProgressOptionsChanged;
+        AutoProgressView.AutoProgressFreeCheck.Unchecked += AutoProgressOptionsChanged;
+        AutoProgressView.AutoProgressEmptyActionCombo.SelectionChanged += AutoProgressOptionsChanged;
+        AutoProgressView.AutoProgressTerrainActionCombo.SelectionChanged += AutoProgressOptionsChanged;
+        AutoProgressView.RemoveTargetRequested += AutoProgressRemoveButton_Click;
+        AutoProgressView.AutoProgressStartButton.Click += AutoProgressStartButton_Click;
+    }
+
     // 独立保存添加顺序，复用作品配置对象，不改变 AP 消耗计划的顺序与选择。
     private readonly ObservableCollection<AutoProgressTarget> _autoProgressQueue = new();
     private bool _autoProgressUiReady;
@@ -26,10 +40,10 @@ public partial class MainWindow
         {
             var settings = (_config.AutoProgress ?? new()).Snapshot();
             _config.AutoProgress = settings;
-            AutoProgressSeriesCheck.IsChecked = settings.AdjustSeriesTeam;
-            AutoProgressFreeCheck.IsChecked = settings.AdjustFreeTeam;
-            AutoProgressEmptyActionCombo.SelectedIndex = (int)settings.EmptySlotAction;
-            AutoProgressTerrainActionCombo.SelectedIndex = (int)settings.TerrainAction;
+            AutoProgressView.AutoProgressSeriesCheck.IsChecked = settings.AdjustSeriesTeam;
+            AutoProgressView.AutoProgressFreeCheck.IsChecked = settings.AdjustFreeTeam;
+            AutoProgressView.AutoProgressEmptyActionCombo.SelectedIndex = (int)settings.EmptySlotAction;
+            AutoProgressView.AutoProgressTerrainActionCombo.SelectedIndex = (int)settings.TerrainAction;
             RefreshAutoProgressOptions(settings);
             _autoProgressUiReady = true;
         }
@@ -42,10 +56,10 @@ public partial class MainWindow
         if (!_autoProgressUiReady || _loadingAutoProgressOptions || _autoProgressRunning) return;
         var settings = new AutoProgressSettings
         {
-            AdjustSeriesTeam = AutoProgressSeriesCheck.IsChecked == true,
-            AdjustFreeTeam = AutoProgressFreeCheck.IsChecked == true,
-            EmptySlotAction = (FormationIssueAction)AutoProgressEmptyActionCombo.SelectedIndex,
-            TerrainAction = (FormationIssueAction)AutoProgressTerrainActionCombo.SelectedIndex,
+            AdjustSeriesTeam = AutoProgressView.AutoProgressSeriesCheck.IsChecked == true,
+            AdjustFreeTeam = AutoProgressView.AutoProgressFreeCheck.IsChecked == true,
+            EmptySlotAction = (FormationIssueAction)AutoProgressView.AutoProgressEmptyActionCombo.SelectedIndex,
+            TerrainAction = (FormationIssueAction)AutoProgressView.AutoProgressTerrainActionCombo.SelectedIndex,
         };
         settings.Normalize();
         _loadingAutoProgressOptions = true;
@@ -61,7 +75,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            AutoProgressStatusText.Text = L.Text("设置在当前窗口已生效，但保存失败，请检查配置目录。");
+            AutoProgressView.AutoProgressStatusText.Text = L.Text("设置在当前窗口已生效，但保存失败，请检查配置目录。");
             _logger.Warn(L.Format($"自动推图设置保存失败: {ex.GetType().Name}"));
         }
     }
@@ -69,17 +83,17 @@ public partial class MainWindow
     /// <summary>界面消费归一化设置，自动编制条目禁用状态与当前选择始终一致。</summary>
     private void RefreshAutoProgressOptions(AutoProgressSettings settings)
     {
-        AutoProgressTeamsSummary.Text = (settings.AdjustSeriesTeam, settings.AdjustFreeTeam) switch
+        AutoProgressView.AutoProgressTeamsSummary.Text = (settings.AdjustSeriesTeam, settings.AdjustFreeTeam) switch
         {
             (true, true) => L.Text("系列部队、自由部队"),
             (true, false) => L.Text("系列部队"),
             (false, true) => L.Text("自由部队"),
             _ => L.Text("未选择部队"),
         };
-        AutoProgressEmptyAutoItem.IsEnabled = settings.CanAutoForm;
-        AutoProgressTerrainAutoItem.IsEnabled = settings.CanAutoForm;
-        AutoProgressEmptyActionCombo.SelectedIndex = (int)settings.EmptySlotAction;
-        AutoProgressTerrainActionCombo.SelectedIndex = (int)settings.TerrainAction;
+        AutoProgressView.AutoProgressEmptyAutoItem.IsEnabled = settings.CanAutoForm;
+        AutoProgressView.AutoProgressTerrainAutoItem.IsEnabled = settings.CanAutoForm;
+        AutoProgressView.AutoProgressEmptyActionCombo.SelectedIndex = (int)settings.EmptySlotAction;
+        AutoProgressView.AutoProgressTerrainActionCombo.SelectedIndex = (int)settings.TerrainAction;
     }
 
     /// <summary>推图事件加入窗口生命周期，关窗或中止会取消完整导航与战斗链。</summary>
@@ -92,19 +106,19 @@ public partial class MainWindow
         if (_autoProgressRunning)
         {
             _autoProgressCts?.Cancel();
-            AutoProgressStartButton.Content = L.Text("正在停止…");
+            AutoProgressView.AutoProgressStartButton.Content = L.Text("正在停止…");
             UpdateBusyState();
             return;
         }
         using var execution = TryBeginExecution();
         if (execution is null) return;
         if (_automation is null || _stageService is null || _sortieFlowService is null || _logger is null)
-        { AutoProgressStatusText.Text = L.Text("请先连接并选择模拟器。"); return; }
-        var serial = await GetOnlineTaskSerialAsync(execution, AutoProgressStatusText, _windowTasks.Token);
+        { AutoProgressView.AutoProgressStatusText.Text = L.Text("请先连接并选择模拟器。"); return; }
+        var serial = await GetOnlineTaskSerialAsync(execution, AutoProgressView.AutoProgressStatusText, _windowTasks.Token);
         if (serial is null) return;
         var targets = AvailableAutoProgressTargets();
         if (targets.Length == 0)
-        { AutoProgressStatusText.Text = L.Text("请先添加推图目标。"); return; }
+        { AutoProgressView.AutoProgressStatusText.Text = L.Text("请先添加推图目标。"); return; }
         var settings = _config.AutoProgress.Snapshot();
         var automation = _automation;
         var stageService = _stageService;
@@ -112,15 +126,15 @@ public partial class MainWindow
         _autoProgressRunning = true;
         _autoProgressCts = CancellationTokenSource.CreateLinkedTokenSource(_windowTasks.Token);
         var ct = _autoProgressCts.Token;
-        AutoProgressStartButton.Content = L.Text("中止推图");
-        AutoProgressTeamsButton.IsChecked = false;
+        AutoProgressView.AutoProgressStartButton.Content = L.Text("中止推图");
+        AutoProgressView.AutoProgressTeamsButton.IsChecked = false;
         UpdateBusyState();
         var endNotification = BeginTaskEndNotification(L.Text("自动推图"), distinguishResult: true);
         try
         {
-            void Report(string message) { AutoProgressStatusText.Text = message; _logger.Info(message); }
+            void Report(string message) { AutoProgressView.AutoProgressStatusText.Text = message; _logger.Info(message); }
             if (!await EnsureDeviceCompatibilityAsync(serial, ct))
-            { AutoProgressStatusText.Text = L.Text("设备画面不兼容，已停止自动推图。"); return; }
+            { AutoProgressView.AutoProgressStatusText.Text = L.Text("设备画面不兼容，已停止自动推图。"); return; }
             var formation = new AutoFormationService(automation, _matcher, _logger, AutoFormationTemplates.FromConfig(_config));
             var progressTemplates = AutoProgressFlowTemplates.FromDefaults();
             var homeDetector = CreateMainScreenDetector();
@@ -205,29 +219,29 @@ public partial class MainWindow
                 if (!current.Completed) break;
             }
             if (result.Completed) result = result with { Message = L.Format($"自动推图完成：{result.CompletedWorks} 个目标，本次完成 {result.CompletedStages} 场战斗。") };
-            AutoProgressStatusText.Text = result.Completed ? result.Message
+            AutoProgressView.AutoProgressStatusText.Text = result.Completed ? result.Message
                 : L.Format($"自动推图已停止：{result.Message} 已完成 {result.CompletedWorks} 个目标、{result.CompletedStages} 场战斗。");
             // 队列持有者记录最终汇总，避免最后一条日志停留在单个目标的进度提示。
-            if (result.Completed) _logger.Info(AutoProgressStatusText.Text);
-            else _logger.Warn(AutoProgressStatusText.Text);
+            if (result.Completed) _logger.Info(AutoProgressView.AutoProgressStatusText.Text);
+            else _logger.Warn(AutoProgressView.AutoProgressStatusText.Text);
             endNotification.Succeeded = result.Completed;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             endNotification.Canceled = true;
-            AutoProgressStatusText.Text = L.Text("自动推图已中止。");
-            _logger.Info(AutoProgressStatusText.Text);
+            AutoProgressView.AutoProgressStatusText.Text = L.Text("自动推图已中止。");
+            _logger.Info(AutoProgressView.AutoProgressStatusText.Text);
         }
         catch (Exception ex)
-        { AutoProgressStatusText.Text = L.Format($"自动推图已停止：{ex.Message}"); _logger.Error(AutoProgressStatusText.Text); }
+        { AutoProgressView.AutoProgressStatusText.Text = L.Format($"自动推图已停止：{ex.Message}"); _logger.Error(AutoProgressView.AutoProgressStatusText.Text); }
         finally
         {
             _autoProgressRunning = false;
             _autoProgressCts.Dispose();
             _autoProgressCts = null;
-            AutoProgressStartButton.Content = L.Text("开始推图");
+            AutoProgressView.AutoProgressStartButton.Content = L.Text("开始推图");
             UpdateBusyState();
-            CompleteTaskEndNotification(endNotification, AutoProgressStatusText.Text);
+            CompleteTaskEndNotification(endNotification, AutoProgressView.AutoProgressStatusText.Text);
         }
     }
 
@@ -241,32 +255,32 @@ public partial class MainWindow
     /// <summary>统一候选显示模型，编号按类别隔离；目录失败时清空候选并给出原因。</summary>
     private void RefreshAutoProgressTargets()
     {
-        if (AutoProgressWorkCombo is null) return;
-        if (!FierceEnemyAvailable && AutoProgressTypeCombo.SelectedIndex == 2)
-            AutoProgressTypeCombo.SelectedIndex = 0;
+        if (AutoProgressView.AutoProgressWorkCombo is null) return;
+        if (!FierceEnemyAvailable && AutoProgressView.AutoProgressTypeCombo.SelectedIndex == 2)
+            AutoProgressView.AutoProgressTypeCombo.SelectedIndex = 0;
         try
         {
-            var history = AutoProgressTypeCombo.SelectedIndex == 1;
-            AutoProgressStartButton.IsEnabled = !_busy;
-            AutoProgressOptionsPanel.IsEnabled = !_busy;
-            AutoProgressAddButton.Content = L.Text("添加目标");
-            AutoProgressHistoryBossCheck.Visibility = history ? Visibility.Visible : Visibility.Collapsed;
-            AutoProgressAddButton.ToolTip = history ? L.Text("添加历史作品至队列；攻略 BOSS 的勾选状态随目标保存，已有目标需移除后重新添加才能更改。") : null;
+            var history = AutoProgressView.AutoProgressTypeCombo.SelectedIndex == 1;
+            AutoProgressView.AutoProgressStartButton.IsEnabled = !_busy;
+            AutoProgressView.AutoProgressOptionsPanel.IsEnabled = !_busy;
+            AutoProgressView.AutoProgressAddButton.Content = L.Text("添加目标");
+            AutoProgressView.AutoProgressHistoryBossCheck.Visibility = history ? Visibility.Visible : Visibility.Collapsed;
+            AutoProgressView.AutoProgressAddButton.ToolTip = history ? L.Text("添加历史作品至队列；攻略 BOSS 的勾选状态随目标保存，已有目标需移除后重新添加才能更改。") : null;
             var targets = history ? LoadHistoryCatalog().Works.AsEnumerable().Reverse().Select(work => new AutoProgressTarget(null, null, work)).ToArray()
-                : AutoProgressTypeCombo.SelectedIndex == 2
+                : AutoProgressView.AutoProgressTypeCombo.SelectedIndex == 2
                 ? new[] { FierceEnemyUnit.Latest }.Concat(FierceEnemyUnit.Load())
                     .Select(unit => new AutoProgressTarget(null, unit)).ToArray()
                 : _hardStages.Where(work => work.Id != 1).Select(work => new AutoProgressTarget(work, null)).ToArray();
-            AutoProgressWorkCombo.ItemsSource = targets;
-            AutoProgressWorkCombo.SelectedItem = history ? targets.FirstOrDefault() : targets.MaxBy(item => item.MainWork?.Id ?? item.Enemy!.Id);
-            AutoProgressAddButton.IsEnabled = !_busy && targets.Length > 0;
-            AutoProgressStatusText.Text = history ? L.Text("历史作品先推进关卡；勾选攻略 BOSS 时继续六关并复核双 100%。") : L.Text("添加目标后点击开始推图。");
+            AutoProgressView.AutoProgressWorkCombo.ItemsSource = targets;
+            AutoProgressView.AutoProgressWorkCombo.SelectedItem = history ? targets.FirstOrDefault() : targets.MaxBy(item => item.MainWork?.Id ?? item.Enemy!.Id);
+            AutoProgressView.AutoProgressAddButton.IsEnabled = !_busy && targets.Length > 0;
+            AutoProgressView.AutoProgressStatusText.Text = history ? L.Text("历史作品先推进关卡；勾选攻略 BOSS 时继续六关并复核双 100%。") : L.Text("添加目标后点击开始推图。");
         }
         catch (Exception ex)
         {
-            AutoProgressWorkCombo.ItemsSource = null;
-            AutoProgressAddButton.IsEnabled = false;
-            AutoProgressStatusText.Text = L.Format($"无法加载推图目标：{ex.Message}");
+            AutoProgressView.AutoProgressWorkCombo.ItemsSource = null;
+            AutoProgressView.AutoProgressAddButton.IsEnabled = false;
+            AutoProgressView.AutoProgressStatusText.Text = L.Format($"无法加载推图目标：{ex.Message}");
         }
     }
 
@@ -274,15 +288,15 @@ public partial class MainWindow
     private void AutoProgressAddButton_Click(object sender, RoutedEventArgs e)
     {
         if (_busy) return;
-        if (AutoProgressWorkCombo.SelectedItem is not AutoProgressTarget work) return;
+        if (AutoProgressView.AutoProgressWorkCombo.SelectedItem is not AutoProgressTarget work) return;
         if (!FierceEnemyAvailable && work.Enemy is not null) return;
         // 添加时冻结本目标的攻略范围，后续勾选变化不影响已有队列。
-        if (work.HistoryWork is not null) work = work with { AttackHistoryBoss = AutoProgressHistoryBossCheck.IsChecked == true };
+        if (work.HistoryWork is not null) work = work with { AttackHistoryBoss = AutoProgressView.AutoProgressHistoryBossCheck.IsChecked == true };
         var existing = _autoProgressQueue.FirstOrDefault(item => item.Key == work.Key);
         if (existing is null) _autoProgressQueue.Add(work);
-        AutoProgressQueueList.SelectedItem = existing ?? work;
-        AutoProgressQueueList.ScrollIntoView(existing ?? work);
-        AutoProgressEmptyText.Visibility = Visibility.Collapsed;
+        AutoProgressView.AutoProgressQueueList.SelectedItem = existing ?? work;
+        AutoProgressView.AutoProgressQueueList.ScrollIntoView(existing ?? work);
+        AutoProgressView.AutoProgressEmptyText.Visibility = Visibility.Collapsed;
     }
 
     /// <summary>允许纠正作品选择；最后一项移除后恢复空队列提示。</summary>
@@ -290,6 +304,6 @@ public partial class MainWindow
     {
         if (_busy) return;
         if (sender is Button { Tag: AutoProgressTarget work }) _autoProgressQueue.Remove(work);
-        AutoProgressEmptyText.Visibility = AvailableAutoProgressTargets().Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        AutoProgressView.AutoProgressEmptyText.Visibility = AvailableAutoProgressTargets().Length == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 }

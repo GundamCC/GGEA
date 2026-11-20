@@ -71,7 +71,7 @@ public sealed class LocalizationTests
         }
     }
 
-    /// <summary>三个实际界面的本地化标记必须有译文，同时禁止再加入裸露的中文显示属性。</summary>
+    /// <summary>窗口与功能面板的本地化标记必须有译文，同时禁止再加入裸露的中文显示属性。</summary>
     [Fact]
     public void XamlDisplayText_HasJapaneseResources()
     {
@@ -79,9 +79,10 @@ public sealed class LocalizationTests
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "GGEA.sln"))) directory = directory.Parent;
         Assert.NotNull(directory);
         var catalog = ReadCatalog();
-        foreach (var file in new[] { "MainWindow.xaml", "SettingsWindow.xaml", "UpdatePanel.xaml" })
+        var uiDirectory = Path.Combine(directory.FullName, "src", "GGEA.App", "UI");
+        foreach (var file in Directory.EnumerateFiles(uiDirectory, "*.xaml", SearchOption.AllDirectories))
         {
-            var document = XDocument.Load(Path.Combine(directory.FullName, "src", "GGEA.App", "UI", file));
+            var document = XDocument.Load(file);
             foreach (var attribute in document.Descendants().Attributes())
             {
                 var match = Regex.Match(attribute.Value, @"^\{loc:Text Source='(.*)'\}$", RegexOptions.Singleline);

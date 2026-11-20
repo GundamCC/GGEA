@@ -1,0 +1,170 @@
+<Grid x:Class="GGEA.App.UI.AutoProgressView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:GGEA.App.Localization"
+        xmlns:ui="clr-namespace:GGEA.App.UI"
+        Margin="0,8,0,0">
+    <Grid.RowDefinitions>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <!-- 最小窗口下内容可滚动，开始/中止与当前状态固定可见，队列不能被压成零高度。 -->
+    <ScrollViewer x:Name="AutoProgressContentScroll" VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled" CanContentScroll="False">
+        <Grid MinHeight="{Binding ViewportHeight, ElementName=AutoProgressContentScroll}" Margin="0,0,8,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*" MinHeight="140"/>
+            </Grid.RowDefinitions>
+            <TextBlock Text="{loc:Text Source='请在非战斗界面使用'}" Style="{StaticResource HintText}"/>
+            <Grid Grid.Row="1" Margin="0,8,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="AutoProgressTypeCombo" Height="34" Margin="0,0,12,0"
+                          SelectedIndex="0"
+                          AutomationProperties.Name="{loc:Text Source='推图关卡类型'}" Style="{StaticResource ComboBoxDark}">
+                    <ComboBoxItem Content="{loc:Text Source='主线关卡'}"/>
+                    <ComboBoxItem Content="{loc:Text Source='历史关卡'}"/>
+                    <ComboBoxItem x:Name="AutoProgressFierceEnemyTypeItem" Content="{loc:Text Source='强敌来袭'}"/>
+                </ComboBox>
+                <!-- 显式模板同时用于选中项和弹出列表，避免自定义样式回退为类型名。 -->
+                <ComboBox x:Name="AutoProgressWorkCombo" Grid.Column="1" Height="34" MaxDropDownHeight="280"
+                          TextSearch.TextPath="Work" AutomationProperties.Name="{loc:Text Source='选择推图目标'}"
+                          Style="{StaticResource ComboBoxDark}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Work}" TextTrimming="CharacterEllipsis"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <CheckBox x:Name="AutoProgressHistoryBossCheck" AutomationProperties.Name="{loc:Text Source='攻略 BOSS'}" IsChecked="True"
+                          Visibility="Collapsed" VerticalAlignment="Center" Margin="12,0,0,0"
+                          Style="{StaticResource TaskCheckBox}" ToolTip="{loc:Text Source='仅影响新添加的历史目标；取消后只攻略关卡。'}"/>
+                    <TextBlock Text="{loc:Text Source='攻略 BOSS'}" VerticalAlignment="Center" Margin="6,0,0,0" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Window}}"
+                               Visibility="{Binding Visibility, ElementName=AutoProgressHistoryBossCheck}"/>
+                    <Button x:Name="AutoProgressAddButton" Content="{loc:Text Source='添加目标'}" Margin="12,0,0,0"
+                        IsEnabled="False" Style="{StaticResource ButtonSecondary}"/>
+                </StackPanel>
+            </Grid>
+            <Grid x:Name="AutoProgressOptionsPanel" Grid.Row="2" Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="240"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="{loc:Text Source='允许调整的部队'}" Style="{StaticResource InlineLabel}" VerticalAlignment="Center"/>
+                <!-- 多选下拉不把 ComboBox 单选状态当作权限，复选框才是设置真值。 -->
+                <ToggleButton x:Name="AutoProgressTeamsButton" Grid.Column="1" Height="34"
+                              AutomationProperties.Name="{loc:Text Source='允许调整的部队'}" Foreground="{DynamicResource Brush.Text}">
+                    <ToggleButton.Template>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="TeamsToggleBorder" Background="{DynamicResource Brush.Input}" BorderBrush="{DynamicResource Brush.Border}"
+                                    BorderThickness="1" CornerRadius="6" Padding="8,5">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ContentPresenter Grid.Column="0" VerticalAlignment="Center"/>
+                                    <!-- 与相邻 ComboBox 使用相同矢量箭头，避免字体字形改变大小和对齐。 -->
+                                    <Path Grid.Column="1" Width="10" Height="6" Margin="8,0,6,0"
+                                          VerticalAlignment="Center" Data="M 0 0 L 5 5 L 10 0 Z"
+                                          Fill="{DynamicResource Brush.TextDim}" Stretch="Uniform" IsHitTestVisible="False"/>
+                                </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="ui:HoverFeedback.IsActive" Value="True">
+                                    <Setter TargetName="TeamsToggleBorder" Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="TeamsToggleBorder" Property="BorderBrush" Value="{DynamicResource Brush.Accent}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </ToggleButton.Template>
+                    <TextBlock x:Name="AutoProgressTeamsSummary" Text="{loc:Text Source='系列部队、自由部队'}"/>
+                </ToggleButton>
+                <Popup PlacementTarget="{Binding ElementName=AutoProgressTeamsButton}" Placement="Bottom"
+                       StaysOpen="False" AllowsTransparency="True"
+                       IsOpen="{Binding IsChecked, ElementName=AutoProgressTeamsButton, Mode=TwoWay}">
+                    <Border Background="{DynamicResource Brush.Card}" BorderBrush="{DynamicResource Brush.Border}"
+                            BorderThickness="1" CornerRadius="6" Padding="12,8" Width="240" Margin="0,4,0,0">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <CheckBox x:Name="AutoProgressSeriesCheck" IsChecked="True" Style="{StaticResource TaskCheckBox}"
+                                          AutomationProperties.Name="{loc:Text Source='允许调整系列部队'}"/>
+                                <Label Content="{loc:Text Source='系列部队'}" Target="{Binding ElementName=AutoProgressSeriesCheck}" Margin="8,0,0,0"
+                                       Foreground="{DynamicResource Brush.Text}"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <CheckBox x:Name="AutoProgressFreeCheck" IsChecked="True" Style="{StaticResource TaskCheckBox}"
+                                          AutomationProperties.Name="{loc:Text Source='允许调整自由部队'}"/>
+                                <Label Content="{loc:Text Source='自由部队'}" Target="{Binding ElementName=AutoProgressFreeCheck}" Margin="8,0,0,0"
+                                       Foreground="{DynamicResource Brush.Text}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+                <TextBlock Grid.Row="1" Text="{loc:Text Source='检测到系列部队存在空位时的处理'}" TextWrapping="Wrap" Margin="0,6,12,0"
+                           Style="{StaticResource InlineLabel}" VerticalAlignment="Center"/>
+                <ComboBox x:Name="AutoProgressEmptyActionCombo" Grid.Row="1" Grid.Column="1" Height="34" Margin="0,6,0,0"
+                          SelectedIndex="0" Style="{StaticResource ComboBoxDark}"
+                          AutomationProperties.Name="{loc:Text Source='系列部队空位处理'}">
+                    <ComboBoxItem Content="{loc:Text Source='依旧出击'}"/>
+                    <ComboBoxItem x:Name="AutoProgressEmptyAutoItem" Content="{loc:Text Source='自动编制'}"/>
+                </ComboBox>
+                <TextBlock Grid.Row="2" Text="{loc:Text Source='编制内存在不符合地形适性的单位时的处理'}" TextWrapping="Wrap" Margin="0,6,12,0"
+                           Style="{StaticResource InlineLabel}" VerticalAlignment="Center"/>
+                <ComboBox x:Name="AutoProgressTerrainActionCombo" Grid.Row="2" Grid.Column="1" Height="34" Margin="0,6,0,0"
+                          SelectedIndex="0" Style="{StaticResource ComboBoxDark}"
+                          AutomationProperties.Name="{loc:Text Source='地形适性处理'}">
+                    <ComboBoxItem Content="{loc:Text Source='依旧出击'}"/>
+                    <ComboBoxItem x:Name="AutoProgressTerrainAutoItem" Content="{loc:Text Source='自动编制'}"/>
+                </ComboBox>
+            </Grid>
+            <StackPanel x:Name="AutoProgressQueueHeader" Grid.Row="3" Margin="0,0,0,8">
+                <TextBlock Text="{loc:Text Source='执行任务队列'}" Style="{StaticResource CardTitle}"/>
+            </StackPanel>
+            <Grid x:Name="AutoProgressQueuePanel" Grid.Row="4">
+                <ListBox x:Name="AutoProgressQueueList" Style="{StaticResource ApPlanList}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         HorizontalContentAlignment="Stretch" AutomationProperties.Name="{loc:Text Source='推图任务队列'}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel Margin="10,5">
+                                <Button DockPanel.Dock="Right" Content="{loc:Text Source='移除'}" Tag="{Binding}" Margin="12,0,0,0"
+                                        Style="{StaticResource ButtonSecondary}" Click="OnRemoveTargetRequested"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Work}" TextWrapping="Wrap"
+                                               Foreground="{DynamicResource Brush.Text}"/>
+                                    <TextBlock Margin="0,3,0,0" TextWrapping="Wrap" Style="{StaticResource HintText}"
+                                               Text="{Binding Summary}"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock x:Name="AutoProgressEmptyText" Text="{loc:Text Source='尚未添加目标，请从上方选择并添加。'}"
+                           IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Style="{StaticResource HintText}"/>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+    <StackPanel Grid.Row="1" Margin="0,8,0,0">
+        <Button x:Name="AutoProgressStartButton" Content="{loc:Text Source='开始推图'}" HorizontalAlignment="Left" MinWidth="120"
+                Style="{StaticResource ButtonPrimary}"/>
+        <TextBlock x:Name="AutoProgressStatusText" Text="{loc:Text Source='主线推进至最终 HARD；历史复核双 100%；强敌推进至 EXPERT。出击会消耗 AP。'}" Margin="0,8,0,0"
+                   Style="{StaticResource HintText}" TextWrapping="Wrap"/>
+    </StackPanel>
+</Grid>

@@ -24,13 +24,13 @@ public partial class MainWindow
     {
         var available = FierceEnemyAvailable;
         FierceEnemyAssaultTab.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
-        AutoProgressFierceEnemyTypeItem.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
-        AutoProgressFierceEnemyTypeItem.IsEnabled = available;
+        AutoProgressView.AutoProgressFierceEnemyTypeItem.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+        AutoProgressView.AutoProgressFierceEnemyTypeItem.IsEnabled = available;
         if (!available && MainTabControl.SelectedItem == FierceEnemyAssaultTab)
             MainTabControl.SelectedItem = AutoProgressTab;
-        if (!available && AutoProgressTypeCombo.SelectedIndex == 2)
+        if (!available && AutoProgressView.AutoProgressTypeCombo.SelectedIndex == 2)
         {
-            AutoProgressTypeCombo.SelectedIndex = 0;
+            AutoProgressView.AutoProgressTypeCombo.SelectedIndex = 0;
             RefreshAutoProgressTargets();
         }
         var dailyView = CollectionViewSource.GetDefaultView(_dailyTasks);
@@ -39,9 +39,9 @@ public partial class MainWindow
         var queueView = CollectionViewSource.GetDefaultView(_autoProgressQueue);
         queueView.Filter = item => item is AutoProgressTarget target && (available || target.Enemy is null);
         queueView.Refresh();
-        AutoProgressEmptyText.Visibility = AvailableAutoProgressTargets().Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        AutoProgressView.AutoProgressEmptyText.Visibility = AvailableAutoProgressTargets().Length == 0 ? Visibility.Visible : Visibility.Collapsed;
         if (!available)
-            AutoProgressStatusText.Text = L.Text("主线推进至最终 HARD；历史复核双 100%。出击会消耗 AP。");
+            AutoProgressView.AutoProgressStatusText.Text = L.Text("主线推进至最终 HARD；历史复核双 100%。出击会消耗 AP。");
         UpdateDailySelectAllState();
     }
 }

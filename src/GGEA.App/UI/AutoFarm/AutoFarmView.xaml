@@ -1,0 +1,89 @@
+<Grid x:Class="GGEA.App.UI.AutoFarmView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:GGEA.App.Localization"
+        Margin="0,14,0,0">
+    <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+
+    <StackPanel Grid.Row="0" Margin="0,0,0,12">
+        <TextBlock Text="{loc:Text Source='请在出击准备页面使用本功能。'}"
+                   Style="{StaticResource HintText}"/>
+        <TextBlock Text="{loc:Text Source='将游戏本体的设定 → 战斗 → AUTO时隐藏战斗触发动画设定改为OFF可以实现自动挑战隐藏'}"
+                   Style="{StaticResource HintText}"
+                   TextWrapping="Wrap"
+                   Margin="0,4,0,0"/>
+    </StackPanel>
+
+    <Border Grid.Row="1"
+            Padding="12,10"
+            Background="{DynamicResource Brush.Toolbar}"
+            BorderBrush="{DynamicResource Brush.Border}"
+            BorderThickness="1"
+            CornerRadius="6"
+            HorizontalAlignment="Left">
+        <StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="{loc:Text Source='刷取次数'}"
+                           Style="{StaticResource InlineLabel}"
+                           VerticalAlignment="Center"/>
+
+                <TextBox x:Name="AutoFarmCountBox"
+                         Grid.Column="2"
+                         Width="120"
+                         Height="34"
+                         Text="10"
+                         VerticalContentAlignment="Center"
+                         Style="{StaticResource TextBoxDark}"/>
+
+                <Button x:Name="AutoFarmStartButton"
+                        Grid.Column="4"
+                        MinWidth="100"
+                        Height="34"
+                        VerticalAlignment="Center"
+                        Content="{loc:Text Source='开始'}"
+                        Style="{StaticResource ButtonPrimary}"/>
+            </Grid>
+
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                <CheckBox x:Name="EmptySlotSortieCheckBox"
+                          Style="{StaticResource TaskCheckBox}"
+                          IsChecked="True"
+                          VerticalAlignment="Center"/>
+                <TextBlock Text="{loc:Text Source='编制内存在空位时依旧出击'}"
+                           Style="{StaticResource InlineLabel}"
+                           Margin="8,0,0,0"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                <CheckBox x:Name="TerrainUnsuitableSortieCheckBox"
+                          Style="{StaticResource TaskCheckBox}"
+                          IsChecked="True"
+                          VerticalAlignment="Center"/>
+                <TextBlock Text="{loc:Text Source='编制内存在不符合地形适性的单位时依旧出击'}"
+                           Style="{StaticResource InlineLabel}"
+                           Margin="8,0,0,0"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+
+    <TextBlock x:Name="AutoFarmStatusText"
+               Grid.Row="2"
+               Style="{StaticResource StatusText}"
+               Text="{loc:Text Source='尚未开始。'}"
+               Margin="0,12,0,0"/>
+</Grid>
