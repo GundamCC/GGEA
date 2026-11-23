@@ -49,6 +49,20 @@ public sealed class MasterLeagueServiceTests
         Assert.Equal(2, adb.ScreenshotCount);
     }
 
+    [Fact]
+    public async Task IntroSkip_EndsCenterTapsAndWaitsForLeague()
+    {
+        var blank = Frame();
+        var skip = Frame((MasterLeagueVision.SkipPath, 1418, 12));
+        var league = LeagueFrame();
+        var frames = new Queue<byte[]>([blank, skip, skip, blank, league]);
+        var adb = new FakeAdbService(blank);
+        adb.ScreenshotProvider = () => frames.TryDequeue(out var frame) ? frame : league;
+        var result = await Service(adb, []).ConfirmAndEnterFormationAsync("serial", false);
+        Assert.True(result.Success, result.Message);
+        Assert.Equal(new[] { (960, 540), (1510, 53), (1646, 893) }, adb.Taps);
+    }
+
     /// <summary>标题缺失最多十五次中心点击，第十次起逐次复查，每次等待 1.2 秒，失败不能循环。</summary>
     [Fact]
     public async Task TitleMissing_TapsFifteenTimesThenStops()

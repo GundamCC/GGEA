@@ -115,8 +115,7 @@ public sealed class MasterLeagueVision : IMasterLeagueVision
         if (!Standard(screen)) return new(false, null, null);
         var result = _result.IsResult(screen, ct);
         var skip = _templates[SkipPath];
-        var match = _matcher.Match(screen.Bgra, screen.Width, screen.Height, skip.Bgra, skip.Width, skip.Height,
-            .90, new Roi(1405, 5, 210, 100), _skipMask, ct);
+        var match = MatchSkip(screen, skip, _skipMask!, _matcher, ct);
         return new(result, match, result ? Match(screen, MasterLeagueService.ResultSelectOpponentTemplate,
             new Roi(1495, 905, 410, 160), .85, ct) : null);
     }
@@ -210,8 +209,14 @@ public sealed class MasterLeagueVision : IMasterLeagueVision
         return mask;
     }
 
+    // 入场演出与对战共用同一字形遮罩、搜索范围和门槛。
+    internal static TemplateMatchResult? MatchSkip(ScreenImage screen, ScreenImage skip, byte[] mask,
+        TemplateMatcher matcher, CancellationToken ct) =>
+        matcher.Match(screen.Bgra, screen.Width, screen.Height, skip.Bgra, skip.Width, skip.Height,
+            .90, new Roi(1405, 5, 210, 100), mask, ct);
+
     /// <summary>保留原始用户素材；运行时仅选择字形和两像素轮廓，不覆盖图片或降低全局匹配门槛。</summary>
-    private static byte[] CreateSkipMask(ScreenImage image)
+    internal static byte[] CreateSkipMask(ScreenImage image)
     {
         if (image.Width != 184 || image.Height != 83)
             throw new InvalidOperationException("大师联盟 SKIP 素材尺寸变化，需重新验证文字遮罩。");

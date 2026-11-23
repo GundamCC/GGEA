@@ -102,7 +102,12 @@ public sealed partial class MasterLeagueService
         ct.ThrowIfCancellationRequested();
         Validate(autoFormation);
         var screen = await CaptureAsync(serial, ct);
+        var skipTemplate = ImageCodec.DecodePng(File.ReadAllBytes(ConfigService.ResolvePath(MasterLeagueVision.SkipPath)));
+        var skipMask = MasterLeagueVision.CreateSkipMask(skipTemplate);
+        var matcher = new TemplateMatcher();
         var centerTaps = 0;
+        var skipSent = false;
+        var transitionFrames = 0;
         var infoFrames = 0;
         while (true)
         {
@@ -114,13 +119,27 @@ public sealed partial class MasterLeagueService
             else
             {
                 // 情报消失时立即复核首页；正常入口演出沿用第十次起复核联盟标题的节奏。
-                if ((centerTaps == 0 || centerTaps >= 10 || infoFrames > 0) && await MatchTitleAsync(screen, ct) is not null)
+                if ((centerTaps == 0 || centerTaps >= 10 || skipSent || infoFrames > 0) && await MatchTitleAsync(screen, ct) is not null)
                     break;
-                if (centerTaps == 15) return Fail("十五次点击后仍未识别到大师联盟标题，已停止大师联盟流程。");
+                if (skipSent)
+                {
+                    // SKIP 结束整段中心点击。转场残帧只等待，直到新截图确认联盟首页。
+                    if (++transitionFrames >= 20) return Fail("点击入场 SKIP 后仍未识别到大师联盟标题。");
+                }
+                else if (MasterLeagueVision.MatchSkip(screen, skipTemplate, skipMask, matcher, ct) is { } skip)
+                {
+                    await _automation.TapAsync(serial, skip.CenterX, skip.CenterY, ct);
+                    skipSent = true;
+                    _log.Info("已点击大师联盟入场 SKIP，结束中心点击，等待联盟标题。");
+                }
+                else
+                {
+                    if (centerTaps == 15) return Fail("十五次点击后仍未识别到大师联盟标题，已停止大师联盟流程。");
+                    ct.ThrowIfCancellationRequested();
+                    await _automation.TapAsync(serial, screen.Width / 2, screen.Height / 2, ct);
+                    centerTaps++;
+                }
                 infoFrames = 0;
-                ct.ThrowIfCancellationRequested();
-                await _automation.TapAsync(serial, screen.Width / 2, screen.Height / 2, ct);
-                centerTaps++;
                 await _delay(1200, ct);
             }
             screen = await CaptureAsync(serial, ct);
