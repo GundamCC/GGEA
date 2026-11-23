@@ -116,7 +116,7 @@ public sealed class MasterLeagueVision : IMasterLeagueVision
         var result = _result.IsResult(screen, ct);
         var skip = _templates[SkipPath];
         var match = _matcher.Match(screen.Bgra, screen.Width, screen.Height, skip.Bgra, skip.Width, skip.Height,
-            .95, new Roi(1405, 5, 210, 100), _skipMask, ct);
+            .90, new Roi(1405, 5, 210, 100), _skipMask, ct);
         return new(result, match, result ? Match(screen, MasterLeagueService.ResultSelectOpponentTemplate,
             new Roi(1495, 905, 410, 160), .85, ct) : null);
     }

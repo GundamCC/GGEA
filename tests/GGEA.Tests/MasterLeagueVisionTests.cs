@@ -92,6 +92,7 @@ public sealed class MasterLeagueVisionTests
     [Theory]
     [InlineData("skip-a", true)]
     [InlineData("skip-b", true)]
+    [InlineData("preparation", false)]
     [InlineData("opponents-silver", false)]
     public void Skip_UsesTextContourMask(string fixture, bool expected)
     {
@@ -100,6 +101,26 @@ public sealed class MasterLeagueVisionTests
         Assert.Equal(expected, result.Skip is not null);
         Assert.False(result.ResultVisible);
         if (result.Skip is not null) Assert.Equal((1510, 53), (result.Skip.CenterX, result.Skip.CenterY));
+    }
+
+    // 在实机帧上模拟按钮变暗，覆盖旧门槛会漏掉的匹配区间。
+    [Fact]
+    public void Skip_DimmedBattleFrameStillMatchesAtButtonCenter()
+    {
+        using var ocr = new OnnxTextRecognizer();
+        var screen = Fixture("skip-a");
+        for (var y = 5; y < 105; y++)
+            for (var x = 1405; x < 1615; x++)
+                for (var channel = 0; channel < 3; channel++)
+                {
+                    var index = (y * screen.Width + x) * 4 + channel;
+                    screen.Bgra[index] = (byte)Math.Max(0, screen.Bgra[index] - 16);
+                }
+
+        var skip = new MasterLeagueVision(ocr).ReadBattle(screen, default).Skip;
+        Assert.NotNull(skip);
+        Assert.InRange(skip.Confidence, .90, .949999);
+        Assert.Equal((1510, 53), (skip.CenterX, skip.CenterY));
     }
 
     /// <summary>挑战次数来自准备页，变更次数来自确认弹窗，不共用同一个计数器。</summary>
