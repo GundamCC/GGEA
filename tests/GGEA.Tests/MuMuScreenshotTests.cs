@@ -143,7 +143,7 @@ public sealed class MuMuScreenshotTests
         var fallback = new AdbService("nonexistent-adb.exe", new TestLog(), emulatorPath: "Z:/missing/MuMuManager.exe", preferMuMuNativeScreenshot: false);
         fallback.DeviceTextAsync = adb.DeviceTextAsync;
         var adbError = await Assert.ThrowsAsync<AdbException>(() => fallback.ScreenshotAsync("emulator-5556"));
-        Assert.Contains("command=exec-out screencap -p", adbError.Message);
+        Assert.Contains("command=shell dumpsys display", adbError.Message);
         Assert.Contains("独立显示屏", adbError.Message);
     }
 

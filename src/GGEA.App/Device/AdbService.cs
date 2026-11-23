@@ -56,7 +56,7 @@ public sealed class AdbService : IAdbService
         };
         // 所有品牌走相同命令链；仅非默认游戏显示屏需要特殊投递，不读取品牌或管理器身份。
         _mumuInput = new MuMuInputService(gamePackage,
-            (args, ct) => DeviceTextAsync(args, args.Contains("dumpsys") ? Math.Min(commandTimeoutMs, 1500) : commandTimeoutMs, ct));
+            (args, ct) => DeviceTextAsync(args, commandTimeoutMs, ct));
         _preciseDrag = new PreciseDragChannel(this, _mumuInput, log);
         _diagnostics = diagnostics;
         _emulatorPath = emulatorPath;
@@ -130,7 +130,7 @@ public sealed class AdbService : IAdbService
     {
         var timer = Stopwatch.StartNew();
         var stage = "读取游戏显示屏";
-        var command = "exec-out screencap -p";
+        var command = "shell dumpsys activity activities";
         var requestToken = ct;
         using var screenshotTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         screenshotTimeout.CancelAfter(_screenshotTimeoutMs);
@@ -141,15 +141,21 @@ public sealed class AdbService : IAdbService
             if (display is > 0)
             {
                 // SDK 可能返回尺寸正确的其他标签页。存在 Android 物理映射时直接读取目标屏。
+                command = "shell dumpsys display";
                 var physical = await _mumuInput.ReadPhysicalDisplayAsync(serial, display.Value, ct);
                 if (physical is not null)
                 {
                     var id = physical.Value.ToString(CultureInfo.InvariantCulture);
                     command = $"exec-out screencap -d {id} -p";
+                    stage = "执行指定显示屏截图";
                     var frame = await DeviceBytesAsync(["-s", serial, "exec-out", "screencap", "-d", id, "-p"], _screenshotTimeoutMs, ct);
                     var normalized = AdbScreenshotOutput.Normalize(frame, out _);
-                    if (await _mumuInput.ResolveDisplayAsync(serial, ct) != display ||
-                        await _mumuInput.ReadPhysicalDisplayAsync(serial, display.Value, ct) != physical)
+                    stage = "复核游戏显示屏";
+                    command = "shell dumpsys activity activities";
+                    if (await _mumuInput.ResolveDisplayAsync(serial, ct) != display)
+                        throw new AdbException("截图期间游戏标签或物理屏幕发生变化，本帧已丢弃");
+                    command = "shell dumpsys display";
+                    if (await _mumuInput.ReadPhysicalDisplayAsync(serial, display.Value, ct) != physical)
                         throw new AdbException("截图期间游戏标签或物理屏幕发生变化，本帧已丢弃");
                     var route = $"serial={serial}，logical={display}，physical={id}";
                     if (Interlocked.Exchange(ref _lastTargetRoute, route) != route)
@@ -163,6 +169,7 @@ public sealed class AdbService : IAdbService
                 // 身份查询与两种截图共用总预算，防止多个内部超时叠加。
                 return (await _mumuScreenshotChannel.CaptureAsync(serial, ct), display.Value, null);
             }
+            command = "exec-out screencap -p";
             stage = "执行命令";
             var bytes = await DeviceBytesAsync(
                 new[] { "-s", serial, "exec-out", "screencap", "-p" },
@@ -170,6 +177,8 @@ public sealed class AdbService : IAdbService
             stage = "校验输出（exit=0）";
             ct.ThrowIfCancellationRequested();
             var png = AdbScreenshotOutput.Normalize(bytes, out var prefixLength, out var newlineRecovered);
+            stage = "复核游戏显示屏";
+            command = "shell dumpsys activity activities";
             if (await _mumuInput.TryResolveDisplayAsync(serial, ct) is > 0)
                 throw new AdbException("截图期间游戏切换至独立显示屏，本帧已丢弃");
             ct.ThrowIfCancellationRequested();

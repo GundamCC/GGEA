@@ -8,6 +8,51 @@ public sealed class UnifiedDeviceCommandsTests
 {
     private const string Package = "com.bandainamcoent.gget_WW";
 
+    // 模拟独立屏的映射查询需要 2 秒，旧的 1.5 秒上限会在这里连续失败。
+    [Fact]
+    public async Task SlowPhysicalDisplayQuery_UsesConfiguredBudgetAndVerifiesRoute()
+    {
+        const int configured = 4500;
+        var mappings = 0;
+        var png = ImageCodec.EncodePng([1, 2, 3, 255], 1, 1);
+        var adb = new AdbService("missing-adb.exe", new TestLog(), commandTimeoutMs: configured)
+        {
+            DeviceTextAsync = (args, budget, _) =>
+            {
+                if (args.Contains("activities")) return Task.FromResult(Activities(2));
+                Assert.Contains("display", args);
+                if (budget < 2000) throw new AdbException("模拟慢响应", new TimeoutException());
+                Assert.Equal(configured, budget);
+                mappings++;
+                return Task.FromResult("mBaseDisplayInfo=DisplayInfo{displayId 2, uniqueId \"local:123\"}");
+            },
+            DeviceBytesAsync = (args, _, _) =>
+            {
+                Assert.Equal(new[] { "-s", "selected", "exec-out", "screencap", "-d", "123", "-p" }, args);
+                return Task.FromResult(png);
+            }
+        };
+        Assert.Equal(png, await adb.ScreenshotAsync("selected"));
+        Assert.Equal(2, mappings);
+    }
+
+    [Fact]
+    public async Task TimedOutDisplayQuery_DoesNotFallBackToDefaultScreen()
+    {
+        var adb = new AdbService("missing-adb.exe", new TestLog())
+        {
+            DeviceTextAsync = (args, _, _) =>
+            {
+                Assert.Contains("dumpsys", args);
+                throw new AdbException("模拟超时", new TimeoutException());
+            },
+            DeviceBytesAsync = (_, _, _) => throw new Exception("目标未确认时不应截图")
+        };
+        var error = await Assert.ThrowsAsync<AdbException>(() => adb.ScreenshotAsync("selected"));
+        Assert.Contains("command=shell dumpsys activity activities", error.Message);
+        await Assert.ThrowsAsync<AdbException>(() => adb.TapAsync("selected", 4, 5));
+    }
+
     /// <summary>截图总预算也约束显示探测，超时不能变成无限等待或成功回退。</summary>
     [Fact]
     [Trait("Category", "Smoke")]

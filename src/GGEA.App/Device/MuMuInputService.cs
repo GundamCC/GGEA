@@ -20,7 +20,13 @@ internal sealed class MuMuInputService
         ct.ThrowIfCancellationRequested();
         string output;
         try { output = await _run(["-s", serial, "shell", "dumpsys", "activity", "activities"], ct); }
-        catch (AdbException) { ct.ThrowIfCancellationRequested(); return null; }
+        catch (AdbException ex)
+        {
+            ct.ThrowIfCancellationRequested();
+            // 慢响应不能证明目标位于默认屏；让截图层重试并重新读取，输入也不得猜测目标。
+            if (ex.InnerException is TimeoutException) throw;
+            return null;
+        }
         ct.ThrowIfCancellationRequested();
         var display = TryParseDisplay(output, _package);
         if (display is null && !allowMissingGame &&
