@@ -1,5 +1,6 @@
 using GGEA.App.Automation;
 using GGEA.App.UI;
+using OpenCvSharp;
 using GGEA.App.Vision;
 
 namespace GGEA.App.Tasks;
@@ -47,11 +48,20 @@ public sealed partial class StageSkipService
             var pollMs = _options.ContinueUnitAcquisition ? GameTiming.ConfirmationIntervalMs
                 : Math.Clamp(_options.PlayerRankUpPollIntervalMs, GameTiming.ConfirmationIntervalMs, GameTiming.RecognitionIntervalMs);
             var rankUpSeen = false;
-            while (Environment.TickCount64 < deadline)
+            var recovering = false;
+            while (true)
             {
                 ct.ThrowIfCancellationRequested();
+                if (Environment.TickCount64 >= deadline)
+                {
+                    if (!detectRank || recovering || timeoutMs <= 0) break;
+                    // 已结算的略过只恢复返回确认，保留奖励点击额度，绝不重发消耗 AP 的执行。
+                    recovering = true;
+                    deadline = Environment.TickCount64 + Math.Min(timeoutMs, 10000);
+                    _log.Warn("略过结果 OK 后返回确认超时，开始一次恢复检查，重新识别升级提示和目标关卡。");
+                }
                 var screen = await _automation.CaptureScreenAsync(serial, ct);
-                var checkRank = _options.ContinueUnitAcquisition || Environment.TickCount64 >= nextRankCheck;
+                var checkRank = rankUpSeen || recovering || _options.ContinueUnitAcquisition || Environment.TickCount64 >= nextRankCheck;
                 var state = await Task.Run(() =>
                 {
                     // SSD 对暗色模板可能误命中纯色过渡画面，再核对纹理，防止提前报告成功。
@@ -70,16 +80,16 @@ public sealed partial class StageSkipService
                     var complete = _options.PostSkipConfirmation?.Invoke(screen, ct) ?? (countMatch is not null);
                     if (!detectRank)
                         return (RankUp: false, Next: (TemplateMatchResult?)null, Complete: complete);
-                    if (countMatch is { Confidence: >= 0.98 } && !rankUpSeen)
+                    if (countMatch is { Confidence: >= 0.98 } && !checkRank)
                         return (RankUp: false, Next: (TemplateMatchResult?)null, Complete: true);
                     if (!checkRank)
                         return (RankUp: false, Next: (TemplateMatchResult?)null, Complete: false);
                     var title = LoadPostSkipTemplate(_options.PlayerRankUpTemplatePath);
-                    var rankUp = Match(title, new Roi(650, 210, 620, 110), 0.92) is not null;
+                    var rankUp = MatchRankText(screen, title, new Roi(620, 190, 720, 145), ct) is not null;
                     // 第一次只确认升级，动画等待后再从新截图读取继续提示。
                     return (RankUp: rankUp,
-                        Next: rankUp && rankUpSeen ? Match(LoadPostSkipTemplate(_options.PlayerRankUpNextTemplatePath),
-                            new Roi(780, 925, 370, 90), 0.92) : null,
+                        Next: rankUp && rankUpSeen ? MatchRankText(screen, LoadPostSkipTemplate(_options.PlayerRankUpNextTemplatePath),
+                            new Roi(715, 900, 520, 175), ct) : null,
                         Complete: !rankUp && complete);
                 }, ct);
                 ct.ThrowIfCancellationRequested();
@@ -91,10 +101,9 @@ public sealed partial class StageSkipService
                     rankUpSeen = true;
                     var animationWait = Math.Max(0, _options.PlayerRankUpAnimationWaitMs);
                     // 只补偿一次动画等待，不因反复命中无限延长总超时。
-                    deadline += animationWait;
+                    if (!recovering) deadline += animationWait;
                     _log.Info("检测到玩家升级，正在确认继续提示…");
-                    if (animationWait <= 5000) await GameTiming.DelayIfPositiveAsync(animationWait, ct);
-                    else await GameTiming.DelayIfPositiveAsync(GameTiming.ConfirmationIntervalMs, ct);
+                    await DelayWithinBudgetAsync(deadline, animationWait <= 5000 ? animationWait : GameTiming.ConfirmationIntervalMs, ct);
                     nextRankCheck = Environment.TickCount64;
                     continue;
                 }
@@ -108,7 +117,7 @@ public sealed partial class StageSkipService
                         await _automation.TapAsync(serial, reward.CenterX, reward.CenterY, ct);
                         acquisitionContinueCount++;
                         _log.Info($"结果 OK 后已点击机体奖励 TAP TO NEXT（{acquisitionContinueCount}/6），继续确认返回关卡。");
-                        deadline = Environment.TickCount64 + Math.Max(0, timeoutMs);
+                        if (!recovering) deadline = Environment.TickCount64 + Math.Max(0, timeoutMs);
                         await DelayWithinBudgetAsync(deadline, GameTiming.ConfirmationIntervalMs, ct);
                         continue;
                     }
@@ -119,7 +128,7 @@ public sealed partial class StageSkipService
                     await _automation.TapAsync(serial, state.Next.CenterX, state.Next.CenterY, ct);
                 }
                 // 无论本帧等待还是点击，下一次判断都必须重新截图。
-                await DelayWithinBudgetAsync(deadline, pollMs, ct);
+                await DelayWithinBudgetAsync(deadline, rankUpSeen || recovering ? GameTiming.ConfirmationIntervalMs : pollMs, ct);
             }
             _log.Warn("结果 OK 后未能确认返回关卡页（升级提示或网络等待超时）");
             return false;
@@ -158,6 +167,36 @@ public sealed partial class StageSkipService
         }
 
         return true;
+    }
+
+    /// <summary>升级页使用完整固定字形；局部灰度相关允许蓝色背景亮度和文字比例变化。</summary>
+    private static TemplateMatchResult? MatchRankText(ScreenImage screen, TemplateImages templates, Roi roi, CancellationToken ct)
+    {
+        if (roi.X + roi.Width > screen.Width || roi.Y + roi.Height > screen.Height) return null;
+        using var frame = Mat.FromPixelData(screen.Height, screen.Width, MatType.CV_8UC4, screen.Bgra);
+        using var crop = frame[new Rect(roi.X, roi.Y, roi.Width, roi.Height)];
+        using var observed = new Mat();
+        Cv2.CvtColor(crop, observed, ColorConversionCodes.BGRA2GRAY);
+        return templates.Match(template =>
+        {
+            using var pixels = Mat.FromPixelData(template.Height, template.Width, MatType.CV_8UC4, template.Bgra);
+            using var reference = new Mat();
+            Cv2.CvtColor(pixels, reference, ColorConversionCodes.BGRA2GRAY);
+            using var scaled = new Mat();
+            using var scores = new Mat();
+            foreach (var scale in new[] { 1.0, 1.05, 1.025 })
+            {
+                ct.ThrowIfCancellationRequested();
+                Cv2.Resize(reference, scaled, new Size(), scale, scale);
+                if (scaled.Width > roi.Width || scaled.Height > roi.Height) continue;
+                Cv2.MatchTemplate(observed, scaled, scores, TemplateMatchModes.CCoeffNormed);
+                Cv2.MinMaxLoc(scores, out _, out double score, out _, out Point position);
+                if (double.IsFinite(score) && score >= .92)
+                    return new TemplateMatchResult(new Roi(roi.X + position.X, roi.Y + position.Y,
+                        scaled.Width, scaled.Height), score);
+            }
+            return null;
+        }, ct);
     }
 
     /// <summary>返回确认及超时取证按需加载素材，避免正常略过重复 PNG 解码。</summary>

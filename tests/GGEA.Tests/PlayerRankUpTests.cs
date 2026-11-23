@@ -40,6 +40,26 @@ public sealed class PlayerRankUpTests
         Assert.Equal(new[] { (960, 973), (960, 973) }, adb.Taps);
     }
 
+    /// <summary>正常等待已耗尽才出现放大的升级页，恢复只能点继续，返回证据出现后才完成。</summary>
+    [Fact]
+    public async Task LateScaledOverlay_RecoversWithoutRepeatingSkip()
+    {
+        var blank = Screen();
+        var pixels = TestImageFactory.CreateBgra(1920, 1080, 45);
+        Paste(pixels, "player_rank_up.png", 699, 234, 1.05);
+        Paste(pixels, "rank_up_next.png", 841, 986, 1.05);
+        var overlay = ImageCodec.EncodePng(pixels, 1920, 1080);
+        var stage = Screen(count: true);
+        var adb = new FakeAdbService(blank);
+        var log = new TestLog();
+        adb.ScreenshotProvider = () => adb.Taps.Count > 0 ? stage :
+            log.Entries.Any(entry => entry.Message.Contains("开始一次恢复检查")) ? overlay : blank;
+        Assert.True(await Service(adb, 2000, log: log).ConfirmPostSkipAsync("serial", Layout));
+        var tap = Assert.Single(adb.Taps);
+        Assert.InRange(tap.X, 991, 995);
+        Assert.InRange(tap.Y, 1008, 1012);
+    }
+
     /// <summary>升级标题和继续提示分属不同帧时不能合并成一次点击授权。</summary>
     [Fact]
     public async Task SeparateSignals_NeverClicks()
@@ -120,8 +140,8 @@ public sealed class PlayerRankUpTests
     }
 
     /// <summary>使用分发素材及可记录点击的 ADB，避免依赖模拟器。</summary>
-    private static StageSkipService Service(FakeAdbService adb, int timeout = 5000, int animationWait = 0, int checkDelay = 0)
-        => new(new AutomationService(adb, new TemplateMatcher(), new TestLog()), new TestLog(), new()
+    private static StageSkipService Service(FakeAdbService adb, int timeout = 5000, int animationWait = 0, int checkDelay = 0, TestLog? log = null)
+        => new(new AutomationService(adb, new TemplateMatcher(), new TestLog()), log ?? new TestLog(), new()
         {
             PlayerRankUpTemplatePath = Template("player_rank_up.png"),
             PlayerRankUpNextTemplatePath = Template("rank_up_next.png"),
@@ -143,9 +163,20 @@ public sealed class PlayerRankUpTests
     }
 
     /// <summary>复制模板到测试画面，不修改生产素材。</summary>
-    private static void Paste(byte[] pixels, string name, int x, int y)
+    private static void Paste(byte[] pixels, string name, int x, int y, double scale = 1)
     {
         var image = ImageCodec.DecodePng(File.ReadAllBytes(Template(name)));
+        if (scale != 1)
+        {
+            using var src = OpenCvSharp.Mat.FromPixelData(image.Height, image.Width, OpenCvSharp.MatType.CV_8UC4, image.Bgra);
+            using var scaled = new OpenCvSharp.Mat();
+            OpenCvSharp.Cv2.Resize(src, scaled, new OpenCvSharp.Size(), scale, scale);
+            var height = scaled.Height;
+            var stride = scaled.Width * 4;
+            for (var row = 0; row < height; row++)
+                System.Runtime.InteropServices.Marshal.Copy(scaled.Ptr(row), pixels, ((y + row) * 1920 + x) * 4, stride);
+            return;
+        }
         for (var row = 0; row < image.Height; row++)
             Array.Copy(image.Bgra, row * image.Width * 4, pixels, ((y + row) * 1920 + x) * 4, image.Width * 4);
     }
