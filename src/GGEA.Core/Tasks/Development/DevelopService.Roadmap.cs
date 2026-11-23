@@ -30,7 +30,10 @@ public sealed partial class DevelopService
         byte[]? inspectedFrame = null;
         TemplateMatchResult? result = null;
 
-        async Task CaptureAsync()
+        TemplateMatchResult? lastTitle = null;
+        SelectStageTitleRecognizer? titleGlyphs = null;
+
+        async Task CaptureAsync(bool confirmingTarget = false)
         {
             token.ThrowIfCancellationRequested();
             async Task<byte[]> Capture()
@@ -45,7 +48,28 @@ public sealed partial class DevelopService
             if (string.IsNullOrEmpty(titleTemplatePath)) return;
             var options = new WaitOptions { Threshold = titleThreshold, Roi = new Roi(200, 0, 650, 150) };
             var check = await PageObservation.ConfirmAsync(previous, Capture,
-                async (frame, _) => await _automation.MatchImageAsync(frame, titleTemplatePath, options, token) is not null,
+                async (frame, _) =>
+                {
+                    var screen = ImageCodec.DecodePng(frame);
+                    var match = await _automation.MatchImageAsync(screen, titleTemplatePath, options, token);
+                    if (match is not null)
+                    {
+                        lastTitle = match;
+                        return true;
+                    }
+                    // 仅在已找到目标后，复核刚刚确认过的固定标题位置。拖图、入场与自定义素材沿用原校验。
+                    if (!confirmingTarget || lastTitle is null || titleThreshold > .90 ||
+                        !Path.GetFileName(titleTemplatePath).Equals("title_develop.png", StringComparison.OrdinalIgnoreCase))
+                        return false;
+                    titleGlyphs ??= new SelectStageTitleRecognizer(titleTemplatePath);
+                    var title = lastTitle.Region;
+                    var pixels = new byte[title.Width * title.Height * 4];
+                    for (var y = 0; y < title.Height; y++)
+                        Buffer.BlockCopy(screen.Bgra, ((title.Y + y) * screen.Width + title.X) * 4,
+                            pixels, y * title.Width * 4, title.Width * 4);
+                    // 使用同一帧完整白字与字间空隙，忽略画布底色；机体仍须在此帧通过位置和尺寸复核。
+                    return titleGlyphs.Recognize(new ScreenImage { Width = title.Width, Height = title.Height, Bgra = pixels }, token);
+                },
                 GameTiming.ConfirmationIntervalMs, token);
             previous = check.Frame;
             if (!check.Confirmed) throw new InvalidOperationException("路线图标题已消失，停止拖动与点击");
@@ -64,7 +88,7 @@ public sealed partial class DevelopService
                 var found = await FindMsMatchAsync(previous!, msLargeTemplatePath, msTemplatePath, wait, token);
                 _log.Info($"路线图单帧检索耗时 {elapsed.Elapsed.TotalMilliseconds:F0}ms，{(found is null ? "未命中" : "发现候选")}");
                 if (found is null) return false;
-                if (!await IsMatchStableAsync(async () => { await CaptureAsync(); return previous!; },
+                if (!await IsMatchStableAsync(async () => { await CaptureAsync(confirmingTarget: true); return previous!; },
                         found.Value.TemplatePath, found.Value.Match, wait, token)) continue;
                 result = found.Value.Match;
                 _log.Info($"目标机体已稳定匹配: {result}");

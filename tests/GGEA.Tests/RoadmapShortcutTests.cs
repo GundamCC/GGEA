@@ -36,6 +36,43 @@ public sealed class RoadmapShortcutTests
         return screen.ToBytes(".png");
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CandidateConfirmation_RequiresTitleGlyphsWhenBackdropChanges(bool keepTitle)
+    {
+        var unit = Frame((Prototype, 1.3, 800));
+        var path = ConfigService.ResolvePath("resources/templates/develop/title_develop.png");
+        var title = ImageCodec.DecodePng(File.ReadAllBytes(path));
+        byte[] WithTitle(bool changed)
+        {
+            var screen = ImageCodec.DecodePng(unit);
+            for (var y = 0; y < title.Height; y++)
+            for (var x = 0; x < title.Width; x++)
+            {
+                var source = (y * title.Width + x) * 4;
+                var dest = ((19 + y) * screen.Width + 219 + x) * 4;
+                for (var c = 0; c < 3; c++)
+                {
+                    var value = title.Bgra[source + c];
+                    screen.Bgra[dest + c] = changed && (!keepTitle || value < 160) ? (byte)135 : value;
+                }
+            }
+            return ImageCodec.EncodePng(screen.Bgra, screen.Width, screen.Height);
+        }
+        var first = WithTitle(false);
+        var second = WithTitle(true);
+        var calls = 0;
+        var adb = new FakeAdbService(first) { ScreenshotProvider = () => ++calls == 1 ? first : second };
+        var log = new TestLog();
+        var service = new DevelopService(new AutomationService(adb, new TemplateMatcher(), log), log, true);
+        var find = () => service.FindOnRoadmapAsync("device", Template(Prototype), "", titleTemplatePath: path);
+        if (keepTitle) Assert.NotNull(await find());
+        else await Assert.ThrowsAsync<InvalidOperationException>(find);
+        Assert.Empty(adb.Taps);
+        Assert.Empty(adb.Swipes);
+    }
+
     /// <summary>两项任务方向相反；快捷路径只拖一次，找到目标立即结束搜索。</summary>
     [Theory]
     [InlineData(Prototype, Ball, -1)]

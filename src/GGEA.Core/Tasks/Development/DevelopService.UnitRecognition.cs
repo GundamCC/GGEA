@@ -171,7 +171,7 @@ public sealed partial class DevelopService
         var current = first;
         for (var i = 1; i < MsConfirmFrames; i++)
         {
-            await Task.Delay(wait.PollIntervalMs, ct);
+            await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
             // 确认帧也归调用方所有；失败时用最新帧比较位移，避免把消失的瞬时目标当成拖动。
             var next = await _automation.MatchRoadmapImageAsync(await captureFrame(), msTemplatePath, wait, ct);
             if (next is null ||
