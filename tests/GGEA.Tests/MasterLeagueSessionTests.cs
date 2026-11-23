@@ -49,6 +49,31 @@ public sealed class MasterLeagueSessionTests
         Assert.Equal(wrongSelection ? 0 : 2, adb.Taps.Count(t => t == (1675, 1000)));
     }
 
+    [Fact]
+    public async Task Session_ConfirmedVictorySurvivesUnrecognizedFramesAfterReturn()
+    {
+        using var ocr = new OnnxTextRecognizer();
+        var won = new MasterLeagueOpponent(100, true, false);
+        var initial = Page(5, won, new(0, false, false), won, won, won);
+        var frames = Enumerable.Range(1, 7).ToDictionary(i => i, i => Frame((byte)i));
+        var adb = new FakeAdbService(frames[1]);
+        GuardScreenshots(adb, 30);
+        var afterReturn = 0;
+        adb.ScreenshotProvider = () => frames[adb.Taps.LastOrDefault() switch
+        {
+            (1701, 989) => ++afterReturn is 1 or 3 ? 6 : 7,
+            (1675, 1000) => 3, (1646, 893) => 2, _ => 1
+        }];
+        var log = new TestLog();
+        using var automation = new AutomationService(adb, new TemplateMatcher(), log, textOcr: ocr);
+        var service = new MasterLeagueService(automation, log, (_, ct) => Task.CompletedTask);
+        var vision = new FakeVision(new Dictionary<byte, MasterLeagueOpponentPage> { [1] = initial, [6] = Completed(initial) }, null);
+        var result = await service.RunChallengesAsync("serial", vision, new(ocr), false);
+        Assert.True(result.Success);
+        Assert.Contains("五名对手均已胜利", result.Message);
+        Assert.Equal(new[] { (429, 400), (1646, 893), (1675, 1000), (1701, 989) }, adb.Taps);
+    }
+
     /// <summary>准备次数识别不等待战斗观察完成；同帧各项只读检查并行，最终只发送一次挑战。</summary>
     [Fact]
     public async Task Session_PreparationReadsAttemptsAlongsideBattle()

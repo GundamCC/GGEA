@@ -8,7 +8,7 @@ namespace GGEA.App.Tasks;
 public sealed partial class MasterLeagueService
 {
     /// <summary>阶段属于一次运行，断连或识别失败不重建阶段，也不重置消费动作记录。</summary>
-    private enum LeaguePhase { Reading, Selecting, Preparing, Fighting, Returning, OpeningRefresh, Refreshing }
+    private enum LeaguePhase { Reading, Selecting, Preparing, Fighting, Returning, ObservingVictory, OpeningRefresh, Refreshing }
 
     /// <summary>只保存本次运行发出的意图；游戏积分和可用次数仍以新截图为准。</summary>
     private sealed class LeagueSession
@@ -18,6 +18,7 @@ public sealed partial class MasterLeagueService
         public int ContinuePages;
         public int Idle;
         public int Battles;
+        public long? VictoryObservedAt;
         public bool StageBoostInfoDismissSent;
         public bool SkipSent;
         public DownloadCapacityWatch? Capacity;
@@ -90,6 +91,7 @@ public sealed partial class MasterLeagueService
                     reason = outcome.Status;
                     if (outcome.Acted)
                     {
+                        state.VictoryObservedAt = null;
                         state.Idle = 0;
                         state.Previous = null;
                         // 进入准备或发送挑战/下载后尽早观察；下一动作仍依赖新帧证据，不靠等待到时授权。
@@ -129,6 +131,19 @@ public sealed partial class MasterLeagueService
         ScreenImage screen, IMasterLeagueVision vision, LeagueSession state, bool retryDefeated, CancellationToken ct,
         Func<CancellationToken, Task<bool>>? recoverKnownHome, bool inspectRecovery, BattleObservation? observation)
     {
+        // 已在短窗口内两次确认全胜，保留这个结果；转场动画或 OCR 波动不能重新开启选敌、结算或导航。
+        if (state.Phase == LeaguePhase.ObservingVictory)
+        {
+            var continuation = await Task.Run(() => _automation.TapToNext.Recognize(screen, ct, RecognitionRegion.ProgressTapToNext), ct);
+            if (continuation is null || state.ContinuePages >= 3)
+                return state.Idle >= 10
+                    ? (new(true, "五名对手均已胜利，大师联盟本轮挑战完成。"), false, "")
+                    : (null, false, "已两次确认五名对手全胜，观察晋级转场后完成…");
+            state.Phase = LeaguePhase.Returning;
+            state.ContinuePages++;
+            await _automation.TapAsync(serial, continuation.CenterX, continuation.CenterY, ct);
+            return (null, true, $"已处理第 {state.ContinuePages}/3 页继续提示，持续观察后续页面…");
+        }
         var checkNavigation = state.Phase is not (LeaguePhase.Refreshing or LeaguePhase.OpeningRefresh) &&
             (inspectRecovery || state.Idle == 5 || state.Idle > 5 && state.Idle % 15 == 0);
         if ((checkNavigation || state.Phase is LeaguePhase.Reading or LeaguePhase.Selecting or LeaguePhase.Returning) &&
@@ -260,7 +275,14 @@ public sealed partial class MasterLeagueService
         if (page is not null && MasterLeagueProgress.IsConsistent(page))
         {
             var previousPage = state.Previous;
-            var stable = state.Previous is not null && SameSessionDecision(state.Previous, page, state, retryDefeated);
+            var allVictory = page.Opponents.All(o => o.Victory);
+            // 动画会暂时遮住胜利文字。短窗口内两次完整五胜可相互印证，明确相反状态或新输入作废旧证据。
+            var now = _time.GetTimestamp();
+            var verifiedVictory = allVictory && state.VictoryObservedAt is long first &&
+                _time.GetElapsedTime(first, now) <= TimeSpan.FromSeconds(45);
+            if (allVictory) state.VictoryObservedAt = now;
+            else if (page.Opponents.Any(o => o.Defeat || o.Unchallenged)) state.VictoryObservedAt = null;
+            var stable = allVictory ? verifiedVictory : state.Previous is not null && SameSessionDecision(state.Previous, page, state, retryDefeated);
             state.Previous = page;
             if (!stable) return (null, false, page.Opponents.All(o => o.Victory)
                 ? "已识别五名对手全胜，正在连续复核…" : "正在确认对手列表…");
@@ -274,7 +296,12 @@ public sealed partial class MasterLeagueService
             if (state.Phase == LeaguePhase.Returning)
             {
                 if (state.BeforeBattle is { } before)
+                {
                     _log.Info($"大师联盟第 {state.Battles + 1} 场，已确认选中第 {state.Target + 1} 位；挑战前 {Describe(before)}；返回后 {Describe(page)}。");
+                    state.BeforeBattle = null;
+                    state.Battles++;
+                    _log.Info($"大师联盟第 {state.Battles} 场已返回，重新读取对手状态。");
+                }
                 // 晋级继续之后，游戏会重置整组对手；据新列表开启下一轮，不再读取右侧任何分数。
                 if (state.ContinuePages > 0 && page.Opponents.All(o => o.Unchallenged))
                 {
@@ -283,8 +310,6 @@ public sealed partial class MasterLeagueService
                     _log.Info("晋级继续后已确认新的零分对手列表，开始下一轮挑战。");
                 }
                 state.Phase = LeaguePhase.Reading;
-                state.Battles++;
-                _log.Info($"大师联盟第 {state.Battles} 场已返回，重新读取对手状态。");
             }
             if (state.Phase == LeaguePhase.Refreshing)
             {
@@ -351,10 +376,14 @@ public sealed partial class MasterLeagueService
                         retryDefeated && page.Opponents.Any(o => o.Defeat) && page.RefreshRemaining is null)
                         return (null, false, "暂未找到可确认的下一目标，持续读取未知状态；任务保持运行。");
                     // 结算后的旧列表可能先于晋级动效短暂出现；没有下一目标时多留一个转场观察窗口。
+                    if (state.ReturnSent && allVictory)
+                    {
+                        state.Phase = LeaguePhase.ObservingVictory;
+                        state.Idle = 0;
+                        return (null, false, "已两次确认五名对手全胜，观察晋级转场后完成…");
+                    }
                     if (state.ReturnSent && state.Idle < 10)
-                        return (null, false, page.Opponents.All(o => o.Victory)
-                            ? "已连续确认五名对手全胜，观察晋级转场后完成…"
-                            : "当前对手已处理完，继续观察可能延迟出现的晋级提示…");
+                        return (null, false, "当前对手已处理完，继续观察可能延迟出现的晋级提示…");
                     return (new(true, choice.StopReason), false, "");
                 }
                 if (!choice.Refresh && state.Attempted.Contains(choice.Index))
