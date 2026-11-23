@@ -206,6 +206,18 @@ public sealed class WorkLogoVision : IWorkLogoVision
             ct.ThrowIfCancellationRequested();
             var match = MatchLogoSingle(gray, work, candidate, roi, scales, coarse, ct);
             if (match is not null && match.Confidence >= threshold) return match;
+            // 只在 DESTINY 原模板已定位到弱候选时复核其邻域，避免每次选作品都多扫一遍画布。
+            if (coarse && work.Screenshot == "logo_l_series_3300.webp" && match is { Confidence: >= .75 })
+            {
+                var bounds = match.Bounds;
+                var left = Math.Max(roi.X, bounds.X - 5);
+                var top = Math.Max(roi.Y, bounds.Y - 5);
+                var right = Math.Min(roi.X + roi.Width, bounds.X + bounds.Width + 5);
+                var bottom = Math.Min(roi.Y + roi.Height, bounds.Y + bounds.Height + 5);
+                var rendered = MatchLogoSingle(gray, work, candidate, new Roi(left, top, right - left, bottom - top),
+                    scales, true, ct, smooth: true);
+                if (rendered is not null && rendered.Confidence >= threshold) return rendered;
+            }
             if (coarse && work.Screenshot == "logo_l_series_0010.webp")
             {
                 // 游戏缩小渲染会平滑浅色 G 的细边缘；仍使用同一 WebP、遮罩与业务阈值。

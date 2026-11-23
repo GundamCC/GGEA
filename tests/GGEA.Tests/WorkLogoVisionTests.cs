@@ -90,6 +90,7 @@ public sealed class WorkLogoVisionTests
     [Theory]
     [InlineData(13)]
     [InlineData(14)]
+    [InlineData(15)]
     public void SeedOverview_RequiresCorrectSubtitle(int displayedWork)
     {
         var (vision, works, resources) = CreateVision();
@@ -99,11 +100,28 @@ public sealed class WorkLogoVisionTests
         Paste(pixels, Path.Combine(resources, "templates/stage/select.png"), 1494, 831);
         var observation = vision.Inspect(ImageCodec.EncodePng(pixels, 1920, 1080), works.Single(w => w.Id == 14), works);
         Assert.Equal(displayedWork == 14, observation.TargetTitleVisible);
+        var destiny = vision.Inspect(ImageCodec.EncodePng(pixels, 1920, 1080), works.Single(w => w.Id == 15), works);
+        Assert.Equal(displayedWork == 15, destiny.TargetTitleVisible);
         Assert.NotNull(observation.SelectButton);
     }
 
+    [Theory]
+    [InlineData(13)]
+    [InlineData(15)]
+    public void SeedAndDestinyCanvas_OnlyMatchesDisplayedWork(int displayed)
+    {
+        var (vision, works, resources) = CreateVision();
+        var pixels = TestImageFactory.CreateBgra(1920, 1080, 120);
+        var work = works.Single(w => w.Id == displayed);
+        PasteRenderedLogo(pixels, ConfigService.ResolvePath(Path.Combine(resources, "templates/stage/main_stage", work.Screenshot)),
+            850, 400, .417);
+        var result = vision.Inspect(ImageCodec.EncodePng(pixels, 1920, 1080), works.Single(w => w.Id == 15), works);
+        Assert.Contains(result.Works, w => w.WorkId == displayed);
+        Assert.DoesNotContain(result.Works, w => w.WorkId == (displayed == 13 ? 15 : 13));
+    }
+
     /// <summary>测试专用黑底透明合成，使用原素材生成详情标题，不依赖模拟器或新识别素材。</summary>
-    private static void PasteRenderedLogo(byte[] pixels, string path, int x, int y)
+    private static void PasteRenderedLogo(byte[] pixels, string path, int x, int y, double scale = .445)
     {
         using var original = Cv2.ImRead(path, ImreadModes.Unchanged);
         var height = original.Height;
@@ -117,8 +135,8 @@ public sealed class WorkLogoVisionTests
                     (byte)(pixel.Item1 * pixel.Item3 / 255), (byte)(pixel.Item2 * pixel.Item3 / 255), 255));
             }
         using var scaled = new Mat();
-        Cv2.Resize(composited, scaled, new Size((int)Math.Round(original.Width * .445),
-            (int)Math.Round(original.Height * .445)), 0, 0, InterpolationFlags.Lanczos4);
+        Cv2.Resize(composited, scaled, new Size((int)Math.Round(original.Width * scale),
+            (int)Math.Round(original.Height * scale)), 0, 0, InterpolationFlags.Lanczos4);
         var image = ImageCodec.DecodePng(scaled.ToBytes(".png"));
         for (var row = 0; row < image.Height; row++)
             Buffer.BlockCopy(image.Bgra, row * image.Width * 4, pixels,
