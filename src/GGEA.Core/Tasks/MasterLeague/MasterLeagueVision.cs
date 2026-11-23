@@ -22,6 +22,7 @@ public interface IMasterLeagueVision
     MasterLeagueRefreshDialog? ReadRefreshDialog(ScreenImage screen, CancellationToken ct);
     TemplateMatchResult? FindRefresh(ScreenImage screen, int opponent, CancellationToken ct);
     TemplateMatchResult? FindBattleButton(ScreenImage screen, CancellationToken ct);
+    int? ReadSelectedOpponent(ScreenImage screen);
     int? ReadChallengeRemaining(ScreenImage screen, CancellationToken ct);
 }
 
@@ -144,6 +145,34 @@ public sealed class MasterLeagueVision : IMasterLeagueVision
     }
 
     /// <summary>只观察按钮；调用方必须在同帧确认对手表。</summary>
+    /// <summary>标准画面中选中卡片两侧都有连续的青色描边。跨高度同时检查两侧，排除机体配色、文字和单侧邻卡高亮。</summary>
+    public int? ReadSelectedOpponent(ScreenImage screen)
+    {
+        if (screen.Width != 1920 || screen.Height != 1080) return null;
+        bool HasBorder(int x, int y)
+        {
+            for (var col = Math.Max(0, x - 9); col <= x + 9; col++)
+            {
+                var offset = (y * screen.Width + col) * 4;
+                var green = screen.Bgra[offset + 1];
+                if (screen.Bgra[offset] >= 220 && green >= 212 && green - screen.Bgra[offset + 2] >= 38)
+                    return true;
+            }
+            return false;
+        }
+        int? selected = null;
+        for (var i = 0; i < 5; i++)
+        {
+            var matches = 0;
+            for (var y = 260; y < 850; y += 30)
+                if (HasBorder(4 + 286 * i, y) && HasBorder(276 + 286 * i, y)) matches++;
+            if (matches < 15) continue;
+            if (selected.HasValue) return null;
+            selected = i;
+        }
+        return selected;
+    }
+
     public TemplateMatchResult? FindBattleButton(ScreenImage screen, CancellationToken ct)
     { Validate(); return Standard(screen) ? Match(screen, Root + "button_battle.png", Region("battleButton"), .85, ct) : null; }
 

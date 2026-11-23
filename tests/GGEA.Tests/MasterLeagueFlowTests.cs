@@ -226,6 +226,9 @@ public sealed class MasterLeagueFlowTests
         public TemplateMatchResult? FindRefresh(ScreenImage screen, int opponent, CancellationToken ct)
             => Match(190 + 286 * opponent, 880, 66, 66);
         public TemplateMatchResult? FindBattleButton(ScreenImage screen, CancellationToken ct) => Match(1466, 833, 360, 120);
+        public Func<ScreenImage, int?>? Selected { get; init; }
+        public int? ReadSelectedOpponent(ScreenImage screen) => Selected is null
+            ? MasterLeagueProgress.Choose(pages[screen.Bgra[0]], false).Index : Selected(screen);
         public Func<ScreenImage, int?>? ChallengeRemaining { get; init; }
         public int? ReadChallengeRemaining(ScreenImage screen, CancellationToken ct)
             => ChallengeRemaining is not null ? ChallengeRemaining(screen) : screen.Bgra[0] == 2 ? 5 : null;

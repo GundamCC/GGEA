@@ -18,6 +18,37 @@ public sealed class MasterLeagueSessionTests
         public void Dispose() => Directory.Delete(Path, true);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Session_ConflictingSelectionOrUnchangedResults_StopsWithoutExtraChallenge(bool wrongSelection)
+    {
+        using var ocr = new OnnxTextRecognizer();
+        var win = new MasterLeagueOpponent(100, true, false);
+        var zero = new MasterLeagueOpponent(0, false, false);
+        var page = Page(5, win, zero, win, zero, win);
+        var frames = Enumerable.Range(1, 3).ToDictionary(i => i, i => Frame((byte)i));
+        var adb = new FakeAdbService(frames[1]);
+        GuardScreenshots(adb, 80);
+        adb.ScreenshotProvider = () => frames[adb.Taps.LastOrDefault() switch
+        {
+            (1646, 893) => 2, (1675, 1000) => 3, _ => 1
+        }];
+        var vision = new FakeVision(new Dictionary<byte, MasterLeagueOpponentPage> { [1] = page }, null)
+        {
+            Selected = _ => wrongSelection ? 2 : adb.Taps.Contains((1001, 400)) ? 3 : 1
+        };
+        var log = new TestLog();
+        var clock = new ManualProgressTime();
+        using var automation = new AutomationService(adb, new TemplateMatcher(), log, textOcr: ocr);
+        var service = new MasterLeagueService(automation, log, (_, ct) =>
+        { clock.Advance(10); ct.ThrowIfCancellationRequested(); return Task.CompletedTask; }, timeProvider: clock);
+        var result = await service.RunChallengesAsync("serial", vision, new(ocr), false);
+        Assert.False(result.Success);
+        Assert.Contains(wrongSelection ? "选位未确认" : "第 2、4 位", result.Message);
+        Assert.Equal(wrongSelection ? 0 : 2, adb.Taps.Count(t => t == (1675, 1000)));
+    }
+
     /// <summary>准备次数识别不等待战斗观察完成；同帧各项只读检查并行，最终只发送一次挑战。</summary>
     [Fact]
     public async Task Session_PreparationReadsAttemptsAlongsideBattle()

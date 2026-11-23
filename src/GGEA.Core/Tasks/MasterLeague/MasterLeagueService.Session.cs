@@ -24,6 +24,8 @@ public sealed partial class MasterLeagueService
         public bool DownloadSent;
         public bool ReturnSent;
         public bool SelectionAcknowledged;
+        public bool SelectionRetried;
+        public MasterLeagueOpponentPage? BeforeBattle;
         public MasterLeagueOpponentPage? Previous;
         public HashSet<int> Attempted { get; } = [];
         public string? LastStatus;
@@ -257,6 +259,7 @@ public sealed partial class MasterLeagueService
         var page = await Task.Run(() => vision.ReadOpponents(screen, ct), ct);
         if (page is not null && MasterLeagueProgress.IsConsistent(page))
         {
+            var previousPage = state.Previous;
             var stable = state.Previous is not null && SameSessionDecision(state.Previous, page, state, retryDefeated);
             state.Previous = page;
             if (!stable) return (null, false, page.Opponents.All(o => o.Victory)
@@ -270,6 +273,8 @@ public sealed partial class MasterLeagueService
             }
             if (state.Phase == LeaguePhase.Returning)
             {
+                if (state.BeforeBattle is { } before)
+                    _log.Info($"大师联盟第 {state.Battles + 1} 场，已确认选中第 {state.Target + 1} 位；挑战前 {Describe(before)}；返回后 {Describe(page)}。");
                 // 晋级继续之后，游戏会重置整组对手；据新列表开启下一轮，不再读取右侧任何分数。
                 if (state.ContinuePages > 0 && page.Opponents.All(o => o.Unchallenged))
                 {
@@ -287,6 +292,7 @@ public sealed partial class MasterLeagueService
                     return (null, false, "刷新结果尚未确认，持续等待目标积分清零；不重复消耗变更次数。");
                 state.Attempted.Remove(state.Target);
                 state.Phase = LeaguePhase.Selecting;
+                state.SelectionRetried = false;
                 state.SelectionAcknowledged = false;
                 await _automation.TapAsync(serial, 143 + 286 * state.Target, 400, ct);
                 state.SelectionAcknowledged = true;
@@ -294,7 +300,7 @@ public sealed partial class MasterLeagueService
             }
             if (state.Phase is LeaguePhase.Selecting or LeaguePhase.Preparing)
             {
-                if (page.Opponents[state.Target].Points != 0) state.Phase = LeaguePhase.Reading;
+                if (!page.Opponents[state.Target].Unchallenged) state.Phase = LeaguePhase.Reading;
                 else if (state.Phase == LeaguePhase.Selecting && !state.SelectionAcknowledged)
                 {
                     // 选择列不消费次数；回执不明时在新对手页重选，不能直接点击可能对应旧目标的对战。
@@ -304,9 +310,23 @@ public sealed partial class MasterLeagueService
                 }
                 else if (state.Phase == LeaguePhase.Selecting || state.Idle >= 5)
                 {
+                    var selected = vision.ReadSelectedOpponent(screen);
+                    if (selected != state.Target)
+                    {
+                        if (inspectRecovery)
+                            return (new(false, Localization.L.Format($"选位未确认：目标第 {state.Target + 1} 位，识别列 {selected + 1}（空表示未知）。已停止，请核对对手列表。")), false, "");
+                        if (!state.SelectionRetried)
+                        {
+                            state.SelectionRetried = true;
+                            await _automation.TapAsync(serial, 143 + 286 * state.Target, 400, ct);
+                            return (null, true, "重新选择目标，等待卡片高亮。");
+                        }
+                        return (null, false, "等待目标卡片高亮。");
+                    }
                     var button = vision.FindBattleButton(screen, ct);
                     if (button is not null)
                     {
+                        state.BeforeBattle = page;
                         state.Phase = LeaguePhase.Preparing;
                         await _automation.TapAsync(serial, button.CenterX, button.CenterY, ct);
                         return (null, true, "已进入对战准备，持续等待挑战次数与页面就绪…");
@@ -342,6 +362,13 @@ public sealed partial class MasterLeagueService
                     var nextIndex = MasterLeagueProgress.ChallengeOrder
                         .Where(i => page.Opponents[i].Unchallenged && !state.Attempted.Contains(i))
                         .Select(i => (int?)i).FirstOrDefault();
+                    if (nextIndex is null && inspectRecovery && state.ReturnSent && state.Battles > 0 &&
+                        previousPage is not null && previousPage.SameAs(page) &&
+                        page.Opponents.All(o => o.Victory || o.Defeat || o.Points.HasValue))
+                    {
+                        var slots = string.Join("、", Enumerable.Range(0, 5).Where(i => page.Opponents[i].Unchallenged).Select(i => i + 1));
+                        return (new(false, Localization.L.Format($"第 {state.Battles} 场已结算，第 {slots} 位仍为零分且本轮已发过挑战。已停止，请核对对战记录。")), false, "");
+                    }
                     if (nextIndex is null)
                         return (null, false, "已发出的挑战尚未同步，等待页面更新；不会再次消耗该目标的次数。");
                     choice = (nextIndex.Value, false, null);
@@ -356,6 +383,7 @@ public sealed partial class MasterLeagueService
                     return (null, true, "已打开败北对手的变更弹窗，等待确认…");
                 }
                 state.Phase = LeaguePhase.Selecting;
+                state.SelectionRetried = false;
                 state.SelectionAcknowledged = false;
                 await _automation.TapAsync(serial, 143 + 286 * choice.Index, 400, ct);
                 state.SelectionAcknowledged = true;
@@ -400,6 +428,9 @@ public sealed partial class MasterLeagueService
             _ => "页面暂未就绪，持续重试并恢复已识别的导航页；可随时中止。"
         });
     }
+
+    private static string Describe(MasterLeagueOpponentPage page) => string.Join(" / ", page.Opponents.Select(o =>
+        $"{(o.Victory ? "胜" : o.Defeat ? "败" : "无标记")}{o.Points?.ToString() ?? "?"}"));
 
     /// <summary>连续确认的是下一步决策，不要求无关列、总分末位或变更次数在两帧中完全相等。</summary>
     private static bool SameSessionDecision(MasterLeagueOpponentPage previous, MasterLeagueOpponentPage current,
