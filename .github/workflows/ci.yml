@@ -61,6 +61,8 @@ jobs:
           retention-days: 7
 
   macos-core:
+    # macOS 开发启动后，先确认可用的 runner，再移除此条件。
+    if: ${{ false }}
     name: macOS shared core
     runs-on: macos-14
     timeout-minutes: 15
