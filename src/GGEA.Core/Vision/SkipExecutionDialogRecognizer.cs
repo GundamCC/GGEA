@@ -6,7 +6,7 @@ namespace GGEA.App.Vision;
 public sealed record SkipExecutionDialog(ScreenImage Screen, TemplateMatchResult Execute, TemplateMatchResult Cancel);
 
 /// <summary>验证执行与取消双按钮，并复核原弹窗标题、次数和 AP 数值，防止恢复时发起另一笔略过。</summary>
-public sealed class SkipExecutionDialogRecognizer
+public sealed class SkipExecutionDialogRecognizer(bool eventLayout = false)
 {
     private readonly StageEntryButtonRecognizer _buttons = new();
     private readonly string _execute = ConfigService.ResolvePath("resources/templates/dialog/execute.png");
@@ -17,21 +17,24 @@ public sealed class SkipExecutionDialogRecognizer
     private static readonly Roi[] IdentityRegions =
     [new(850, 210, 220, 60), new(900, 440, 170, 70), new(940, 590, 120, 55), new(1330, 590, 120, 55)];
 
+    private static readonly Roi[] EventIdentity = [new(850, 150, 220, 65), new(913, 330, 130, 102),
+        new(895, 700, 135, 75), new(1295, 700, 150, 75)];
+
     /// <summary>匹配当前语言的完整按钮与中央文字；蓝色亮态是执行授权的额外条件。</summary>
     public SkipExecutionDialog? Recognize(ScreenImage screen, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         if (screen.Width != 1920 || screen.Height != 1080) return null;
-        var execute = _buttons.Match(screen, _execute, ExecuteRegion, .90, ct);
+        var execute = _buttons.Match(screen, _execute, eventLayout ? new(945, 910, 445, 170) : ExecuteRegion, .90, ct);
         if (execute is null || !IsEnabled(screen, execute)) return null;
-        var cancel = _buttons.Match(screen, _cancel, CancelRegion, .90, ct);
+        var cancel = _buttons.Match(screen, _cancel, eventLayout ? new(555, 910, 435, 170) : CancelRegion, .90, ct);
         return cancel is null ? null : new(screen, execute, cancel);
     }
 
     /// <summary>固定字形区域逐像素比较，AP 或次数的一处变化就拒绝，不能被大片相同底色稀释。</summary>
     public bool IsSameSelection(SkipExecutionDialog original, SkipExecutionDialog current, CancellationToken ct)
     {
-        foreach (var region in IdentityRegions)
+        foreach (var region in eventLayout ? EventIdentity : IdentityRegions)
         {
             if (!TemplateMatcher.MatchesUnchangedText(original.Screen, current.Screen, region, ct)) return false;
         }

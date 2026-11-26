@@ -71,8 +71,10 @@ public sealed class LimitedEventBossTests
     }
 
     /// <summary>常驻最大次数、结算后出现稀有、稀有只执行一次，直到关闭不足弹窗。</summary>
-    [Fact]
-    public async Task EachResultRechecksRareAndOnlyRegularSelectsMaximum()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task EachResultRechecksRareAndOnlyRegularSelectsMaximum(bool initiallyOffscreen)
     {
         var story = Frame((Assets + "story.png", 210, 3));
         var regular = Frame((Assets + "boss.png", 219, 8), ("Fixtures/Navigation/event-regular-card.png", 975, 135));
@@ -86,11 +88,14 @@ public sealed class LimitedEventBossTests
         var maximum = Dialog(true);
         byte[][] screens = [story, regular, initial, maximum, rare, maximum, regular, insufficient, regular];
         var device = new FakeAdbService(story);
-        device.ScreenshotProvider = () => screens[device.Taps.Count];
+        var listWithoutTarget = Frame((Assets + "boss.png", 219, 8));
+        device.ScreenshotProvider = () => initiallyOffscreen && device.Taps.Count == 1 && device.Swipes.Count == 0
+            ? listWithoutTarget : screens[device.Taps.Count];
         using var ocr = new OnnxTextRecognizer();
         var log = new TestLog();
         using var automation = new AutomationService(device, new TemplateMatcher(), log);
         await new LimitedEventBossService(automation, ocr, log, "serial").RunAsync(FierceEnemyDifficulty.EXPERT, default);
+        Assert.Equal(initiallyOffscreen ? 1 : 0, device.Swipes.Count);
         Assert.Equal(8, device.Taps.Count);
         Assert.InRange(device.Taps[2].X, 1280, 1360);
         Assert.InRange(device.Taps[3].X, 1100, 1190);

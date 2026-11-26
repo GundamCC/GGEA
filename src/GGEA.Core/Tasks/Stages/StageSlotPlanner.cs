@@ -50,7 +50,12 @@ public static class StageSlotPlanner
     {
         var start = GetViewportStart(normalCount, hardCount, currentHardIndex, sideStories);
         var targetIndex = GetOverallIndex(normalCount, targetHardIndex, sideStories);
-        var relative = targetIndex - start;
+        return TryGetVisibleSlot(start, targetIndex, out slotIndex);
+    }
+
+    internal static bool TryGetVisibleSlot(int viewportStart, int overallIndex, out int slotIndex)
+    {
+        var relative = overallIndex - viewportStart;
         if (relative < 0 || relative >= SlotCount)
         {
             slotIndex = 0;

@@ -43,17 +43,37 @@ public sealed class MissionRewardService
         await _automation.TapAsync(serial, navMission.CenterX, navMission.CenterY, ct);
         if (networkSettleDelayMs <= 5000) await Task.Delay(Math.Max(0, networkSettleDelayMs), ct);
 
+        if (!await ClaimPageAsync(serial, claimAll.Roi, RecognitionRegions.Resolve(RecognitionRegion.BottomButtons,
+            missionLayout.ScreenWidth, missionLayout.ScreenHeight), claimAllTemplatePath, claimAllDisabledTemplatePath,
+            okTemplatePath, networkSettleDelayMs, waitTimeoutMs, threshold, ct)) return false;
+        await ReturnToMainAsync(serial, navHome, networkSettleDelayMs, ct);
+        _log.Info("领取每日使命奖励完成");
+        return true;
+    }
+
+    // 单页领取不负责导航；活动页由调用方提供页签身份和结果弹窗的连续帧证据。
+    internal async Task<bool> ClaimPageAsync(string serial, Roi claimRegion, Roi okRegion, string claimAllTemplatePath,
+        string claimAllDisabledTemplatePath, string okTemplatePath, int networkSettleDelayMs, int waitTimeoutMs,
+        double threshold, CancellationToken ct, Func<Task<(bool Disabled, TemplateMatchResult Button)>>? observe = null,
+        Func<Task<TemplateMatchResult>>? receipt = null)
+    {
         // 亮色优先，暗态命中立即返回：同一轮里先找可领取按钮，找不到再找暗态按钮。
         var deadline = Environment.TickCount64 + Math.Max(0, waitTimeoutMs);
         TemplateMatchResult? claimMatch = null;
-        while (Environment.TickCount64 < deadline)
+        if (observe is not null)
+        {
+            var state = await observe();
+            if (state.Disabled) return true;
+            claimMatch = state.Button;
+        }
+        while (claimMatch is null && Environment.TickCount64 < deadline)
         {
             ct.ThrowIfCancellationRequested();
 
             var enabledWait = new WaitOptions
             {
                 Threshold = threshold,
-                Roi = claimAll.Roi,
+                Roi = claimRegion,
             };
             var enabledMatch = await _automation.FindImageAsync(
                 serial,
@@ -69,7 +89,7 @@ public sealed class MissionRewardService
             var disabledWait = new WaitOptions
             {
                 Threshold = Math.Clamp(threshold + 0.05, 0.5, 0.99),
-                Roi = claimAll.Roi,
+                Roi = claimRegion,
             };
             var disabledMatch = await _automation.FindImageAsync(
                 serial,
@@ -79,7 +99,6 @@ public sealed class MissionRewardService
             if (disabledMatch is not null)
             {
                 _log.Info("使命奖励已领取完毕（全部领取为暗态）");
-                await ReturnToMainAsync(serial, navHome, networkSettleDelayMs, ct);
                 return true;
             }
 
@@ -104,9 +123,9 @@ public sealed class MissionRewardService
             PollIntervalMs = GameTiming.RecognitionIntervalMs,
             Threshold = threshold,
             // 完整 OK 模板共享底部识别区域，点击使用实际匹配中心。
-            Roi = RecognitionRegions.Resolve(RecognitionRegion.BottomButtons, missionLayout.ScreenWidth, missionLayout.ScreenHeight),
+            Roi = okRegion,
         };
-        var okMatch = await _automation.WaitForImageAsync(serial, okTemplatePath, okWait, ct);
+        var okMatch = receipt is not null ? await receipt() : await _automation.WaitForImageAsync(serial, okTemplatePath, okWait, ct);
         if (okMatch is null)
         {
             _log.Warn("未检测到使命领取结果 OK，流程中断");
@@ -120,8 +139,6 @@ public sealed class MissionRewardService
                      okWait with { AllowGlobalContinuation = false }, ct))
             return false;
 
-        await ReturnToMainAsync(serial, navHome, networkSettleDelayMs, ct);
-        _log.Info("领取每日使命奖励完成");
         return true;
     }
 

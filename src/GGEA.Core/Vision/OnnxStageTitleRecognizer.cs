@@ -8,13 +8,14 @@ namespace GGEA.App.Vision;
 /// <summary>在标题栏定位完整 HARD STAGE 行，借用与数字识别共用的 CPU OCR 会话。</summary>
 public sealed class OnnxStageTitleRecognizer : IStageTitleRecognizer
 {
+    private readonly bool _eventSuffix;
     private readonly IAdbService _adb;
     private readonly IGgeaLog _log;
     private readonly OnnxTextRecognizer _ocr;
 
     /// <summary>会话所有者负责释放；标题识别不加载或匹配旧 PNG 模板。</summary>
-    public OnnxStageTitleRecognizer(IAdbService adb, IGgeaLog log, OnnxTextRecognizer ocr)
-    { _adb = adb; _log = log; _ocr = ocr; }
+    public OnnxStageTitleRecognizer(IAdbService adb, IGgeaLog log, OnnxTextRecognizer ocr, bool eventSuffix = false)
+    { _adb = adb; _log = log; _ocr = ocr; _eventSuffix = eventSuffix; }
 
     /// <summary>仅接受标题 ROI 内的唯一完整高分标题；未命中属于等待状态。</summary>
     public async Task<StageTitleMatch?> RecognizeAsync(string serial, Roi titleRoi,
@@ -28,10 +29,10 @@ public sealed class OnnxStageTitleRecognizer : IStageTitleRecognizer
             var screen = ImageCodec.DecodePng(png);
             var binary = OnnxTextRecognizer.CreateWhiteMask(screen, titleRoi, ct);
             var matches = new List<StageTitleMatch>();
-            foreach (var bounds in LocateTitleLines(binary, titleRoi))
+            foreach (var bounds in LocateTitleLines(binary, titleRoi, _eventSuffix ? 5 : 10))
             {
                 var text = _ocr.Recognize(binary, titleRoi.Width, bounds, ct);
-                var index = OcrStageTitleDecoder.Decode(text, threshold);
+                var index = OcrStageTitleDecoder.Decode(text, threshold, _eventSuffix);
                 _log.Info($"HARD 标题 {text.Diagnostic}，最低字母/数字 {text.MinimumContentConfidence ?? text.MinimumConfidence:P1}；{(index is null ? "格式或置信度未达标，等待重新识别" : $"确认 HARD STAGE {index}")}。");
                 if (index is null) continue;
                 var region = new Roi(titleRoi.X + bounds.X, titleRoi.Y + bounds.Y, bounds.Width, bounds.Height);
@@ -45,8 +46,8 @@ public sealed class OnnxStageTitleRecognizer : IStageTitleRecognizer
         }, ct);
     }
 
-    /// <summary>按白色字形基线找行；作品名长度可变，截取行尾完整的十个字符 HARD STAGE n。</summary>
-    private static IEnumerable<Roi> LocateTitleLines(byte[] binary, Roi roi)
+    /// <summary>按基线定位行末字形；活动 HARD-n 的短横较低，不参与基线分组，但保留在 OCR 文字框中。</summary>
+    private static IEnumerable<Roi> LocateTitleLines(byte[] binary, Roi roi, int glyphCount)
     {
         using var source = Mat.FromPixelData(roi.Height, roi.Width, MatType.CV_8UC1, binary);
         using var labels = new Mat(); using var stats = new Mat(); using var centers = new Mat();
@@ -66,8 +67,8 @@ public sealed class OnnxStageTitleRecognizer : IStageTitleRecognizer
         }
         foreach (var line in lines)
         {
-            if (line.Count < 10) continue;
-            var letters = line.OrderBy(b => b.X).TakeLast(10).ToArray();
+            if (line.Count < glyphCount) continue;
+            var letters = line.OrderBy(b => b.X).TakeLast(glyphCount).ToArray();
             var x = letters.Min(b => b.X); var y = letters.Min(b => b.Y);
             var right = letters.Max(b => b.X + b.Width); var bottom = letters.Max(b => b.Y + b.Height);
             // ROI 不能裁断标题；字符间隔过大会把分离的控件拼成文字行。
@@ -83,12 +84,12 @@ public sealed class OnnxStageTitleRecognizer : IStageTitleRecognizer
 public static class OcrStageTitleDecoder
 {
     /// <summary>允许模型省略词间空格，但必须读出完整 HARD STAGE 与 1～5 编号。</summary>
-    public static int? Decode(OcrTextRecognition result, double threshold = .90)
+    public static int? Decode(OcrTextRecognition result, double threshold = .90, bool eventSuffix = false)
     {
         // 两个词间空格不参与最低有效字符分，但平均分仍含空格；关键词与编号一字也不能缺失。
         if (result.Confidence < Math.Max(.90, threshold) ||
             (result.MinimumContentConfidence ?? result.MinimumConfidence) < .85) return null;
-        var match = Regex.Match(result.Text.Trim(), @"\AHARD\s*STAGE\s*([1-5])\z", RegexOptions.CultureInvariant);
+        var match = Regex.Match(result.Text.Trim(), eventSuffix ? @"\AHARD\s*-\s*([1-4])\z" : @"\AHARD\s*STAGE\s*([1-5])\z", RegexOptions.CultureInvariant);
         return match.Success ? match.Groups[1].Value[0] - '0' : null;
     }
 }

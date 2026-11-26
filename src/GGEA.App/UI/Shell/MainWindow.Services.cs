@@ -209,7 +209,7 @@ public partial class MainWindow
     }
 
     /// <summary>强化培育与 AP 任务分别持有略过配置，避免共享实例误触发升级检测。</summary>
-    private StageSkipService CreateStageSkipService(bool forUpgradeStages, Func<ScreenImage, CancellationToken, bool>? postSkipConfirmation = null)
+    private StageSkipService CreateStageSkipService(bool forUpgradeStages, Func<ScreenImage, CancellationToken, bool>? postSkipConfirmation = null, bool eventQuantityLayout = false)
     {
         return new StageSkipService(
             _automation ?? throw new InvalidOperationException(L.Text("自动化服务尚未初始化")),
@@ -217,7 +217,8 @@ public partial class MainWindow
             new StageSkipOptions
             {
                 // 当前恢复证据对应标准 HARD 的 AP/次数布局，强敌和强化培育保留各自确认策略。
-                RecoverUnchangedExecutionDialog = !forUpgradeStages && postSkipConfirmation is null,
+                EventQuantityLayout = eventQuantityLayout,
+                RecoverUnchangedExecutionDialog = !forUpgradeStages && (postSkipConfirmation is null || eventQuantityLayout),
                 PostSkipTimeoutMs = GameTiming.ShortRecognitionTimeoutMs,
                 PostSkipConfirmation = postSkipConfirmation,
                 ContinueUnitAcquisition = postSkipConfirmation is not null,

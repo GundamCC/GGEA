@@ -72,7 +72,7 @@ public sealed class FierceEnemyAssaultSkipCountTests
         var pixels = TestImageFactory.CreateBgra(1920, 1080, 20);
         void Paste(string path, int x, int y)
         {
-            var image = ImageCodec.DecodePng(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, path)));
+            var image = ImageCodec.DecodePng(File.ReadAllBytes(GGEA.App.Config.ConfigService.ResolvePath(path)));
             for (var row = 0; row < image.Height; row++)
                 Buffer.BlockCopy(image.Bgra, row * image.Width * 4, pixels,
                     ((y + row) * 1920 + x) * 4, image.Width * 4);

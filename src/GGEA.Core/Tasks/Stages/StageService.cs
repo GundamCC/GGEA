@@ -50,6 +50,11 @@ public sealed partial class StageService
         _menuEntry = menuEntry ?? new StageMenuEntryService(automation, log);
     }
 
+    // 活动轨道可横向拖动，先停靠末端再使用公共五槽位规划。识别器仅替换轨道几何。
+    private bool _endAligned;
+    internal StageService ForEndAlignedTrack(IStageNodeRecognizer nodes, IStageTitleRecognizer eventTitles)
+        => new StageService(_automation, _recognizer, _log, _options, eventTitles, nodes) { _endAligned = true };
+
     /// <summary>当前设备的连续关卡导航上下文。</summary>
     public StageNavigationContext Context { get; } = new();
 

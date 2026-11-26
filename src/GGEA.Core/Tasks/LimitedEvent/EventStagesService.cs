@@ -9,8 +9,7 @@ namespace GGEA.App.Tasks;
 internal sealed class EventStagesService(AutomationService automation, string serial)
 {
     internal const string Directory = "stage/event/limited_time_event/";
-    private static readonly Roi Header = new(190, 0, 470, 105), Nodes = new(0, 285, 1000, 265),
-        Detail = new(1240, 86, 465, 85), SkipArea = new(1505, 645, 345, 140),
+    private static readonly Roi Header = new(190, 0, 470, 105), SkipArea = new(1505, 645, 345, 140),
         ClaimArea = new(1505, 821, 390, 150), DailyTabArea = new(896, 94, 165, 75), TotalTabArea = new(1492, 94, 162, 75);
     private sealed record Target(string Key, Roi Area, double Threshold, bool? BlueTab = null);
     private static Target E(string name, Roi area, double threshold = .92) => new(Directory + name, area, threshold);
@@ -18,7 +17,7 @@ internal sealed class EventStagesService(AutomationService automation, string se
         Mission = E("event_mission_title", Header, .90), Back = new("stage/history_back", new(0, 0, 225, 112), .90),
         Complete = E("event_stage_complete", new(1290, 510, 155, 90), .97),
         Skip = new("stage/event/button_skip", SkipArea, .90), Limit = new("stage/skip/count_limit", SkipArea, .90),
-        ApDialog = E("event_skip_ap", new(750, 135, 420, 110)), Execute = new("dialog/execute", new(945, 912, 425, 160), .88),
+        ApDialog = E("event_skip_ap", new(750, 135, 420, 110)),
         Daily = E("mission_daily_tab", DailyTabArea) with { BlueTab = true }, Total = E("mission_total_tab", TotalTabArea) with { BlueTab = true },
         TenRow = E("mission_ten_row", new(850, 363, 215, 98)), TenDone = E("mission_daily_complete", new(1092, 465, 147, 71), .982),
         Claim = new("mission/button_claim_all", ClaimArea, .89), Claimed = new("mission/button_claim_all_disabled", ClaimArea, .91);
@@ -45,21 +44,15 @@ internal sealed class EventStagesService(AutomationService automation, string se
     private sealed record Seen(Target Target, TemplateMatchResult Match);
     private async Task<Seen?> Observe(Target? page, Target[] choices, CancellationToken ct, int budget = GameTiming.RecognitionTimeoutMs)
     {
-        Seen? last = null;
-        var end = Environment.TickCount64 + budget;
-        do
+        return await StableObservation.WaitAsync<Seen>(async () =>
         {
             var frame = await automation.CaptureScreenAsync(serial, ct);
-            Seen? now = null;
             if (page is null || await Match(frame, page, ct) is not null)
                 foreach (var t in choices)
-                    if (await Match(frame, t, ct) is { } hit) { now = new(t, hit); break; }
-            if (now is not null && last?.Target == now.Target && Math.Abs(last.Match.CenterX-now.Match.CenterX) <= 4 &&
-                Math.Abs(last.Match.CenterY-now.Match.CenterY) <= 4) return now;
-            last = now;
-            await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
-        } while (Environment.TickCount64 < end);
-        return null;
+                    if (await Match(frame, t, ct) is { } hit) return new(t, hit);
+            return null;
+        }, (a,b) => a.Target == b.Target && Math.Abs(a.Match.CenterX-b.Match.CenterX) <= 4 &&
+            Math.Abs(a.Match.CenterY-b.Match.CenterY) <= 4, budget, ct);
     }
     private async Task<Seen> Require(Target? page, CancellationToken ct, params Target[] choices) =>
         await Observe(page, choices, ct) ?? throw new InvalidOperationException($"事件关卡：未确认 {string.Join(" / ", choices.Select(t => t.Key))}。");
@@ -85,11 +78,23 @@ internal sealed class EventStagesService(AutomationService automation, string se
 
     internal async Task OpenFromMenuAsync(CancellationToken ct)
     {
-        await automation.TapAsync(serial, 1165, 400, ct);
-        var events = new Target("stage/event/title_event", new(155, 0, 450, 108), .88);
-        await Click(events, E("event_banner", new(0, 105, 398, 871)), ct);
-        var forward = new Target("stage/event/button_to_event", FierceEnemyAssaultEntryService.ButtonRegion, .85);
-        await Click(E("event_poster", new(740, 230, 635, 370)), forward, ct);
+        await FierceEnemyAssaultService.OpenEventListAsync(automation, serial, ct);
+        var options = new WaitOptions { Region = RecognitionRegion.PageTitle, Threshold = .85,
+            TimeoutMs = GameTiming.RecognitionTimeoutMs, AllowGlobalContinuation = false };
+        if (!await FierceEnemyAssaultService.WaitEventListAsync(automation, serial,
+            ConfigService.ResolvePath(FierceEnemyAssaultService.TitleTemplate), options, ct))
+            throw new InvalidOperationException("未确认事件列表标题。");
+        var banner = E("event_banner", new(0, 105, 398, 871));
+        if (!await FierceEnemyAssaultService.SelectEventBannerAsync(automation, serial,
+            ConfigService.ResolvePath(FierceEnemyAssaultService.TitleTemplate), options,
+            (frame, token) => Match(frame, banner, token), ct))
+            throw new InvalidOperationException("事件列表未确认当前活动横幅。");
+        var poster = E("event_poster", new(740, 230, 635, 370));
+        await Require(null, ct, poster);
+        if (!await FierceEnemyAssaultEntryService.EnterSelectedAsync(automation, serial,
+            options with { Region = null, Roi = FierceEnemyAssaultEntryService.ButtonRegion },
+            async (screen, token) => await Match(screen, poster, token) is not null, ct))
+            throw new InvalidOperationException("未确认当前故事事件的前往按钮。");
         await Require(null, ct, Story);
     }
 
@@ -99,38 +104,18 @@ internal sealed class EventStagesService(AutomationService automation, string se
         await Require(null, ct, Story);
     }
 
-    private async Task<Seen> FindNode(int index, CancellationToken ct)
+    private async Task ConfigureQuantity(bool maximum, CancellationToken ct)
     {
-        var node = E($"node_hard_{index}", Nodes, .94);
-        for (int i = 0; i < 8; i++)
-        {
-            if (await Observe(Stage, [node], ct, 1900) is { } seen) return seen;
-            await Require(null, ct, Stage);
-            await automation.SwipeAsync(serial, 830, 538, 225, 538, 370, ct);
-        }
-        return await Require(Stage, ct, node);
-    }
-
-    private async Task RunSkip(StageSkipService settlement, UiLayout layout, bool hard, CancellationToken ct)
-    {
-        var arrow = hard ? "develop/button/set_max_button" : "develop/button/set_min_button";
-        var area = hard ? new Roi(1190, 310, 230, 175) : new Roi(533, 310, 210, 165);
+        var arrow = maximum ? "develop/button/set_max_button" : "develop/button/set_min_button";
+        var area = maximum ? new Roi(1190, 310, 230, 175) : new Roi(533, 310, 210, 165);
         var ready = new Target(arrow + "_disabled", area, .93);
-        if (hard) await Require(ApDialog, ct, E("event_daily_limit", new(775, 437, 240, 108)));
         var selection = await Require(ApDialog, ct, ready, new Target(arrow, area, .90));
         if (selection.Target != ready)
         {
             await Tap(selection, ct);
             await Require(ApDialog, ct, ready);
         }
-        if (!hard) await Require(ApDialog, ct, E("event_skip_one", new(922, 329, 101, 115), .98));
-        await Click(ApDialog, Execute, ct);
-        // 事件弹窗的取消按钮位于底部。只替换此锚点，结果与升级仍沿用公共布局。
-        var eventLayout = new UiLayout { ScreenWidth = layout.ScreenWidth, ScreenHeight = layout.ScreenHeight,
-            Anchors = layout.Anchors.Where(a => a.Name != "skipDialogCancel").Append(
-                new UiAnchor { Name = "skipDialogCancel", X = 590, Y = 935, Width = 360, Height = 115 }).ToList() };
-        var result = await settlement.CompleteExecutedSkipAsync(serial, eventLayout, ct);
-        if (!result.Success) throw new InvalidOperationException(result.Message);
+        if (!maximum) await Require(ApDialog, ct, E("event_skip_one", new(922, 329, 101, 115), .98));
     }
 
     private async Task OpenMission(CancellationToken ct)
@@ -152,97 +137,140 @@ internal sealed class EventStagesService(AutomationService automation, string se
     private async Task ClaimTab(Target tab, CancellationToken ct)
     {
         await Require(Mission, ct, tab);
-        var state = await Require(Mission, ct, Claimed, Claim);
-        if (state.Target == Claimed) return;
-        await Tap(state, ct);
         var receipt = E("mission_receipt", new(790, 33, 350, 115));
-        await Click(receipt, new("dialog/button_ok", new(720, 905, 480, 175), .88), ct);
+        var ok = new Target("dialog/button_ok", new(720, 905, 480, 175), .88);
+        var service = new MissionRewardService(automation, automation.Log);
+        await service.ClaimPageAsync(serial, ClaimArea, ok.Area, ConfigService.ResolvePath($"resources/templates/{Claim.Key}.png"),
+            ConfigService.ResolvePath($"resources/templates/{Claimed.Key}.png"), ConfigService.ResolvePath($"resources/templates/{ok.Key}.png"),
+            0, GameTiming.RecognitionTimeoutMs, Claim.Threshold, ct, async () =>
+            {
+                var seen = await Require(tab, ct, Claimed, Claim);
+                return (seen.Target == Claimed, seen.Match);
+            }, async () => (await Require(receipt, ct, ok)).Match);
         await Require(tab, ct, Claimed);
     }
 
-    // 三个 HARD 均已耗尽时，只有明确读到 9/10 才补普通关，缺帧或文字被遮挡时继续观察。
-    private async Task ConfirmNineAsync(OnnxTextRecognizer ocr, CancellationToken ct)
+    // 进度条每格对应一次；只接受连续蓝段后接连续空段的十格，未知颜色不能当作零。
+    private static int? ReadTenStepBar(ScreenImage frame)
     {
-        int consecutive = 0;
-        var deadline = Environment.TickCount64 + GameTiming.RecognitionTimeoutMs;
-        do
+        int filled = 0;
+        bool emptySeen = false;
+        for (int step = 0; step < 10; step++)
         {
-            var frame = await automation.CaptureScreenAsync(serial, ct);
-            string progress = "";
-            if (await Match(frame, Daily, ct) is not null && await Match(frame, TenRow, ct) is not null)
+            int x = 1060 + step * 23;
+            bool? sample = null;
+            for (int y = 527; y <= 531; y += 2)
             {
-                const int width = 128, height = 32;
-                var ink = new byte[width * height];
-                for (int y = 0; y < height; y++)
-                for (int x = 0; x < width; x++)
-                {
-                    int offset = ((483 + y) * frame.Width + 1096 + x) * 4;
-                    ink[y * width + x] = (byte)Math.Clamp((167 - frame.Bgra[offset + 2]) * 3, 0, 255);
-                }
-                var result = ocr.Recognize(ink, width, new(0, 0, width, height), ct);
-                if (result.Confidence >= .9) progress = result.Text.Replace(" ", "");
+                int offset = (frame.Width * y + x) * 4;
+                var blue = frame.Bgra[offset];
+                var green = frame.Bgra[offset + 1];
+                var red = frame.Bgra[offset + 2];
+                bool active = blue >= 225 && green is >= 145 and <= 205 && red is >= 85 and <= 150;
+                bool empty = blue is >= 60 and <= 90 && green is >= 47 and <= 72 && red is >= 32 and <= 57;
+                if ((!active && !empty) || (sample.HasValue && sample != active)) return null;
+                sample = active;
             }
-            consecutive = progress == "9/10" ? consecutive + 1 : 0;
-            if (consecutive == 2) return;
-            await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
-        } while (Environment.TickCount64 < deadline);
-        throw new InvalidOperationException("未能确认每日使命进度为 9/10，已保留 AP。");
+            if (sample == false) emptySeen = true;
+            else if (emptySeen) return null;
+            else filled++;
+        }
+        return filled;
     }
 
-    internal async Task DailyAsync(StageSkipService settlement, UiLayout layout, OnnxTextRecognizer ocr, CancellationToken ct, bool claimRewards = true)
+    private sealed record MissionProgress(int Count);
+    private async Task<int> ReadMissionProgressAsync(CancellationToken ct)
     {
-        await EnterAsync(false, ct);
-        var ranHard = false;
-        for (int i = 1; i <= 3; i++)
+        var result = await StableObservation.WaitAsync<MissionProgress>(async () =>
         {
-            await Tap(await FindNode(i, ct), ct);
-            var detail = E($"selected_hard_{i}", Detail, .97);
-            await Require(Stage, ct, detail);
-            var state = await Require(detail, ct, Limit, Skip);
-            if (state.Target == Limit) continue;
-            await Tap(state, ct);
-            await RunSkip(settlement, layout, true, ct);
-            await Require(detail, ct, Limit);
-            ranHard = true;
-        }
+            var frame = await automation.CaptureScreenAsync(serial, ct);
+            if (await Match(frame, Daily, ct) is null || await Match(frame, TenRow, ct) is null) return null;
+            if (await Match(frame, TenDone, ct) is not null) return new(10);
+            return ReadTenStepBar(frame) is int value ? new(value) : null;
+        }, (a,b) => a == b, GameTiming.RecognitionTimeoutMs, ct);
+        if (result is null) throw new InvalidOperationException("未能确认每日十次使命进度，已保留 AP。");
+        automation.Log.Info($"限时活动每日使命进度 {result.Count}/10。");
+        return result.Count;
+    }
 
-        // 重启时先读使命进度；已经满十次时不能重复消耗普通关卡的 AP。
-        var needsOne = ranHard;
-        if (!ranHard)
+    internal static HardStageEntry CreateWork() => new() { Work = "事件关卡", NormalCount = 7, HardCount = 4 };
+
+    internal static UiLayout CreateTrackLayout(UiLayout layout)
+    {
+        // 与主线共用五槽位规划；活动轨道整体上移，第一槽位（普通末关）靠近左边缘。
+        var slots = new[] { (30, 458), (220, 394), (410, 458), (600, 394), (790, 458) };
+        var anchors = layout.Anchors.ToDictionary(a => a.Name);
+        for (int i = 0; i < slots.Length; i++)
         {
-            await OpenMission(ct);
-            await Require(Daily, ct, TenRow);
-            needsOne = await Observe(Daily, [TenDone], ct, 3000) is null;
-            if (needsOne)
-            {
-                await ConfirmNineAsync(ocr, ct);
-                await Click(Mission, Back, ct);
-                await EnterAsync(false, ct);
-            }
+            string key = $"stageSlot{i + 1}";
+            anchors[key] = new UiAnchor { Name = key, X = slots[i].Item1 - 10, Y = slots[i].Item2 - 10, Width = 20, Height = 20 };
         }
-        if (needsOne)
+        anchors["stageTitle"] = new UiAnchor { Name = "stageTitle", X = 1120, Y = 90, Width = 700, Height = 78 };
+        anchors["skipDialogCancel"] = new UiAnchor { Name = "skipDialogCancel", X = 590, Y = 935, Width = 360, Height = 115 };
+        return new UiLayout { ScreenWidth = layout.ScreenWidth, ScreenHeight = layout.ScreenHeight, Anchors = anchors.Values.ToList() };
+    }
+
+    internal async Task<bool> DailyAsync(StageSkipService settlement, UiLayout layout, StageService navigation,
+        CancellationToken ct, bool claimRewards = true)
+    {
+        var work = CreateWork();
+        var eventLayout = CreateTrackLayout(layout);
+        var start = await Require(null, ct, Story, Stage);
+        if (start.Target == Stage) await OpenMission(ct); else await OpenMissionFromStory(ct);
+        int progress = await ReadMissionProgressAsync(ct);
+        for (int hard = 1; progress < 10 && hard <= 3; hard++)
         {
-            var first = await FindNode(1, ct);
-            var second = await FindNode(2, ct);
-            // 相邻节点等距、上下交替，以同屏的 HARD1 和 HARD2 反推紧邻前一关的位置。
-            first = await Require(Stage, ct, first.Target);
-            second = await Require(Stage, ct, second.Target);
-            if (first.Match.CenterX < second.Match.CenterX - first.Match.CenterX + 8)
+            await Click(Mission, Back, ct);
+            await EnterAsync(false, ct);
+            var selected = await navigation.SelectHardStageAsync(serial, eventLayout, [work], work.Id, hard, ct);
+            if (!selected.Success) throw new InvalidOperationException(selected.Message);
+            bool maximum = progress <= 7;
+            var result = await SkipSelected(maximum);
+            if (result.IsApInsufficient) return await FinishWithoutAp();
+            if (!result.Success && !result.IsUnavailable) throw new InvalidOperationException(result.Message);
+            if (result.Success)
             {
-                await automation.SwipeAsync(serial, 300, 540, 570, 540, 400, ct);
-                first = await Require(Stage, ct, first.Target);
-                second = await Require(Stage, ct, second.Target);
+                var confirmed = await navigation.ConfirmCurrentHardStageAsync(serial, eventLayout, work, hard, ct);
+                if (!confirmed.Success) throw new InvalidOperationException(confirmed.Message);
             }
-            var pitch = second.Match.CenterX - first.Match.CenterX;
-            var x = first.Match.CenterX - pitch;
-            if (pitch is < 170 or > 210 || x < 0) throw new InvalidOperationException("未确认 HARD1 前一关的位置。");
-            await automation.TapAsync(serial, x, second.Match.CenterY, ct);
-            await Require(Stage, ct, E("previous_stage_title", new(1180, 88, 560, 100), .94));
-            await Click(Stage, Skip, ct);
-            await RunSkip(settlement, layout, false, ct);
             await OpenMission(ct);
+            int updated = await ReadMissionProgressAsync(ct);
+            if (result.Success && updated <= progress) throw new InvalidOperationException("事件使命进度未增加，已保留 AP。");
+            if (!maximum && updated > progress && updated < 10) hard--;
+            progress = updated;
         }
-        await Require(Daily, ct, TenDone);
+        if (progress < 10)
+        {
+            if (progress != 9) throw new InvalidOperationException($"每日使命为 {progress}/10，当前 HARD 次数不足。");
+            await Click(Mission, Back, ct);
+            await EnterAsync(false, ct);
+            var first = await navigation.SelectHardStageAsync(serial, eventLayout, [work], work.Id, 1, ct);
+            if (!first.Success) throw new InvalidOperationException(first.Message);
+            await navigation.SelectBeforeHardAsync(serial, eventLayout, work, ct);
+            var result = await SkipSelected(false);
+            if (result.IsApInsufficient) return await FinishWithoutAp();
+            if (!result.Success) throw new InvalidOperationException(result.Message);
+            await navigation.ConfirmBeforeHardAsync(serial, work, ct);
+            await OpenMission(ct);
+            if (await ReadMissionProgressAsync(ct) != 10) throw new InvalidOperationException("未确认每日使命完成。");
+        }
+        await FinishMissionAsync(claimRewards, ct);
+        return true;
+
+        Task<StageSkipResult> SkipSelected(bool maximum) => settlement.SkipCurrentAsync(serial, eventLayout, ct,
+            token => ConfigureQuantity(maximum, token),
+            async token => (await Require(Stage, token, Limit, Skip)).Target == Skip);
+
+        async Task<bool> FinishWithoutAp()
+        {
+            // 公共结算已关闭回复与确认弹窗，返回故事事件后仍可执行领取、BOSS 和补给。
+            await OpenMission(ct);
+            await FinishMissionAsync(claimRewards, ct);
+            return false;
+        }
+    }
+
+    private async Task FinishMissionAsync(bool claimRewards, CancellationToken ct)
+    {
         if (claimRewards) await ClaimBothTabs(ct);
         await Click(Mission, Back, ct);
         await Require(null, ct, Story);
@@ -251,9 +279,7 @@ internal sealed class EventStagesService(AutomationService automation, string se
     internal async Task ClaimFromStoryAsync(CancellationToken ct)
     {
         await OpenMissionFromStory(ct);
-        await ClaimBothTabs(ct);
-        await Click(Mission, Back, ct);
-        await Require(null, ct, Story);
+        await FinishMissionAsync(true, ct);
     }
 
     private async Task ClaimBothTabs(CancellationToken ct)

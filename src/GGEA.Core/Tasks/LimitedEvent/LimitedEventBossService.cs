@@ -27,7 +27,7 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
         var entry = await WaitStable(async frame =>
         {
             if (await Find(frame, Event + "boss", Title, ct, BossTitleThreshold) is { } boss) return new Observation("boss", boss);
-            return await Find(frame, Event + "story", Title, ct) is { } story ? new Observation("story", story) : null;
+            return await Find(frame, Event + "story", Title, ct, .90) is { } story ? new Observation("story", story) : null;
         }, ct) ?? throw new InvalidOperationException(L.Text("请进入故事事件或 BOSS 战斗界面。"));
         if (entry.Kind == "story") await automation.TapAsync(serial, 1650, 314, ct);
         await WaitBoss(ct);
@@ -80,14 +80,13 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
         throw Unknown();
     }
 
-    /// <summary>先复核列表顶部的稀有标记，再向下浏览玩家所选难度，每次手势后重新截图。</summary>
+    /// <summary>先检查当前屏的稀有标记和目标难度，仅在没有可用目标时浏览其他卡片。</summary>
     private async Task<(TemplateMatchResult, bool)> Locate(FierceEnemyDifficulty difficulty, CancellationToken ct)
     {
-        async Task<Observation?> Card(ScreenImage frame, bool rareOnly)
+        async Task<Observation?> Card(ScreenImage frame)
         {
             if (await Find(frame, Event + "boss", Title, ct, BossTitleThreshold) is null) return null;
             var rare = await FindRare(frame, ct);
-            if (rareOnly && rare is null) return null;
             Roi? label = rare is null
                 ? await Task.Run(() => labels.Find(frame, difficulty, ct), ct)
                 : new Roi(1040, rare.Y + 55, 100, 30);
@@ -95,17 +94,13 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
             var button = await Find(frame, "stage/event/button_skip", new Roi(region.X - 25, region.Y - 16, region.Width + 50, region.Height + 32), ct, .88);
             return button is null ? null : new Observation(rare is null ? "regular" : "rare", button);
         }
-        for (int i = 0; i < 2; i++)
+        // 先从当前可见卡片选择；每次未命中才滚动一次，再用新帧重新识别。
+        int[] movements = [420, 420, -245, -245, -245, -245, -245];
+        for (int i = 0; i <= movements.Length; i++)
         {
-            if (await WaitStable(f => Card(f, true), ct, 1500) is { } rare) return (rare.Button, true);
-            await Scroll(420, ct);
-            await WaitBoss(ct);
-        }
-        for (int i = 0; i < 6; i++)
-        {
-            if (await WaitStable(f => Card(f, false), ct, 2000) is { } card) return (card.Button, card.Kind == "rare");
-            if (i == 5) break;
-            await Scroll(-245, ct);
+            if (await WaitStable(Card, ct, 2500) is { } card) return (card.Button, card.Kind == "rare");
+            if (i == movements.Length) break;
+            await Scroll(movements[i], ct);
             await WaitBoss(ct);
         }
         throw Unknown();
@@ -147,18 +142,9 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
     private async Task<Observation?> WaitStable(Func<ScreenImage, Task<Observation?>> recognize,
         CancellationToken ct, int timeoutMs = GameTiming.ShortRecognitionTimeoutMs)
     {
-        var deadline = Environment.TickCount64 + timeoutMs;
-        Observation? previous = null;
-        do
-        {
-            var current = await recognize(await Capture(ct));
-            if (current is not null && previous?.Kind == current.Kind &&
-                Math.Abs(previous.Button.CenterX - current.Button.CenterX) <= 3 &&
-                Math.Abs(previous.Button.CenterY - current.Button.CenterY) <= 3) return current;
-            previous = current;
-            await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
-        } while (Environment.TickCount64 < deadline);
-        return null;
+        return await StableObservation.WaitAsync(async () => await recognize(await Capture(ct)),
+            (a,b) => a.Kind == b.Kind && Math.Abs(a.Button.CenterX-b.Button.CenterX) <= 3 &&
+                Math.Abs(a.Button.CenterY-b.Button.CenterY) <= 3, timeoutMs, ct);
     }
 
     private async Task WaitBoss(CancellationToken ct, int seconds = 20)

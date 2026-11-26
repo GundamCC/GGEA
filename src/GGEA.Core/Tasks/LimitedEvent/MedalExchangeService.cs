@@ -12,9 +12,9 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
     private const int MedalCost = 5;
     private const string Directory = "stage/event/limited_time_event/";
     private sealed record Target(string Key, Roi Area, double Threshold = .94);
-    private static Target Event(string name, Roi area) => new(Directory + name, area);
+    private static Target Event(string name, Roi area, double threshold = .94) => new(Directory + name, area, threshold);
     private static readonly Roi PageTitle = new(190, 0, 500, 110), ModalTitle = new(700, 30, 520, 105);
-    private static readonly Target Story = Event("story", PageTitle), Supply = Event("medal_supply_title", PageTitle),
+    private static readonly Target Story = Event("story", PageTitle, .90), Supply = Event("medal_supply_title", PageTitle, .90),
         Settings = Event("medal_settings_title", ModalTitle), Status = Event("medal_reward_status_title", ModalTitle),
         OpenSettings = Event("medal_settings_button", new(625, 795, 360, 130)),
         SupplyStatus = Event("medal_reward_status_button", new(1030, 670, 460, 120)),
@@ -45,13 +45,13 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         if (!System.IO.File.Exists(ConfigService.ResolvePath($"resources/templates/{Supply.Key}.png")))
             throw new InvalidOperationException(L.Text("当前游戏语言缺少故事事件识别素材。"));
         ocr.Validate();
-        var frame = await Capture(ct);
-        if (await Match(frame, Supply, ct) is null)
+        var entry = await StableObservation.WaitAsync<Target>(async () =>
         {
-            if (await Match(frame, Story, ct) is null)
-                throw new InvalidOperationException(L.Text("请进入故事事件或奖章机体补给界面。"));
-            await automation.TapAsync(serial, 1656, 720, ct);
-        }
+            var frame = await Capture(ct);
+            if (await Match(frame, Supply, ct) is not null) return Supply;
+            return await Match(frame, Story, ct) is not null ? Story : null;
+        }, (a,b) => a == b, GameTiming.RecognitionTimeoutMs, ct) ?? throw Uncertain();
+        if (entry == Story) await automation.TapAsync(serial, 1656, 720, ct);
         await Click(Supply, OpenSettings, ct);
         await Configure(ct);
         await Click(Settings, ModalClose, ct);
@@ -202,18 +202,13 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
     /// <summary>弹窗关闭后重新确认实际底层页面，避免沿用上一次打开弹窗时的父页。</summary>
     private async Task<Target> WaitParent(CancellationToken ct)
     {
-        var deadline = Environment.TickCount64 + 20000;
-        do
+        return await StableObservation.WaitAsync<Target>(async () =>
         {
             var frame = await Capture(ct);
-            if (await Match(frame, Status, ct) is null)
-            {
-                if (await Match(frame, Supply, ct) is not null) return Supply;
-                if (await Match(frame, Results, ct) is not null) return Results;
-            }
-            await Task.Delay(400, ct);
-        } while (Environment.TickCount64 < deadline);
-        throw Uncertain();
+            if (await Match(frame, Status, ct) is not null) return null;
+            if (await Match(frame, Supply, ct) is not null) return Supply;
+            return await Match(frame, Results, ct) is not null ? Results : null;
+        }, (a,b) => a == b, 20000, ct) ?? throw Uncertain();
     }
 
     private async Task<int> ReadBalance(CancellationToken ct)
@@ -268,17 +263,21 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         await Tap(await Match(frame, control, ct) ?? throw Uncertain(), ct);
     }
 
+    private sealed record MatchedFrame(ScreenImage Frame, TemplateMatchResult Match);
+
     private Task<ScreenImage> WaitPage(Target page, CancellationToken ct) => WaitPair(page, null, ct);
     private async Task<ScreenImage> WaitPair(Target page, Target? control, CancellationToken ct)
     {
-        var deadline = Environment.TickCount64 + GameTiming.RecognitionTimeoutMs;
-        do
+        var stable = await StableObservation.WaitAsync(async () =>
         {
             var frame = await Capture(ct);
-            if (await Match(frame, page, ct) is not null &&
-                (control is null || await Match(frame, control, ct) is not null)) return frame;
-            await Task.Delay(350, ct);
-        } while (Environment.TickCount64 < deadline);
+            var hit = await Match(frame, page, ct);
+            if (hit is null) return null;
+            if (control is not null) hit = await Match(frame, control, ct);
+            return hit is null ? null : new MatchedFrame(frame, hit);
+        }, (a,b) => Math.Abs(a.Match.CenterX-b.Match.CenterX) <= 4 &&
+            Math.Abs(a.Match.CenterY-b.Match.CenterY) <= 4, GameTiming.RecognitionTimeoutMs, ct);
+        if (stable is not null) return stable.Frame;
         log.Warn($"奖章兑换等待超时：{page.Key} / {control?.Key}，搜索区 {control?.Area ?? page.Area}。");
         throw Uncertain();
     }

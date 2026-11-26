@@ -45,8 +45,8 @@ public partial class MainWindow
                 LimitedStatus.Text = await RunEventProgressAsync(serial, owner.Token);
             else if (button == EventDaily)
             {
-                await RunEventStagesDailyAsync(serial, owner.Token);
-                LimitedStatus.Text = L.Text("事件每日关卡及使命领取完成。");
+                LimitedStatus.Text = await RunEventStagesDailyAsync(serial, owner.Token)
+                    ? L.Text("事件每日关卡及使命领取完成。") : L.Text("AP 不足，当前略过任务结束");
             }
             else if (button == MedalStart)
             {
@@ -75,20 +75,26 @@ public partial class MainWindow
         }
     }
 
-    private Task RunEventStagesDailyAsync(string serial, CancellationToken ct, bool claimRewards = true)
+    private async Task<bool> RunEventStagesDailyAsync(string serial, CancellationToken ct, bool claimRewards = true)
     {
         var title = new SelectStageTitleRecognizer(EventStagesService.PathFor("stage_title"));
-        var settlement = CreateStageSkipService(false, title.Recognize);
-        return new EventStagesService(_automation!, serial).DailyAsync(settlement, _stageLayout, GetTextOcr(), ct, claimRewards);
+        var settlement = CreateStageSkipService(false, title.Recognize, eventQuantityLayout: true);
+        using var nodes = CreateEventNodeRecognizer();
+        var titles = new OnnxStageTitleRecognizer(_adb!, _logger!, GetTextOcr(), eventSuffix: true);
+        var navigation = _stageService!.ForEndAlignedTrack(nodes, titles);
+        return await new EventStagesService(_automation!, serial).DailyAsync(settlement, _stageLayout, navigation, ct, claimRewards);
     }
+
+    private StageNodeRecognizer CreateEventNodeRecognizer() =>
+        new(_adb!, _matcher, _logger!, ConfigService.ResolvePath(_config.StageNodeTemplateDirectory),
+            numberRecognizer: new OnnxStageNumberRecognizer(GetTextOcr()), evidence: GetRecognitionEvidence(), layout: StageNodeLayout.History);
 
     private async Task<string> RunEventProgressAsync(string serial, CancellationToken ct)
     {
         var stages = new EventStagesService(_automation!, serial);
         if (!await stages.EnterAsync(true, ct)) return L.Text("事件关卡攻略度已达 100%。");
-        var work = new HardStageEntry { Work = L.Text("事件关卡"), NormalCount = 7, HardCount = 4 };
-        using var nodes = new StageNodeRecognizer(_adb!, _matcher, _logger!, ConfigService.ResolvePath(_config.StageNodeTemplateDirectory),
-            numberRecognizer: new OnnxStageNumberRecognizer(GetTextOcr()), layout: StageNodeLayout.History);
+        var work = EventStagesService.CreateWork();
+        using var nodes = CreateEventNodeRecognizer();
         var reader = _stageService!.CreateProgressReader(nodes);
         var path = EventStagesService.PathFor("stage_title");
         var title = new SelectStageTitleRecognizer(path);

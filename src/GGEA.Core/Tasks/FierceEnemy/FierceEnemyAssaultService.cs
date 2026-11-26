@@ -52,7 +52,7 @@ public sealed class FierceEnemyAssaultService
         var menu = await new StageMenuEntryService(_automation, _log, timeoutMs: _timeoutMs,
             pollIntervalMs: _pollIntervalMs).OpenFromHomeAsync(serial, mainLayout, settleDelayMs, ct);
         if (!menu.Success) return new(false, menu.Message);
-        await _automation.TapAsync(serial, 1165, 400, ct);
+        await OpenEventListAsync(_automation, serial, ct);
         return await SelectFromEventAsync(serial, ct);
     }
 
@@ -63,24 +63,37 @@ public sealed class FierceEnemyAssaultService
         Validate();
         var options = new WaitOptions { Region = RecognitionRegion.PageTitle, Threshold = .85,
             TimeoutMs = _timeoutMs, PollIntervalMs = _pollIntervalMs, AllowGlobalContinuation = false };
-        if (await _automation.WaitForImageAsync(serial, _titlePath, options, ct) is null)
-        {
-            // 新活动演出可能遮住标题；只检测一次继续提示，不点击略过或未知画面。
-            // 无论是否发送点击，都重新等待标题，动作本身不能作为进入事件页的证据。
-            await _automation.HandleTapToNextAsync(serial, ct);
-            if (await _automation.WaitForImageAsync(serial, _titlePath, options, ct) is null)
-                return Fail(L.Text("未识别到事件标题，已停止强敌来袭导航。"));
-        }
-        var entry = await _automation.WaitForImageAsync(serial, _entryPath, options, ct,
-            async (screen, token) =>
-            {
-                if (await _automation.MatchImageAsync(screen, _titlePath, options, token) is null) return null;
-                return await Task.Run(() => _recognizer!.Match(screen, token), token);
-            });
-        if (entry is null) return Fail(L.Text("左上角 400×980 区域未识别到强敌来袭，已停止，未点击。"));
-        await _automation.TapAsync(serial, entry.CenterX, entry.CenterY, ct);
-        _log.Info($"已识别并点击强敌来袭：({entry.CenterX},{entry.CenterY})，置信度 {entry.Confidence:P1}");
+        if (!await WaitEventListAsync(_automation, serial, _titlePath, options, ct))
+            return Fail(L.Text("未识别到事件标题，已停止强敌来袭导航。"));
+        if (!await SelectEventBannerAsync(_automation, serial, _titlePath, options,
+            (screen, token) => Task.Run(() => _recognizer!.Match(screen, token), token), ct))
+            return Fail(L.Text("左上角 400×980 区域未识别到强敌来袭，已停止，未点击。"));
         return new(true, L.Text("已确认事件界面，并点击左侧强敌来袭活动。"));
+    }
+
+    internal static async Task<bool> SelectEventBannerAsync(AutomationService automation, string serial,
+        string title, WaitOptions options, Func<ScreenImage,CancellationToken,Task<TemplateMatchResult?>> recognize, CancellationToken ct)
+    {
+        var entry = await StableObservation.WaitAsync(async () =>
+        {
+            var frame = await automation.CaptureScreenAsync(serial, ct);
+            return await automation.MatchImageAsync(frame, title, options, ct) is null ? null : await recognize(frame, ct);
+        }, (a,b) => Math.Abs(a.CenterX-b.CenterX) <= 4 && Math.Abs(a.CenterY-b.CenterY) <= 4, options.TimeoutMs, ct);
+        if (entry is null) return false;
+        await automation.TapAsync(serial, entry.CenterX, entry.CenterY, ct);
+        automation.Log.Info($"已点击事件列表活动：({entry.CenterX},{entry.CenterY})，置信度 {entry.Confidence:P1}");
+        return true;
+    }
+
+    internal static Task OpenEventListAsync(AutomationService automation, string serial, CancellationToken ct)
+        => automation.TapAsync(serial, 1165, 400, ct);
+
+    internal static async Task<bool> WaitEventListAsync(AutomationService automation, string serial,
+        string title, WaitOptions options, CancellationToken ct)
+    {
+        if (await automation.WaitForImageAsync(serial, title, options, ct) is not null) return true;
+        await automation.HandleTapToNextAsync(serial, ct);
+        return await automation.WaitForImageAsync(serial, title, options, ct) is not null;
     }
 
     /// <summary>预期识别失败保留画面，由界面显示停止范围。</summary>

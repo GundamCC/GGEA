@@ -35,13 +35,20 @@ public sealed class FierceEnemyAssaultEntryService(AutomationService automation,
         ct.ThrowIfCancellationRequested();
         var options = new WaitOptions { Roi = ButtonRegion, Threshold = .85, TimeoutMs = timeoutMs,
             PollIntervalMs = pollIntervalMs, AllowGlobalContinuation = false };
+        return await EnterSelectedAsync(automation, serial, options, async (screen, token) =>
+            await automation.MatchImageAsync(screen, ConfigService.ResolvePath(FierceEnemyAssaultService.TitleTemplate),
+                options with { Region = RecognitionRegion.PageTitle }, token) is not null, ct);
+    }
+
+    internal static async Task<bool> EnterSelectedAsync(AutomationService automation, string serial, WaitOptions options,
+        Func<ScreenImage,CancellationToken,Task<bool>> identity, CancellationToken ct)
+    {
         var buttonPath = ConfigService.ResolvePath(ButtonTemplate);
-        var match = await automation.WaitForImageAsync(serial, buttonPath, options, ct, async (screen, token) =>
+        var match = await StableObservation.WaitAsync(async () =>
         {
-            var title = await automation.MatchImageAsync(screen, ConfigService.ResolvePath(FierceEnemyAssaultService.TitleTemplate),
-                options with { Region = RecognitionRegion.PageTitle }, token);
-            return title is null ? null : await automation.MatchImageAsync(screen, buttonPath, options, token);
-        });
+            var screen = await automation.CaptureScreenAsync(serial, ct);
+            return await identity(screen, ct) ? await automation.MatchImageAsync(screen, buttonPath, options, ct) : null;
+        }, (a,b) => Math.Abs(a.CenterX-b.CenterX) <= 4 && Math.Abs(a.CenterY-b.CenterY) <= 4, options.TimeoutMs, ct);
         if (match is null)
             return false;
         await automation.TapAsync(serial, match.CenterX, match.CenterY, ct);

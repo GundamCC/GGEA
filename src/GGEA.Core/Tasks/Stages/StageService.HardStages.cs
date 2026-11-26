@@ -39,6 +39,12 @@ public sealed partial class StageService
             match = await _titleRecognizer.RecognizeAsync(serial, title.Roi, ct: ct);
             if (match is not null)
             {
+                if (_endAligned)
+                {
+                    await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
+                    var next = await _titleRecognizer.RecognizeAsync(serial, title.Roi, ct: ct);
+                    if (next?.HardIndex != match.HardIndex) { match = null; continue; }
+                }
                 break;
             }
 
@@ -162,7 +168,16 @@ public sealed partial class StageService
             return StageNavigationResult.Ok("已确认 HARD 1");
         }
 
-        if (Context.CurrentHardIndex is not int currentHardIndex)
+        int currentHardIndex = Context.CurrentHardIndex ?? 0;
+        if (_endAligned)
+        {
+            // 单次手势可能只移动数个节点；每次选择均复核实际编号，拖动本身不能授权消耗。
+            await _automation.SwipeAsync(serial, 900, 540, 50, 540, 320, ct);
+            await _automation.SwipeAsync(serial, 900, 540, 50, 540, 320, ct);
+            await GameTiming.DelayIfPositiveAsync(_options.PageSettleMs, ct);
+            currentHardIndex = work.HardCount;
+        }
+        else if (currentHardIndex == 0)
         {
             var titleResult = await ReadCurrentHardStageAsync(serial, stageLayout, work, ct);
             if (!titleResult.Success || titleResult.HardIndex is not int readHardIndex)
@@ -200,27 +215,22 @@ public sealed partial class StageService
             // 右上角标题与点击前完全相同时，通常是入场动画吞掉了第一次点击。
             // 此时用左侧黄色选中节点重新确认真实位置，再按识别结果计算槽位重试一次。
             if (confirmed.Success &&
-                confirmed.HardIndex == currentHardIndex &&
-                confirmed.Message.StartsWith("识别到 HARD STAGE", StringComparison.Ordinal) &&
+                (_endAligned || confirmed.HardIndex == currentHardIndex) &&
+                (_endAligned || confirmed.Message.StartsWith("识别到 HARD STAGE", StringComparison.Ordinal)) &&
                 _progressReader is not null)
             {
                 var node = await _progressReader.ReadSelectedNodeAsync(serial, work, ct);
-                if (node is
-                    {
-                        Kind: WorkStageKind.Hard,
-                        Number: int recognizedHardIndex,
-                        Position: not null,
-                        State: WorkStageNodeState.Completed or WorkStageNodeState.Cleared,
-                    } && recognizedHardIndex >= 1 && recognizedHardIndex <= work.HardCount)
+                // 末端活动槽位的位置不随当前选中项变化；两帧标题一致时，即使呼吸光圈变暗也可重选。
+                int? observedHard = node is { Kind: WorkStageKind.Hard, Position: not null, HasPassed: true }
+                    ? node.Number : _endAligned ? confirmed.HardIndex : null;
+                if (observedHard is int recognizedHardIndex && recognizedHardIndex >= 1 && recognizedHardIndex <= work.HardCount)
                 {
-                    _log.Warn(
-                        $"点击后标题仍为 HARD {currentHardIndex}，左侧节点确认 HARD {recognizedHardIndex}；" +
-                        $"重新点击 HARD {targetHardIndex}");
+                    _log.Warn($"点击后复核为 HARD {recognizedHardIndex}，重新点击 HARD {targetHardIndex}");
                     var retryTap = await TapHardStageSlotAsync(
                         serial,
                         stageLayout,
                         work,
-                        recognizedHardIndex,
+                        _endAligned ? work.HardCount : recognizedHardIndex,
                         targetHardIndex,
                         ct);
                     if (!retryTap.Success)
@@ -242,7 +252,8 @@ public sealed partial class StageService
             var actualHardIndex = confirmed.Success && confirmed.HardIndex is int confirmedHardIndex
                 ? confirmedHardIndex
                 : currentHardIndex;
-            Context.SetWorkStageList(serial, Context.Mode, workId, actualHardIndex);
+            if (_endAligned && !confirmed.Success) Context.Invalidate();
+            else Context.SetWorkStageList(serial, Context.Mode, workId, actualHardIndex);
             return StageNavigationResult.Fail(
                 StageNavigationFailure.TitleNotRecognized,
                 confirmed.Success
@@ -252,6 +263,33 @@ public sealed partial class StageService
 
         Context.SetWorkStageList(serial, Context.Mode, workId, targetHardIndex);
         return StageNavigationResult.Ok($"已选中 HARD {targetHardIndex}");
+    }
+
+    internal async Task SelectBeforeHardAsync(string serial, UiLayout layout, HardStageEntry work, CancellationToken ct)
+    {
+        var start = StageSlotPlanner.GetViewportStart(work.NormalCount, work.HardCount, work.HardCount, work.SideStories);
+        var previous = StageSlotPlanner.GetOverallIndex(work.NormalCount, 1, work.SideStories) - 1;
+        if (!StageSlotPlanner.TryGetVisibleSlot(start, previous, out int slotIndex))
+            throw new InvalidOperationException("HARD 1 前一关不在当前视口中。");
+        var slot = layout.Require($"stageSlot{slotIndex}", "活动布局缺少前一关的槽位");
+        await ClearStageContinuationsAsync(serial, ct);
+        await _automation.TapAsync(serial, slot.CenterX, slot.CenterY, ct);
+        await GameTiming.DelayIfPositiveAsync(_options.PageSettleMs, ct);
+        await _automation.SwipeAsync(serial, 180, 540, 585, 540, 400, ct);
+        await GameTiming.DelayIfPositiveAsync(_options.PageSettleMs, ct);
+        await ConfirmBeforeHardAsync(serial, work, ct);
+    }
+
+    internal async Task ConfirmBeforeHardAsync(string serial, HardStageEntry work, CancellationToken ct)
+    {
+        int previous = StageSlotPlanner.GetOverallIndex(work.NormalCount, 1, work.SideStories) - 1;
+        for (int attempt = 0; attempt < 4; attempt++)
+        {
+            var node = await _progressReader!.ReadSelectedNodeAsync(serial, work, ct);
+            if (node is { HasPassed: true } && node.Position?.OverallIndex == previous) return;
+            await GameTiming.DelayIfPositiveAsync(GameTiming.ConfirmationIntervalMs, ct);
+        }
+        throw new InvalidOperationException("未确认 HARD 1 前一关的选中编号与通关状态。");
     }
 
     /// <summary>根据当前 HARD 位置计算目标槽位并点击；用于首次选择和动画阻挡后的单次重试。</summary>

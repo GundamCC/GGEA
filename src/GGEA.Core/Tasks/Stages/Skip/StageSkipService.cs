@@ -32,7 +32,7 @@ public sealed partial class StageSkipService
         _options = options ?? new StageSkipOptions();
         _evidence = evidence;
         _apStopSignal = apStopSignal;
-        _executionDialog = _options.RecoverUnchangedExecutionDialog ? new SkipExecutionDialogRecognizer() : null;
+        _executionDialog = _options.RecoverUnchangedExecutionDialog ? new SkipExecutionDialogRecognizer(_options.EventQuantityLayout) : null;
     }
 
     /// <summary>只有完整配置回复 AP 标题与按钮时才允许识别，通用关闭按钮不能提供业务证据。</summary>
@@ -77,10 +77,11 @@ public sealed partial class StageSkipService
     public async Task<StageSkipResult> SkipCurrentAsync(
         string serial,
         UiLayout stageLayout,
-        CancellationToken ct = default)
+        CancellationToken ct = default, Func<CancellationToken, Task>? configureQuantity = null,
+        Func<CancellationToken, Task<bool>>? checkAvailability = null)
     {
         // 先报告当前关卡的不可用状态；素材校验仍在所有消费动作之前完成。
-        if (!await IsSkipEnabledAsync(serial, stageLayout, ct))
+        if (!(checkAvailability is null ? await IsSkipEnabledAsync(serial, stageLayout, ct) : await checkAvailability(ct)))
         {
             return StageSkipResult.Fail("略过不可用（次数上限）", isUnavailable: true);
         }
@@ -96,6 +97,8 @@ public sealed partial class StageSkipService
         _log.Info($"点击略过: ({stageSkip.CenterX},{stageSkip.CenterY})");
         await _automation.TapAsync(serial, stageSkip.CenterX, stageSkip.CenterY, ct);
         await GameTiming.DelayIfPositiveAsync(_options.SkipDialogWaitMs, ct);
+
+        if (configureQuantity is not null) await configureQuantity(ct);
 
         // 原确认页是本次消费的身份依据；两帧稳定后再执行，不能仅凭固定等待盲点。
         SkipExecutionDialog? originalDialog = null;
