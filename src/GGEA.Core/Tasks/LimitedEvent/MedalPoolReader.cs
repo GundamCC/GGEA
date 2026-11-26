@@ -48,6 +48,13 @@ internal sealed class MedalPoolReader(OnnxTextRecognizer ocr)
         return Number(text.Replace(",", ""), out var n) ? n : null;
     }
 
+    /// <summary>批量按钮费用右对齐。用亮态按钮的实际位置读取数字，兼容次数变化。</summary>
+    public int? BulkCost(ScreenImage frame, TemplateMatchResult button, CancellationToken ct)
+    {
+        var text = Read(frame, new(button.X + 150, button.Y + 54, 100, 33), true, ct);
+        return Number(text, out int cost) && cost is > 0 and <= 500 && cost % 5 == 0 ? cost : null;
+    }
+
     private static bool Number(string text, out int value) =>
         int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out value);
 

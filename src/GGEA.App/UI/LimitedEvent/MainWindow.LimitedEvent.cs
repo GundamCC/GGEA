@@ -43,7 +43,7 @@ public partial class MainWindow
             {
                 var service = new MedalExchangeService(_automation, GetTextOcr(), _logger, serial);
                 await Task.Run(() => service.RunAsync(owner.Token), owner.Token);
-                LimitedStatus.Text = L.Text("奖章不足，自动兑换已结束。");
+                LimitedStatus.Text = L.Text("批量交换按钮已置灰，自动兑换已结束。");
             }
             else
             {

@@ -22,10 +22,9 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         Radio = Event("medal_settings_radio_unselected", new(1545, 166, 128, 111)),
         Off = Event("medal_settings_animation_off", new(1510, 298, 340, 135)),
         On = Event("medal_settings_animation_on", Off.Area),
-        Bulk = Event("medal_exchange_100_button", new(1480, 795, 365, 106)),
-        One = Event("medal_exchange_one", new(1120, 790, 350, 115)),
+        Bulk = Event("medal_bulk_enabled", new(1450, 779, 405, 165)),
+        DarkBulk = Event("medal_bulk_disabled", Bulk.Area),
         Results = Event("medal_exchange_results_title", new(40, 90, 280, 125)),
-        Again = Event("medal_results_exchange_again", new(1485, 936, 345, 138)),
         ResultStatus = Event("medal_results_status_button", new(23, 946, 380, 130)),
         Key = Event("medal_reset_key_rewards", new(478, 138, 300, 601)),
         General = Event("medal_general_rewards", Key.Area),
@@ -60,7 +59,6 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         await OpenStatus(Supply, ct);
         var pool = await ReadPool(ct);
         var parent = Supply;
-        var previousBatch = 0;
 
         while (true)
         {
@@ -77,46 +75,54 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             }
             await Click(Status, ModalClose, ct);
             parent = await WaitParent(ct);
-            if (balance < MedalCost)
-            {
-                if (parent == Results) await Click(Results, ResultClose, ct);
-                balance = await ReadBalance(ct);
-                if (balance < MedalCost) return;
-                parent = Supply;
-            }
-            // 常规每份 5 枚。能支付剩余整批则用 100 次，否则以单次用尽不足一批的余额。
-            var batch = balance >= MedalCost * Math.Min(100, pool.Remaining) ? 100 : 1;
-            if (parent == Results && batch != previousBatch)
-            {
-                await Click(Results, ResultClose, ct);
-                parent = Supply;
-            }
-            if (parent == Supply)
-            {
-                int actual = await ReadBalance(ct);
-                if (actual != balance) throw Uncertain();
-                // 池尾仍需按当前帧确认可用按钮。只点击已识别的批量按钮或单次按钮。
-                frame = await WaitPair(Supply, SupplyStatus, ct);
-                var button = batch == 100 ? await Match(frame, Bulk, ct) : null;
-                if (button is null)
-                {
-                    batch = 1;
-                    button = await Match(frame, One, ct) ?? throw Uncertain();
-                }
-                await Tap(button, ct);
-            }
-            else await Click(Results, Again, ct);
+            if (parent == Results) await Click(Results, ResultClose, ct);
+            var batch = await SubmitFromSupply(balance, pool.Remaining, ct);
+            if (batch == 0) return;
 
-            await OpenStatus(Results, ct, balance, parent == Results);
+            await OpenStatus(Results, ct, balance);
             var after = await ReadPool(ct);
             var gained = after.GainSince(pool, batch);
             balance -= MedalCost * gained;
             if (balance < 0) throw Uncertain();
             log.Info($"奖章机体补给：本批获得 {gained} 份，关键 {after.Key.Obtained}/{after.Key.Total}，一般 {after.General.Obtained}/{after.General.Total}。");
             pool = after;
-            previousBatch = batch;
-            parent = Results;
         }
+    }
+
+    /// <summary>每轮关闭结果后从补给页重新报价。两帧的余额、按钮状态与费用一致才提交一次。</summary>
+    private async Task<int> SubmitFromSupply(int expectedBalance, int remaining, CancellationToken ct)
+    {
+        var deadline = Environment.TickCount64 + GameTiming.RecognitionTimeoutMs;
+        int? previous = null;
+        do
+        {
+            var frame = await Capture(ct);
+            int? count = null;
+            TemplateMatchResult? action = null;
+            if (await Match(frame, Supply, ct) is not null && reader.Balance(frame, ct) == expectedBalance)
+            {
+                if (await Match(frame, DarkBulk, ct) is not null)
+                {
+                    count = 0;
+                }
+                else if (await Match(frame, Bulk, ct) is { } bulk &&
+                    reader.BulkCost(frame, bulk, ct) is int cost && cost <= expectedBalance)
+                {
+                    count = cost / MedalCost;
+                    action = bulk;
+                }
+            }
+            if (count is int quantity && count == previous)
+            {
+                if (quantity == 0) return 0;
+                log.Info($"奖章机体补给：余额 {expectedBalance}，补给页本批 {quantity} 次。");
+                await Tap(action!, ct);
+                return Math.Min(quantity, remaining);
+            }
+            previous = count;
+            await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
+        } while (Environment.TickCount64 < deadline);
+        throw Uncertain();
     }
 
     private async Task Configure(CancellationToken ct)
@@ -130,14 +136,13 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
     }
 
     /// <summary>兑换已提交。只读重识别当前阶段；唯一允许补点的是打开状况的按钮。</summary>
-    private async Task OpenStatus(Target parent, CancellationToken ct, int? previousBalance = null, bool fromResults = false)
+    private async Task OpenStatus(Target parent, CancellationToken ct, int? previousBalance = null)
     {
         var deadline = Environment.TickCount64 + 90000;
         var attempts = 0;
         long nextAttempt = 0;
         TemplateMatchResult? lastButton = null;
         int? lastBalance = null;
-        bool sawResultLeave = false;
         do
         {
             var frame = await Capture(ct);
@@ -147,7 +152,6 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             var page = await Match(frame, parent, ct);
             if (page is null)
             {
-                sawResultLeave = true;
                 // 结算后也可能回到补给页，只通过状况窗口核对已到账份数。
                 if (previousBalance.HasValue && parent == Results)
                 {
@@ -156,15 +160,15 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
                 }
             }
             var button = page is null ? null : await Match(frame, visible == Supply ? SupplyStatus : ResultStatus, ct);
-            // 再次交换前后标题和按钮相同。可见余额必须下降；余额暂不可读时，须先看见旧页离场。
+            // 已经确认离开上轮结果并从补给页提交；结果余额可读时，再检查本批的实际扣款。
             int? current = null;
             bool fresh = true;
-            if (button is not null && previousBalance is int before && (visible == Supply || fromResults))
+            if (button is not null && previousBalance is int before)
             {
                 current = visible == Supply ? reader.Balance(frame, ct) : reader.ResultBalance(frame, ct);
                 fresh = current is int n
                     ? before - n is >= MedalCost and <= 100 * MedalCost && (before - n) % MedalCost == 0
-                    : visible == Results && sawResultLeave;
+                    : visible == Results;
             }
             if (button is not null && fresh && lastButton is not null && current == lastBalance &&
                 Math.Abs(button.CenterX - lastButton.CenterX) <= 3 && Math.Abs(button.CenterY - lastButton.CenterY) <= 3 &&

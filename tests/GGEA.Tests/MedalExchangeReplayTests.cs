@@ -50,6 +50,7 @@ public sealed class MedalExchangeReplayTests
             for (int x = 0; x < balance.Width; x++)
                 if (x is < 102 or > 114) Array.Clear(balance.Bgra, (y * balance.Width + x) * 4, 3);
             Paste(supply, balance, 1762, 33);
+            Paste(supply, Load(Fixtures + "bulk-disabled"), 1476, 796);
         }
         var story = Scene("supply");
         Paste(story, Load(Assets + "story"), 210, 3);
@@ -84,6 +85,9 @@ public sealed class MedalExchangeReplayTests
             Paste(result, Load(Fixtures + $"result-balance-{balance}"), 740, 989);
             return Encode(result);
         }
+        var secondSupply = Scene("supply");
+        Paste(secondSupply, Load(Fixtures + "balance-2847"), 1762, 33);
+        frames["second-supply"] = Encode(secondSupply);
         frames["stale"] = ResultWithBalance(2847);
         frames["settled"] = ResultWithBalance(2347);
         var reviewed = ImageCodec.DecodePng(frames["early"]);
@@ -93,7 +97,7 @@ public sealed class MedalExchangeReplayTests
             Buffer.BlockCopy(amount.Bgra, (y * amount.Width + 151) * 4, amount.Bgra, (y * amount.Width + 65) * 4, 22 * 4);
         Paste(reviewed, amount, 1185, 534 + Load(Assets + "medal_general_rewards").Height / 2 - 19);
         frames["reviewed"] = Encode(reviewed);
-        int staleFrames = 0, statusClicks = 0, againClicks = 0;
+        int staleFrames = 0, statusClicks = 0, secondOrders = 0;
         device.ScreenshotProvider = () =>
         {
             if (state == "stale" && ++staleFrames > 3) state = "settled";
@@ -112,7 +116,8 @@ public sealed class MedalExchangeReplayTests
                 ("partial" or "new", > 825 and < 1092, > 929 and < 1055) => "supply",
                 ("supply", > 1510 and < 1830, > 800 and < 906) when !startFull => "early",
                 ("early", > 825 and < 1092, > 929 and < 1055) => "result",
-                ("result", > 1500 and < 1820, > 937 and < 1057) when ++againClicks == 1 => "stale",
+                ("result", > 1230 and < 1360, > 937 and < 1057) => "second-supply",
+                ("second-supply", > 1510 and < 1830, > 800 and < 920) when ++secondOrders == 1 => "stale",
                 ("settled", > 55 and < 288, > 949 and < 1060) => ++statusClicks == 1 ? "settled" : "reviewed",
                 ("reviewed", > 825 and < 1092, > 929 and < 1055) => "finished",
                 ("full", > 479 and < 573, > 778 and < 874) => "checked",
@@ -138,7 +143,7 @@ public sealed class MedalExchangeReplayTests
         {
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.RunAsync(owner.Token));
             Assert.True(submitted);
-            Assert.Equal(1, againClicks);
+            Assert.Equal(1, secondOrders);
             Assert.Equal(2, statusClicks);
             Assert.Contains(log.Entries, entry => entry.Message.Contains("785/793"));
             Assert.False(reset);
@@ -146,7 +151,7 @@ public sealed class MedalExchangeReplayTests
     }
 
     [Fact]
-    public async Task UnaffordableBatchUsesOneExchangeAndChecksFinalBalance()
+    public async Task DynamicBatchUsesDisplayedCostAndStopsOnGrayButton()
     {
         var story = Scene("supply");
         Paste(story, Load(Assets + "story"), 210, 3);
@@ -158,6 +163,10 @@ public sealed class MedalExchangeReplayTests
             for (var x = 0; x < strip.Width; x++)
                 if (x < left || x > right) Array.Clear(strip.Bgra, (y * strip.Width + x) * 4, 3);
             Paste(frame, strip, 1762, 33);
+            if (right == 114)
+                Paste(frame, Load(Fixtures + "bulk-disabled"), 1476, 796);
+            else
+                Paste(frame, Load(Fixtures + "bulk-one"), 1476, 796);
             return Encode(frame);
         }
         var status = PoolFrame("pool-full-key", "exchange100-after-general", false);
@@ -180,8 +189,27 @@ public sealed class MedalExchangeReplayTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(40));
         await new MedalExchangeService(automation, ocr, log, "serial").RunAsync(timeout.Token);
         Assert.Equal(9, device.Taps.Count);
-        Assert.InRange(device.Taps[5].X, 1180, 1390);
+        Assert.InRange(device.Taps[5].X, 1510, 1830);
         Assert.InRange(device.Taps[8].X, 1230, 1360);
+    }
+
+    [Theory]
+    [InlineData("replay-supply", 500)]
+    [InlineData("bulk-one", 5)]
+    [InlineData("bulk-disabled", 0)]
+    public async Task BulkFrameSeparatesPriceFromButtonState(string sample, int price)
+    {
+        var frame = Scene("supply");
+        if (sample != "replay-supply") Paste(frame, Load(Fixtures + sample), 1476, 796);
+        using var automation = new AutomationService(new FakeAdbService(Encode(frame)), new TemplateMatcher(), new TestLog());
+        var wait = new WaitOptions { Roi = new(1450, 779, 405, 165), Threshold = .94 };
+        var bright = await automation.MatchImageAsync(frame, ConfigService.ResolvePath(Assets + "medal_bulk_enabled.png"), wait);
+        var dark = await automation.MatchImageAsync(frame, ConfigService.ResolvePath(Assets + "medal_bulk_disabled.png"), wait);
+        Assert.Equal(price == 0, dark is not null);
+        Assert.Equal(price > 0, bright is not null);
+        if (bright is null) return;
+        using var ocr = new OnnxTextRecognizer();
+        Assert.Equal(price, new MedalPoolReader(ocr).BulkCost(frame, bright, default));
     }
 
     /// <summary>结果页关闭所在位置被清空，右侧仍保留蓝色再次交换；重置按钮置灰时不能命中亮态。</summary>
