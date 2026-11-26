@@ -72,6 +72,7 @@ public partial class MainWindow
     {
         var busy = _updatePending || _executionGate.IsHeld || _windowTasks.IsStopping || _starting || _dailyRunning || _autoFarmRunning || _scoutRunning || _ballFactoryRunning || _autoProgressRunning;
         _busy = busy;
+        if (!busy) _waitingForIdle?.TrySetResult();
         SettingsButton.IsEnabled = !busy;
         DeviceCombo.IsEnabled = !busy;
         RefreshButton.IsEnabled = !busy;

@@ -12,7 +12,8 @@ public sealed class GitHubUpdateClient : IDisposable
     // 新版只信任源码仓库的正式附件；旧客户端由旧仓库中的过渡包完成迁移。
     public const string Repository = "GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant";
     public const string ReleasesUrl = "https://github.com/" + Repository + "/releases";
-    private const string LatestUrl = "https://api.github.com/repos/" + Repository + "/releases/latest";
+    internal const string RepositoryApi = "https://api.github.com/repositories/1435670943";
+    private const string LatestUrl = RepositoryApi + "/releases/latest";
     private readonly UpdateHttpTransport _http;
     private readonly bool _ownsTransport;
 
@@ -34,6 +35,13 @@ public sealed class GitHubUpdateClient : IDisposable
         if (!tag.StartsWith('v')) throw new InvalidDataException(L.Text("GitHub 发布版本格式无效。"));
         var version = UpdateFiles.ParseVersion(tag[1..]);
         if (version <= current) return null;
+        // 仓库身份由查询入口的不可变 ID 决定；从同一响应取得当次规范名称。
+        var page = release.GetProperty("html_url").GetString() ?? "";
+        var suffix = "/releases/tag/" + tag;
+        if (!Uri.TryCreate(page, UriKind.Absolute, out var uri) || uri.GetLeftPart(UriPartial.Authority) != "https://github.com" ||
+            uri.Segments.Length != 6 || !page.EndsWith(suffix, StringComparison.Ordinal))
+            throw new InvalidDataException(L.Text("更新附件不属于官方发布仓库。"));
+        var downloadRoot = page[..^suffix.Length] + "/releases/download/" + tag;
         var name = $"GGEA-v{version}-win-x64.zip";
         var assets = release.GetProperty("assets").EnumerateArray().ToArray();
         var zip = FindAsset(assets, name);
@@ -42,28 +50,28 @@ public sealed class GitHubUpdateClient : IDisposable
         if (size <= 0 || size > UpdatePackage.MaximumPackageBytes) throw new InvalidDataException(L.Text("更新包大小超出支持范围。"));
         var notes = release.TryGetProperty("body", out var body) ? body.GetString() ?? "" : "";
         if (notes.Length > 12000) notes = notes[..12000] + L.Text("\n…更多内容请查看 GitHub 发布页。");
-        return new UpdateRelease(version, notes, name, AssetUri(zip, tag, name), size,
-            AssetUri(checksum, tag, name + ".sha256"), ReadDigest(zip))
+        return new UpdateRelease(version, notes, name, AssetUri(zip, downloadRoot, name), size,
+            AssetUri(checksum, downloadRoot, name + ".sha256"), ReadDigest(zip))
         {
-            Delta = ReadDelta(assets, tag, version, current, size),
-            Index = ReadIndex(assets, tag, name),
-            Blocks = ReadBlocks(assets, tag, name + ".blocks"),
-            UpdaterBlocks = ReadBlocks(assets, tag, name + ".updater.blocks")
+            Delta = ReadDelta(assets, downloadRoot, version, current, size),
+            Index = ReadIndex(assets, downloadRoot, name),
+            Blocks = ReadBlocks(assets, downloadRoot, name + ".blocks"),
+            UpdaterBlocks = ReadBlocks(assets, downloadRoot, name + ".updater.blocks")
         };
     }
 
-    private static UpdateBlockAsset? ReadBlocks(JsonElement[] assets, string tag, string name)
+    private static UpdateBlockAsset? ReadBlocks(JsonElement[] assets, string downloadRoot, string name)
     {
         var asset = assets.SingleOrDefault(a => a.GetProperty("name").GetString() == name &&
             a.GetProperty("state").GetString() == "uploaded");
         if (asset.ValueKind == JsonValueKind.Undefined) return null;
         var size = asset.GetProperty("size").GetInt64();
         if (size <= 0 || size > UpdatePackage.MaximumPackageBytes) throw new InvalidDataException("可执行文件块附件大小无效。");
-        return new(AssetUri(asset, tag, name), size);
+        return new(AssetUri(asset, downloadRoot, name), size);
     }
 
     // GitHub API 的附件摘要认证索引，索引中的 ZIP 摘要再绑定已核对的完整包。
-    private static UpdateRangeIndex? ReadIndex(JsonElement[] assets, string tag, string packageName)
+    private static UpdateRangeIndex? ReadIndex(JsonElement[] assets, string downloadRoot, string packageName)
     {
         var name = packageName + ".index.json";
         var asset = assets.SingleOrDefault(a => a.GetProperty("name").GetString() == name &&
@@ -71,11 +79,11 @@ public sealed class GitHubUpdateClient : IDisposable
         if (asset.ValueKind == JsonValueKind.Undefined || ReadDigest(asset) is not { } hash) return null;
         var size = asset.GetProperty("size").GetInt64();
         if (size is <= 0 or > 16 * 1024 * 1024) throw new InvalidDataException("更新索引大小无效。");
-        return new(AssetUri(asset, tag, name), hash, (int)size);
+        return new(AssetUri(asset, downloadRoot, name), hash, (int)size);
     }
 
     /// <summary>差异附件尚未发布完整或不比全量包小则直接使用全量包；已发布的附件仍须通过地址和摘要校验。</summary>
-    private static UpdateDeltaRelease? ReadDelta(JsonElement[] assets, string tag, Version version, Version current, long fullSize)
+    private static UpdateDeltaRelease? ReadDelta(JsonElement[] assets, string downloadRoot, Version version, Version current, long fullSize)
     {
         var name = $"GGEA-v{version}-from-v{current.ToString(4)}-win-x64.delta.zip";
         var matches = assets.Where(a => a.GetProperty("name").GetString() == name && a.GetProperty("state").GetString() == "uploaded").ToArray();
@@ -84,8 +92,8 @@ public sealed class GitHubUpdateClient : IDisposable
         if (matches.Length != 1 || checksums.Length != 1) throw new InvalidDataException(L.Text("差异更新附件重复。"));
         var size = matches[0].GetProperty("size").GetInt64();
         if (size <= 0 || size >= fullSize) return null;
-        return new(current.ToString(4), name, AssetUri(matches[0], tag, name), size,
-            AssetUri(checksums[0], tag, name + ".sha256"), ReadDigest(matches[0]));
+        return new(current.ToString(4), name, AssetUri(matches[0], downloadRoot, name), size,
+            AssetUri(checksums[0], downloadRoot, name + ".sha256"), ReadDigest(matches[0]));
     }
 
     /// <summary>GitHub 的摘要为可选字段；存在时必须明确使用 SHA-256。</summary>
@@ -114,9 +122,9 @@ public sealed class GitHubUpdateClient : IDisposable
     }
 
     /// <summary>只接受固定仓库、固定 tag 下的精确附件链接。</summary>
-    private static Uri AssetUri(JsonElement asset, string tag, string name)
+    private static Uri AssetUri(JsonElement asset, string downloadRoot, string name)
     {
-        var expected = $"https://github.com/{Repository}/releases/download/{tag}/{name}";
+        var expected = $"{downloadRoot}/{name}";
         if (asset.GetProperty("browser_download_url").GetString() != expected)
             throw new InvalidDataException(L.Text("更新附件不属于官方发布仓库。"));
         return new Uri(expected);

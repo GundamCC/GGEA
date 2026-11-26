@@ -16,6 +16,8 @@ public partial class MainWindow
     private bool _startupUpdateChecked;
     private bool _startupUpdateAcknowledged;
     private UpdateRelease? _startupUpdate;
+    private TaskCompletionSource? _waitingForIdle;
+    private CancellationTokenSource? _automaticDownload;
 
     /// <summary>每次启动仅检查一次，不持有设备执行权；关闭时由窗口任务生命周期取消并等待。</summary>
     private async Task CheckStartupUpdateAsync()
@@ -34,20 +36,35 @@ public partial class MainWindow
             _logger.Info(L.Format($"发现新版本 v{_startupUpdate.Version}，可在设置中下载更新。"));
             RefreshUpdateBadge();
             if (!_config.AutomaticUpdates || UpdateLauncher.InstallationUnavailableReason(AppContext.BaseDirectory) is not null) return;
-            // 自动安装仅在启动检查后取得空闲执行权时进行，设备任务期间保留提醒。
-            using var lease = TryBeginHostOperation(false);
-            if (lease is null) return;
             var update = _startupUpdate;
-            var package = await client.DownloadAsync(update, new Progress<double>(), _windowTasks.Token);
+            using var pending = CancellationTokenSource.CreateLinkedTokenSource(_windowTasks.Token);
+            _automaticDownload = pending;
+            string? package = null;
             try
             {
-                await ((App)Application.Current).StartUpdateAsync(package, update.Version.ToString(4), false, _windowTasks.Token);
-                CloseForUpdate();
+                // 下载、复用和重建暂存包不占用设备。只在交接独立更新器时持有窗口执行权。
+                package = await Task.Run(() => client.DownloadAsync(update, new Progress<double>(), pending.Token), pending.Token);
+                while (!_updatePending && _config.AutomaticUpdates)
+                {
+                    pending.Token.ThrowIfCancellationRequested();
+                    using var lease = TryBeginHostOperation(false);
+                    if (lease is not null)
+                    {
+                        await ((App)Application.Current).StartUpdateAsync(package, update.Version.ToString(4), false, pending.Token);
+                        package = null; // 已交给独立更新器。
+                        CloseForUpdate();
+                        break;
+                    }
+                    _waitingForIdle = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                    await _waitingForIdle.Task.WaitAsync(pending.Token);
+                }
             }
-            catch
+            catch (OperationCanceledException) when (pending.IsCancellationRequested) { }
+            finally
             {
-                UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(package)!);
-                throw;
+                _automaticDownload = null;
+                _waitingForIdle = null;
+                if (package is not null) await Task.Run(() => UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(package)!));
             }
         }
         catch (OperationCanceledException) when (_windowTasks.IsStopping) { }
@@ -80,6 +97,7 @@ public partial class MainWindow
         UpdatePreferences.SaveAutomaticUpdates(enabled,
             Path.Combine(AppContext.BaseDirectory, "config", "ggea.config.json"));
         _config.AutomaticUpdates = enabled;
+        if (!enabled) _automaticDownload?.Cancel();
     }
 
     /// <summary>事件先释放执行租约，随后正常关闭，保证设备任务和 插件 完成收尾。</summary>

@@ -70,7 +70,7 @@ pwsh -File tools/package-delta.ps1 -BaseDirectory <旧版原始解压目录> -Pu
 随包的 `config/update-sources.json` 初始为 `{"schemaVersion":1,"sources":[]}`，不预填任何第三方镜像。客户端在每次启动检查或手动检查时，并行读取固定入口：
 
 ```text
-https://raw.githubusercontent.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/main/update-sources.json
+https://api.github.com/repositories/1435670943/contents/update-sources.json
 ```
 
 维护者以后在**GGEA 仓库 main 分支根目录**修改这个文件即可，无须更换客户端、Tag 或 Release 附件；根目录文件随源码提交推送后才生效，随包的 `config/update-sources.json` 不会自动上传。旧客户端仍读取 GGEA-Release 根目录的同名文件，该兼容入口必须保留。入口不存在、离线、超时或配置损坏时保留原有缓存。成功读取并校验后原子写入安装目录 `.ggea-update/sources-cache.json`，即使程序已经是最新版也照常缓存。有效的空列表明确清空远程缓存。先前的 v1.1.10.0 不支持该协议，必须先安装支持版本。

@@ -19,13 +19,13 @@ public sealed partial class OnlineUpdateTests
         {
             var url = request.RequestUri!.AbsoluteUri;
             requests.Add(url);
-            return url == "https://raw.githubusercontent.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/main/update-sources.json"
+            return url == "https://api.github.com/repositories/1435670943/contents/update-sources.json"
                 ? JsonReply(Catalog()) : new(HttpStatusCode.NotFound);
         }));
         await Assert.ThrowsAsync<HttpRequestException>(() => client.CheckAsync(new Version(1, 3, 4, 0), default));
         Assert.Equal(2, requests.Count);
-        Assert.Contains("https://raw.githubusercontent.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/main/update-sources.json", requests);
-        Assert.Contains("https://api.github.com/repos/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases/latest", requests);
+        Assert.Contains("https://api.github.com/repositories/1435670943/contents/update-sources.json", requests);
+        Assert.Contains("https://api.github.com/repositories/1435670943/releases/latest", requests);
         Assert.Empty(new UpdateSourceStore(temp.Path).Load());
     }
 
@@ -36,7 +36,7 @@ public sealed partial class OnlineUpdateTests
         using var temp = new TempDirectory();
         var mirror = Source("mirror");
         using (var online = new OnlineUpdateClient(temp.Path, handler: new ReplyHandler(request =>
-                   request.RequestUri!.Host == "raw.githubusercontent.com" ? JsonReply(Catalog(mirror)) : JsonReply(ReleaseJson("1.1.10.0")))))
+                   request.RequestUri!.AbsoluteUri == UpdateSourceStore.DiscoveryUrl ? JsonReply(Catalog(mirror)) : JsonReply(ReleaseJson("1.1.10.0")))))
             Assert.Null(await online.CheckAsync(new Version(1, 1, 10, 0), default));
         Assert.Equal("mirror", Assert.Single(new UpdateSourceStore(temp.Path).Load()).Id);
 
@@ -61,7 +61,7 @@ public sealed partial class OnlineUpdateTests
         using var client = new OnlineUpdateClient(temp.Path, handler: new ReplyHandler(request =>
         {
             Assert.NotEqual("mirror.example.com", request.RequestUri!.Host);
-            return JsonReply(request.RequestUri.Host == "raw.githubusercontent.com" ? "{broken" : ReleaseJson("1.1.11.0"));
+            return JsonReply(request.RequestUri.AbsoluteUri == UpdateSourceStore.DiscoveryUrl ? "{broken" : ReleaseJson("1.1.11.0"));
         }));
         Assert.Equal("github", (await client.CheckAsync(new Version(1, 1, 10, 0), default))!.SourceId);
         Assert.Equal("mirror", Assert.Single(store.Load()).Id);

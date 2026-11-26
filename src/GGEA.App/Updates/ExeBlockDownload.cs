@@ -84,7 +84,16 @@ internal static class ExeBlockDownload
                 byte[] data;
                 try
                 {
-                    data = await ReadGroupAsync(http, update, asset, block.Offset, count, token);
+                    try
+                    {
+                        data = await ReadGroupAsync(http, update, asset, block.Offset, count, token);
+                    }
+                    catch (Exception interrupted) when (!token.IsCancellationRequested &&
+                        interrupted is OperationCanceledException or HttpRequestException { StatusCode: null })
+                    {
+                        http.Trace($"{relativePath} 块连接中断，重试相同范围一次（{block.Offset}, {count} B）。");
+                        data = await ReadGroupAsync(http, update, asset, block.Offset, count, token);
+                    }
                 }
                 catch (Exception ex) when (!token.IsCancellationRequested && ex is HttpRequestException or OperationCanceledException)
                 {
@@ -117,7 +126,7 @@ internal static class ExeBlockDownload
     {
         var last = offset + count - 1;
         using var response = await http.GetAsync(asset.Url, update.AllowedHosts, token, new(offset, last));
-        if (response.StatusCode == HttpStatusCode.OK) throw new HttpRequestException("更新源不支持块下载。");
+        if (response.StatusCode == HttpStatusCode.OK) throw new HttpRequestException("更新源不支持块下载。", null, HttpStatusCode.OK);
         var range = response.Content.Headers.ContentRange;
         if (response.StatusCode != HttpStatusCode.PartialContent || range?.Unit != "bytes" ||
             range.From != offset || range.To != last || range.Length != asset.Size)

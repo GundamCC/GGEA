@@ -8,7 +8,7 @@ GGEA 主仓库统一承载源码、Issues、版本标签和后续正式 Release�
 
 新版客户端只访问 `GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant` 的最新正式 Release，并严格绑定同仓库、同标签的 ZIP 与校验文件。主仓库缺少正式版时检查会失败，不伪报“已经最新”，也不自动回退到旧仓库。网站可以在确认主仓库存在但尚无正式版时展示经核验的旧仓库版本；网络失败、限流和不完整发布不会触发该回退。
 
-新版来源发现地址为 `https://raw.githubusercontent.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/main/update-sources.json`。旧版继续读取 `https://raw.githubusercontent.com/GundamCC/GGEA-Release/main/update-sources.json`。两处保留 v1 协议，初始均为空列表；空列表会清空远程来源缓存，但不影响独立的本地导入配置。此文件仅提供备用源清单，不是主仓库重定向。以后增设备用源时，应分别核验两处配置的服务对象和协议，不能把 GitHub Release API 填为静态版本清单。
+开发版通过 GitHub raw 媒体类型读取配置，来源发现地址为 `https://api.github.com/repositories/1435670943/contents/update-sources.json`。旧版继续读取 `https://raw.githubusercontent.com/GundamCC/GGEA-Release/main/update-sources.json`。两处保留 v1 协议，初始均为空列表；空列表会清空远程来源缓存，但不影响独立的本地导入配置。此文件仅提供备用源清单，不是主仓库重定向。以后增设备用源时，应分别核验两处配置的服务对象和协议，不能把 GitHub Release API 填为静态版本清单。
 
 已安装版本如果仍按旧短名校验 GitHub 附件，仓库重定向也无法使它接受新地址。请关闭程序，备份原目录，通过主仓库正式发布页下载完整 Windows ZIP 与同名 SHA-256 文件，校验后解压至新目录，再按需迁移用户设置；不要直接覆盖旧目录。旧兼容仓库 GGEA-Release 与旧短名是两件事，不把旧短名作为新客户端的备用来源。
 

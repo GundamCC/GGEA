@@ -71,7 +71,8 @@ internal sealed class UpdateHttpTransport : IDisposable
             request.Headers.Range = range;
             if (uri.Host == "api.github.com")
             {
-                request.Headers.Accept.ParseAdd("application/vnd.github+json");
+                request.Headers.Accept.ParseAdd(uri.AbsoluteUri == UpdateSourceStore.DiscoveryUrl
+                    ? "application/vnd.github.raw+json" : "application/vnd.github+json");
                 request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
             }
             var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, headersTimeout.Token);

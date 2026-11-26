@@ -17,13 +17,13 @@ public sealed partial class OnlineUpdateTests
     {
         using var client = new GitHubUpdateClient(new ReplyHandler(request =>
         {
-            Assert.Equal("https://api.github.com/repos/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases/latest", request.RequestUri!.AbsoluteUri);
-            return JsonReply(ReleaseJson("1.1.10.0"));
+            Assert.Equal("https://api.github.com/repositories/1435670943/releases/latest", request.RequestUri!.AbsoluteUri);
+            return JsonReply(ReleaseJson("1.1.10.0").Replace(GitHubUpdateClient.Repository, "owner/renamed"));
         }));
         var update = await client.CheckAsync(new Version(1, 1, 9, 1), default);
         Assert.Equal(new Version(1, 1, 10, 0), update!.Version);
         Assert.Equal("GGEA-v1.1.10.0-win-x64.zip", update.PackageName);
-        const string attachment = "https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases/download/v1.1.10.0/GGEA-v1.1.10.0-win-x64.zip";
+        const string attachment = "https://github.com/owner/renamed/releases/download/v1.1.10.0/GGEA-v1.1.10.0-win-x64.zip";
         Assert.Equal(attachment, update.PackageUrl.AbsoluteUri);
         Assert.Equal(attachment + ".sha256", update.ChecksumUrl!.AbsoluteUri);
         Assert.Null(await client.CheckAsync(new Version(1, 1, 10, 0), default));
@@ -39,8 +39,8 @@ public sealed partial class OnlineUpdateTests
             ReleaseJson("1.1.10.0").Replace(".zip.sha256", ".zip.missing"),
             ReleaseJson("1.1.10.0").Replace("\"prerelease\":false", "\"prerelease\":true"),
             ReleaseJson("1.1.10.0").Replace("https://github.com/", "https://example.org/"),
-            ReleaseJson("1.1.10.0").Replace("GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/", "GundamCC/GGEA-Release/"),
-            ReleaseJson("1.1.10.0").Replace("GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/", "GundamCC/GGEA/"),
+            ReleaseJson("1.1.10.0").Replace("GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases/download/", "GundamCC/GGEA-Release/releases/download/"),
+            ReleaseJson("1.1.10.0").Replace("GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases/download/", "GundamCC/GGEA/releases/download/"),
             ReleaseJson("1.1.10.0").Replace("/v1.1.10.0/GGEA-", "/v1.1.9.0/GGEA-")
         })
         {
@@ -322,6 +322,7 @@ public sealed partial class OnlineUpdateTests
     /// <summary>最小 GitHub Release 响应，与固定发布仓库的附件命名保持一致。</summary>
     private static string ReleaseJson(string version) => JsonSerializer.Serialize(new
     {
+        html_url = $"https://github.com/{GitHubUpdateClient.Repository}/releases/tag/v{version}",
         tag_name = "v" + version, draft = false, prerelease = false, body = "更新说明",
         assets = new[] { $"GGEA-v{version}-win-x64.zip", $"GGEA-v{version}-win-x64.zip.sha256" }.Select(name => new
         {
