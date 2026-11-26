@@ -75,11 +75,11 @@ public partial class MainWindow
         }
     }
 
-    private Task RunEventStagesDailyAsync(string serial, CancellationToken ct)
+    private Task RunEventStagesDailyAsync(string serial, CancellationToken ct, bool claimRewards = true)
     {
         var title = new SelectStageTitleRecognizer(EventStagesService.PathFor("stage_title"));
         var settlement = CreateStageSkipService(false, title.Recognize);
-        return new EventStagesService(_automation!, serial).DailyAsync(settlement, _stageLayout, GetTextOcr(), ct);
+        return new EventStagesService(_automation!, serial).DailyAsync(settlement, _stageLayout, GetTextOcr(), ct, claimRewards);
     }
 
     private async Task<string> RunEventProgressAsync(string serial, CancellationToken ct)

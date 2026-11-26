@@ -232,6 +232,7 @@
                                         <CheckBox Foreground="{DynamicResource Brush.Text}" x:Name="IncludeStages" Content="{loc:Text Source='每日10次关卡'}" IsChecked="True" VerticalAlignment="Center"/>
                                         <CheckBox Foreground="{DynamicResource Brush.Text}" x:Name="IncludeBoss" Content="{loc:Text Source='BOSS 战斗'}" IsChecked="True" VerticalAlignment="Center" Margin="12,0,0,0"/>
                                         <CheckBox Foreground="{DynamicResource Brush.Text}" x:Name="IncludeMedals" Content="{loc:Text Source='奖章机体补给'}" IsChecked="True" VerticalAlignment="Center" Margin="12,0"/>
+                                        <CheckBox Foreground="{DynamicResource Brush.Text}" x:Name="IncludeMissionRewards" Content="{loc:Text Source='领取限时活动使命奖励'}" IsChecked="True" VerticalAlignment="Center" Margin="12,0"/>
                                         <Button x:Name="AddLimitedDaily" Content="{loc:Text Source='添加到每日任务'}" Click="AddLimitedDaily_Click" Style="{StaticResource ButtonPrimary}"/>
                                     </WrapPanel>
                                     <TextBlock x:Name="LimitedStatus" Style="{StaticResource StatusText}" Margin="0,12,0,0" TextWrapping="Wrap"/>

@@ -136,6 +136,10 @@ internal sealed class EventStagesService(AutomationService automation, string se
     private async Task OpenMission(CancellationToken ct)
     {
         await Click(Stage, Back, ct);
+        await OpenMissionFromStory(ct);
+    }
+    private async Task OpenMissionFromStory(CancellationToken ct)
+    {
         await Click(Story, E("mission_entry", new(1110, 820, 280, 118)), ct);
         await SelectTab(Daily, E("mission_daily_inactive", DailyTabArea) with { BlueTab = false }, ct);
     }
@@ -185,7 +189,7 @@ internal sealed class EventStagesService(AutomationService automation, string se
         throw new InvalidOperationException("未能确认每日使命进度为 9/10，已保留 AP。");
     }
 
-    internal async Task DailyAsync(StageSkipService settlement, UiLayout layout, OnnxTextRecognizer ocr, CancellationToken ct)
+    internal async Task DailyAsync(StageSkipService settlement, UiLayout layout, OnnxTextRecognizer ocr, CancellationToken ct, bool claimRewards = true)
     {
         await EnterAsync(false, ct);
         var ranHard = false;
@@ -239,10 +243,23 @@ internal sealed class EventStagesService(AutomationService automation, string se
             await OpenMission(ct);
         }
         await Require(Daily, ct, TenDone);
+        if (claimRewards) await ClaimBothTabs(ct);
+        await Click(Mission, Back, ct);
+        await Require(null, ct, Story);
+    }
+
+    internal async Task ClaimFromStoryAsync(CancellationToken ct)
+    {
+        await OpenMissionFromStory(ct);
+        await ClaimBothTabs(ct);
+        await Click(Mission, Back, ct);
+        await Require(null, ct, Story);
+    }
+
+    private async Task ClaimBothTabs(CancellationToken ct)
+    {
         await ClaimTab(Daily, ct);
         await SelectTab(Total, E("mission_total_inactive", TotalTabArea) with { BlueTab = false }, ct);
         await ClaimTab(Total, ct);
-        await Click(Mission, Back, ct);
-        await Require(null, ct, Story);
     }
 }

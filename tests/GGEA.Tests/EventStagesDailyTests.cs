@@ -11,9 +11,11 @@ public class EventStagesDailyTests
 {
     // 原始 1080p 采集只保留识别区域；每一步均验证点击落点，错误输入不能推进回放。
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task DailyReplayHonorsLimitsAndClaimsBothTabs(bool alreadyDone)
+    [InlineData(false, true, false)]
+    [InlineData(true, true, false)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, true)]
+    public async Task DailyReplayHonorsLimitsAndClaimsBothTabs(bool alreadyDone, bool claimRewards, bool rewardsOnly)
     {
         var steps = new List<(string Page, int X, int Y)> { ("story_return",1240,407) };
         int[] xs = [220,409,601];
@@ -34,6 +36,7 @@ public class EventStagesDailyTests
             steps.Add(("result1",1676,988));
         }
         steps.Add((alreadyDone ? "hard3done" : "normal_done",122,48));
+        if (rewardsOnly) steps.Clear();
         steps.Add(("story_return",1246,880));
         if (!alreadyDone)
         {
@@ -47,6 +50,12 @@ public class EventStagesDailyTests
             steps.Add(("claim",960,995));
         }
         steps.Add(("cumulative_done",122,48));
+        if (!claimRewards)
+        {
+            int firstMission = steps.FindIndex(step => step.Page == "story_return" && step.Y == 880) + 1;
+            steps.RemoveRange(firstMission, steps.Count - firstMission);
+            steps.Add((alreadyDone ? "claimed" : "mission_ready",122,48));
+        }
         var pages = steps.Select(s=>s.Page).Append("story_return").Distinct().ToDictionary(n=>n, n=>
             File.ReadAllBytes(ConfigService.ResolvePath($"Fixtures/Navigation/limited-daily-{n}.png")));
         int index=0;
@@ -68,8 +77,10 @@ public class EventStagesDailyTests
             PostSkipConfirmation=title.Recognize, SettleAfterOkMs=0
         });
         using var ocr = new OnnxTextRecognizer();
-        await new EventStagesService(automation,"test").DailyAsync(settlement,
-            new UiLayoutService(log).Load(ConfigService.ResolvePath("resources/ui_layout/stage.json")),ocr,default);
+        var service = new EventStagesService(automation,"test");
+        if (rewardsOnly) await service.ClaimFromStoryAsync(default);
+        else await service.DailyAsync(settlement,
+            new UiLayoutService(log).Load(ConfigService.ResolvePath("resources/ui_layout/stage.json")),ocr,default,claimRewards);
         Assert.Equal(steps.Count,index);
     }
 

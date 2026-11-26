@@ -11,6 +11,7 @@ public partial class MainWindow
     private void ShowLimitedDaily(LimitedEventDailySettings choice)
     {
         IncludeStages.IsChecked = choice.Stages;
+        IncludeMissionRewards.IsChecked = choice.ClaimRewards;
         IncludeBoss.IsChecked = choice.Boss;
         IncludeMedals.IsChecked = choice.Medals;
         LimitedDifficulty.SelectedItem = LimitedDifficulty.Items.OfType<ComboBoxItem>()
@@ -37,8 +38,8 @@ public partial class MainWindow
         var existing = _dailyTasks.FirstOrDefault(task => task.Kind == DailyTaskKind.LimitedEvent);
         var choice = new LimitedEventDailySettings(IncludeStages.IsChecked == true, IncludeBoss.IsChecked == true,
             IncludeMedals.IsChecked == true, Enum.Parse<FierceEnemyDifficulty>((string)((ComboBoxItem)LimitedDifficulty.SelectedItem).Content),
-            existing?.IsChecked ?? true);
-        if (!choice.Stages && !choice.Boss && !choice.Medals) { LimitedStatus.Text = L.Text("请选择有效的限时活动子任务。"); return; }
+            existing?.IsChecked ?? true, MissionRewards: IncludeMissionRewards.IsChecked == true);
+        if (!choice.Stages && !choice.Boss && !choice.Medals && !choice.ClaimRewards) { LimitedStatus.Text = L.Text("请选择有效的限时活动子任务。"); return; }
         var item = choice.CreateItem();
         item.PropertyChanged += DailyTask_StateChanged;
         if (existing is null)
@@ -67,7 +68,12 @@ public partial class MainWindow
         if (choice.Stages)
         {
             AccountStatusText.Text = L.Text("每日10次关卡");
-            await RunEventStagesDailyAsync(serial, ct);
+            await RunEventStagesDailyAsync(serial, ct, choice.ClaimRewards);
+        }
+        else if (choice.ClaimRewards)
+        {
+            AccountStatusText.Text = L.Text("领取限时活动使命奖励");
+            await stages.ClaimFromStoryAsync(ct);
         }
         if (choice.Boss)
         {
