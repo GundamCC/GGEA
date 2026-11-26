@@ -3,6 +3,15 @@
  xmlns:loc="clr-namespace:GGEA.App.Localization"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  FontFamily="{loc:UiFont}" Foreground="{DynamicResource Brush.Text}">
+    <UserControl.Resources>
+        <Style x:Key="OptionalUpdateText" TargetType="TextBlock" BasedOn="{StaticResource HintText}">
+            <Style.Triggers>
+                <Trigger Property="Text" Value="">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
                     <StackPanel>
                         <TextBlock Text="{loc:Text Source='软件更新'}" Style="{StaticResource CardTitle}"/>
                         <TextBlock x:Name="UpdateVersionText" Style="{StaticResource HintText}"/>
@@ -20,13 +29,13 @@
                             <RadioButton x:Name="AutomaticMode" Content="{loc:Text Source='自动更新'}" Foreground="{DynamicResource Brush.Text}" Margin="0,0,18,0" Click="Mode_Click"/>
                             <RadioButton x:Name="ReminderMode" Content="{loc:Text Source='有新版本时提醒我'}" Foreground="{DynamicResource Brush.Text}" Click="Mode_Click"/>
                         </WrapPanel>
-                        <TextBlock x:Name="DownloadAmount" Style="{StaticResource HintText}"/>
+                        <TextBlock x:Name="DownloadAmount" Style="{StaticResource OptionalUpdateText}"/>
                         <ProgressBar x:Name="UpdateProgress" Height="5" Minimum="0" Maximum="100"
                                      Visibility="Collapsed" Margin="0,2,0,8"/>
-                        <TextBlock x:Name="UpdateStatusText" Style="{StaticResource HintText}" TextWrapping="Wrap"/>
-                        <TextBlock x:Name="SourceStatusText" Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                        <TextBlock x:Name="UpdateStatusText" Style="{StaticResource OptionalUpdateText}" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="SourceStatusText" Style="{StaticResource HintText}" TextWrapping="Wrap"/>
                         <TextBlock Text="{loc:Text Source='更新内容'}" x:Name="NotesHeading" Visibility="Collapsed" FontWeight="SemiBold" Margin="0,16,0,8"/>
-                        <ScrollViewer x:Name="NotesScroll" MaxHeight="140" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer Visibility="{Binding Visibility, ElementName=NotesHeading}" x:Name="NotesScroll" MaxHeight="140" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <TextBlock x:Name="UpdateNotesText" Style="{StaticResource HintText}" TextWrapping="Wrap"/>
                         </ScrollViewer>
                     </StackPanel>
