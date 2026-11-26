@@ -71,6 +71,38 @@ public class PersonalBaseServiceTests
         return (templatePath, maskPath);
     }
 
+    // 模拟正在处理按钮事件且暂时无法泵送消息的窗口，回收流程应能独立到达截图并响应取消。
+    [Fact]
+    public async Task HarvestBattleshipAsync_SearchDoesNotRequireDispatcher()
+    {
+        using var stop = new CancellationTokenSource();
+        var adb = new FakeAdbService(Array.Empty<byte>());
+        adb.BeforeScreenshotAsync = (_, token) =>
+        {
+            stop.Cancel();
+            token.ThrowIfCancellationRequested();
+            return Task.CompletedTask;
+        };
+        var matcher = new TemplateMatcher();
+        var log = new TestLog();
+        var service = new PersonalBaseService(new AutomationService(adb, matcher, log),
+            new BattleshipLocator(adb, matcher, log), log);
+        var previous = SynchronizationContext.Current;
+        Task<BattleshipHarvestResult> harvest;
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext());
+            harvest = service.HarvestBattleshipAsync("serial", CreateMainLayout(), CreateBaseLayout(),
+                "", null, "", "", "", stepDelayMs: 10, ct: stop.Token);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => harvest.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.True(stop.IsCancellationRequested);
+    }
+
     [Fact]
     public async Task HarvestBattleshipAsync_Ready_TapsInOrder()
     {

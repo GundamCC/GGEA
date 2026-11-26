@@ -81,7 +81,7 @@ public sealed class PersonalBaseService
     /// <param name="waitTimeoutMs">等待按钮状态出现的总超时。</param>
     /// <param name="threshold">模板匹配置信度阈值。</param>
     /// <returns>收获结果（成功 / 暂不可回收 / 超时）。</returns>
-    public async Task<BattleshipHarvestResult> HarvestBattleshipAsync(
+    public Task<BattleshipHarvestResult> HarvestBattleshipAsync(
         string serial,
         UiLayout mainLayout,
         UiLayout baseLayout,
@@ -98,6 +98,8 @@ public sealed class PersonalBaseService
         double threshold = 0.85,
         CancellationToken ct = default,
         int pollIntervalMs = GameTiming.RecognitionIntervalMs)
+        // 截图可能同步完成；将整段识别调度到线程池，避免全屏匹配占用 WPF 消息循环。
+        => Task.Run(async () =>
     {
         var navBase = mainLayout.Require("navBase", "主界面布局缺少 navBase 锚点");
         var claimAll = baseLayout.Require("claimAll", "个人基地布局缺少 claimAll 锚点");
@@ -196,5 +198,5 @@ public sealed class PersonalBaseService
         var message = recycleClicked ? "已点击全部回收，但未确认奖励弹窗关闭" : "等待战舰状态或奖励弹窗关闭超时";
         _log.Warn(message);
         return BattleshipHarvestResult.TimedOut(message);
-    }
+    }, ct);
 }
