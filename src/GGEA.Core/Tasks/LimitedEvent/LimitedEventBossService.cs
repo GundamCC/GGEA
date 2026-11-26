@@ -6,7 +6,7 @@ using GGEA.App.Vision;
 
 namespace GGEA.App.Tasks;
 
-/// <summary>只接管玩家打开的故事事件。每次结果返回后丢弃上一轮卡片位置。</summary>
+/// <summary>支持故事事件与 BOSS 战斗列表启动。每次结果返回后丢弃上一轮卡片位置。</summary>
 public sealed class LimitedEventBossService(AutomationService automation, OnnxTextRecognizer ocr, IGgeaLog log, string serial)
 {
     private const string Event = "stage/event/limited_time_event/";
@@ -24,10 +24,13 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
             throw new InvalidOperationException(L.Text("当前游戏语言缺少故事事件识别素材。"));
         ocr.Validate();
         var frame = await Capture(ct);
-        if (await Find(frame, Event + "story", Title, ct) is null)
-            throw new InvalidOperationException(L.Text("请先手动进入故事事件界面。"));
-        await automation.TapAsync(serial, 1650, 314, ct);
-        frame = await WaitBoss(ct);
+        if (await Find(frame, Event + "boss", Title, ct, .94) is null)
+        {
+            if (await Find(frame, Event + "story", Title, ct) is null)
+                throw new InvalidOperationException(L.Text("请进入故事事件或 BOSS 战斗界面。"));
+            await automation.TapAsync(serial, 1650, 314, ct);
+            frame = await WaitBoss(ct);
+        }
         while (true)
         {
             var (button, rare) = await Locate(frame, difficulty, ct);

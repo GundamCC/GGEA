@@ -47,8 +47,12 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             throw new InvalidOperationException(L.Text("当前游戏语言缺少故事事件识别素材。"));
         ocr.Validate();
         var frame = await Capture(ct);
-        if (await Match(frame, Story, ct) is null) throw new InvalidOperationException(L.Text("请先手动进入故事事件界面。"));
-        await automation.TapAsync(serial, 1656, 720, ct);
+        if (await Match(frame, Supply, ct) is null)
+        {
+            if (await Match(frame, Story, ct) is null)
+                throw new InvalidOperationException(L.Text("请进入故事事件或奖章机体补给界面。"));
+            await automation.TapAsync(serial, 1656, 720, ct);
+        }
         await Click(Supply, OpenSettings, ct);
         await Configure(ct);
         await Click(Settings, ModalClose, ct);

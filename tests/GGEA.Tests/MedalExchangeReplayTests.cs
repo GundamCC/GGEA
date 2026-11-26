@@ -40,7 +40,7 @@ public sealed class MedalExchangeReplayTests
     public async Task ActualControlsProtectExchangeAndReset(bool startFull)
     {
         using var owner = new CancellationTokenSource(TimeSpan.FromSeconds(45));
-        var state = "story";
+        var state = startFull ? "supply" : "story";
         var supply = Scene("supply");
         if (startFull)
         {

@@ -23,22 +23,41 @@ public sealed class LimitedEventBossTests
         return ImageCodec.EncodePng(pixels, 1920, 1080);
     }
 
-    [Fact]
-    public async Task RareExpertPrecedesNormalAndClosesInsufficientDialog()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task OtherTaskPageDoesNotAuthorizeEntry(bool bossTask)
+    {
+        var frame = Frame((Assets + (bossTask ? "medal_supply_title.png" : "boss.png"), 218, 10));
+        var device = new FakeAdbService(frame);
+        var log = new TestLog();
+        using var automation = new AutomationService(device, new TemplateMatcher(), log);
+        using var ocr = new OnnxTextRecognizer();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => bossTask
+            ? new LimitedEventBossService(automation, ocr, log, "serial").RunAsync(FierceEnemyDifficulty.EXPERT, default)
+            : new MedalExchangeService(automation, ocr, log, "serial").RunAsync(default));
+        Assert.Empty(device.Taps);
+        Assert.Empty(device.Swipes);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RareExpertPrecedesNormalAndClosesInsufficientDialog(bool fromBoss)
     {
         var story = Frame((Assets + "story.png", 210, 3));
         var boss = Frame((Assets + "boss.png", 219, 8), ("Fixtures/Navigation/event-card.png", 975, 120));
         var dialog = Frame(("Fixtures/Navigation/event-dialog.png", 423, 165));
         var log = new TestLog();
         var device = new FakeAdbService(story);
-        device.ScreenshotProvider = () => device.Taps.Count switch { 0 => story, 2 => dialog, _ => boss };
+        device.ScreenshotProvider = () => (device.Taps.Count + (fromBoss ? 1 : 0)) switch { 0 => story, 2 => dialog, _ => boss };
         using var automation = new AutomationService(device, new TemplateMatcher(), log);
         using var ocr = new OnnxTextRecognizer();
         await new LimitedEventBossService(automation, ocr, log, "serial").RunAsync(FierceEnemyDifficulty.NORMAL, default);
-        Assert.Equal(3, device.Taps.Count);
-        Assert.InRange(device.Taps[1].X, 1390, 1470);
-        Assert.InRange(device.Taps[1].Y, 400, 460);
-        Assert.InRange(device.Taps[2].X, 710, 825);
+        Assert.Equal(fromBoss ? 2 : 3, device.Taps.Count);
+        Assert.InRange(device.Taps[^2].X, 1390, 1470);
+        Assert.InRange(device.Taps[^2].Y, 400, 460);
+        Assert.InRange(device.Taps[^1].X, 710, 825);
     }
 
     /// <summary>常驻最大次数、结算后出现稀有、稀有只执行一次，直到关闭不足弹窗。</summary>
