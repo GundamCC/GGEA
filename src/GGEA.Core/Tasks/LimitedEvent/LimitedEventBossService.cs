@@ -10,6 +10,7 @@ namespace GGEA.App.Tasks;
 public sealed class LimitedEventBossService(AutomationService automation, OnnxTextRecognizer ocr, IGgeaLog log, string serial)
 {
     private const string Event = "stage/event/limited_time_event/";
+    private const double BossTitleThreshold = 0.90;
     private const string Max = "develop/button/set_max_button";
     private readonly FierceEnemyDifficultyRecognizer labels = new(ocr, new(1035, 128, 125, 776));
     private static readonly Roi Title = new(190, 0, 375, 96);
@@ -25,7 +26,7 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
         ocr.Validate();
         var entry = await WaitStable(async frame =>
         {
-            if (await Find(frame, Event + "boss", Title, ct, .94) is { } boss) return new Observation("boss", boss);
+            if (await Find(frame, Event + "boss", Title, ct, BossTitleThreshold) is { } boss) return new Observation("boss", boss);
             return await Find(frame, Event + "story", Title, ct) is { } story ? new Observation("story", story) : null;
         }, ct) ?? throw new InvalidOperationException(L.Text("请进入故事事件或 BOSS 战斗界面。"));
         if (entry.Kind == "story") await automation.TapAsync(serial, 1650, 314, ct);
@@ -61,7 +62,7 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
     {
         async Task<Observation?> Card(ScreenImage frame, bool rareOnly)
         {
-            if (await Find(frame, Event + "boss", Title, ct, .94) is null) return null;
+            if (await Find(frame, Event + "boss", Title, ct, BossTitleThreshold) is null) return null;
             var rare = await FindRare(frame, ct);
             if (rareOnly && rare is null) return null;
             Roi? label = rare is null
@@ -139,7 +140,7 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
 
     private async Task WaitBoss(CancellationToken ct, int seconds = 20)
     {
-        _ = await WaitStable(async frame => await Find(frame, Event + "boss", Title, ct, .94) is { } boss
+        _ = await WaitStable(async frame => await Find(frame, Event + "boss", Title, ct, BossTitleThreshold) is { } boss
             ? new Observation("boss", boss) : null, ct, seconds * 1000) ?? throw Unknown();
     }
 }
