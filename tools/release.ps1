@@ -1,7 +1,8 @@
-﻿param(
+param(
     [string]$Commit = 'HEAD',
     [switch]$FullTests,
-    [string]$BaseDirectory = ''
+    [string]$BaseDirectory = '',
+    [string]$WorkRoot = ''
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -9,7 +10,9 @@ if ($BaseDirectory) { $BaseDirectory = [IO.Path]::GetFullPath($BaseDirectory) }
 # 固定一次提交解析；后续不再从可能变化的工作区复制源文件、配置或文档。
 $revision = [string](& git -C $root rev-parse --verify "$Commit^{commit}")
 if ($LASTEXITCODE -ne 0 -or $revision -notmatch '^[a-f0-9]{40}$') { throw 'Invalid release commit' }
-$work = Join-Path $root ('build/release-work-' + [Guid]::NewGuid().ToString('N'))
+# CI 的检出路径包含两次仓库名；在短路径中解压并自检，避免原生 OCR 加载器超过路径上限。
+$WorkRoot = if ($WorkRoot) { [IO.Path]::GetFullPath($WorkRoot) } else { Join-Path $root 'build' }
+$work = Join-Path $WorkRoot ('release-work-' + [Guid]::NewGuid().ToString('N'))
 $source = Join-Path $work 'source'
 New-Item -ItemType Directory -Path $work | Out-Null
 try {
@@ -33,7 +36,7 @@ try {
 }
 finally {
     # 包和校验文件已输出到独立的 dist，仅删除本次创建的快照。
-    if ([IO.Directory]::GetParent($work).FullName -ne (Join-Path $root 'build') -or
+    if ([IO.Directory]::GetParent($work).FullName -ne $WorkRoot -or
         [IO.Path]::GetFileName($work) -notmatch '^release-work-[a-f0-9]{32}$') { throw 'Unsafe release workspace' }
     Remove-Item -LiteralPath $work -Recurse -Force
 }
