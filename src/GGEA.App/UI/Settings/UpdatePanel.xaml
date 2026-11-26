@@ -16,18 +16,10 @@
                             <Button Content="{loc:Text Source='GitHub 发布页'}" Click="OpenReleasesButton_Click"
                                     Style="{StaticResource ButtonSecondary}" Margin="0,0,8,8"/>
                         </WrapPanel>
-                        <!-- 与通知选项共用 18px 复选框；说明沿文字左缘对齐，选项与状态分组留白。 -->
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
-                            <CheckBox x:Name="AutoInstallUpdatesCheckBox" Style="{StaticResource TaskCheckBox}"
-                                      IsChecked="True" VerticalAlignment="Center"
-                                      AutomationProperties.Name="{loc:Text Source='下载完成后自动重启安装'}"
-                                      Click="AutoInstallUpdatesCheckBox_Click"/>
-                            <TextBlock Text="{loc:Text Source='下载完成后自动重启安装'}" Style="{StaticResource InlineLabel}"
-                                       Margin="8,0,0,0" VerticalAlignment="Center" Cursor="Hand"
-                                       MouseLeftButtonUp="AutoInstallUpdatesLabel_Click"/>
-                        </StackPanel>
-                        <TextBlock Text="{loc:Text Source='选项即时保存。开启后，点击下载即同意校验成功后重启；其他未保存的设置不会保存。'}"
-                                   Style="{StaticResource HintText}" TextWrapping="Wrap" Margin="26,0,0,16"/>
+                        <WrapPanel Margin="0,4,0,8">
+                            <RadioButton x:Name="AutomaticMode" Content="{loc:Text Source='自动更新'}" Foreground="{DynamicResource Brush.Text}" Margin="0,0,18,0" Click="Mode_Click"/>
+                            <RadioButton x:Name="ReminderMode" Content="{loc:Text Source='有新版本时提醒我'}" Foreground="{DynamicResource Brush.Text}" Click="Mode_Click"/>
+                        </WrapPanel>
                         <ProgressBar x:Name="UpdateProgress" Height="5" Minimum="0" Maximum="100"
                                      Visibility="Collapsed" Margin="0,2,0,8"/>
                         <TextBlock x:Name="UpdateStatusText" Style="{StaticResource HintText}" TextWrapping="Wrap"/>

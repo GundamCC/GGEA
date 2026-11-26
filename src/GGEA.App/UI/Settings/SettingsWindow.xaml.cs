@@ -41,15 +41,15 @@ public partial class SettingsWindow : Window
         UiLanguageCombo.ItemsSource = GGEA.App.Localization.UiLanguages.All;
         UiLanguageCombo.SelectedItem = GGEA.App.Localization.UiLanguages.All.First(option =>
             option.Id == GGEA.App.Localization.UiLanguages.Resolve(config.UiLanguage, System.Globalization.CultureInfo.CurrentUICulture));
-        Updates.Initialize(log, allowUpdateInstall, availableUpdate, config.AutoInstallUpdates, enabled =>
+        Updates.Initialize(log, allowUpdateInstall, availableUpdate, config.AutomaticUpdates, enabled =>
         {
             // 仅更新软件更新偏好；其他编辑仍由底部“保存”负责，取消窗口也不会回滚即时偏好。
             if (saveUpdatePreference is not null) saveUpdatePreference(enabled);
-            else UpdatePreferences.SaveAutoInstallUpdates(enabled,
+            else UpdatePreferences.SaveAutomaticUpdates(enabled,
                 Path.Combine(AppContext.BaseDirectory, "config", "ggea.config.json"));
-            _config.AutoInstallUpdates = enabled;
-            _config.SavedValues!["autoInstallUpdates"] = enabled;
-        });
+            _config.AutomaticUpdates = enabled;
+            _config.SavedValues!["automaticUpdates"] = enabled;
+        }, config.AutoInstallUpdates);
         Updates.InstallationReady += (_, _) => DialogResult = false;
         foreach (var path in (config.AdbPaths ?? []).Append(config.AdbPath).Where(p => !string.IsNullOrWhiteSpace(p)).Distinct(StringComparer.OrdinalIgnoreCase))
             AdbPathBox.Items.Add(path);

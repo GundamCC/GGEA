@@ -32,16 +32,17 @@ public partial class UpdatePanel : UserControl
 
     /// <summary>显示真实程序集版本；首次初始化期间只允许检查，避免重入主窗口启动链。</summary>
     public void Initialize(IGgeaLog log, bool allowInstall, UpdateRelease? available = null,
-        bool autoInstallUpdates = true, Action<bool>? saveAutoInstall = null)
+        bool automaticUpdates = false, Action<bool>? saveAutoInstall = null, bool restartAfterDownload = true)
     {
         _log = log;
         _allowUpdateInstall = allowInstall;
-        _autoInstallUpdates = autoInstallUpdates;
-        AutoInstallUpdatesCheckBox.IsChecked = autoInstallUpdates;
+        _autoInstallUpdates = restartAfterDownload;
+        AutomaticMode.IsChecked = automaticUpdates;
+        ReminderMode.IsChecked = !automaticUpdates;
         _saveAutoInstall = saveAutoInstall;
         RefreshSourceSummary();
-        UpdateVersionText.Text = L.Format($"当前版本 v{UpdateLauncher.CurrentVersion.ToString(4)} · 正式版 / GitHub 优先");
-        UpdateStatusText.Text = L.Text("检查新版本后，点击下载更新。");
+        UpdateVersionText.Text = L.Format($"当前版本 v{UpdateLauncher.CurrentVersion.ToString(4)}");
+
         Unloaded += (_, _) =>
         {
             _updateClosed = true;
@@ -57,29 +58,24 @@ public partial class UpdatePanel : UserControl
     }
 
     /// <summary>检查不阻塞 WPF；取消、超时、无新版本和服务错误均显示实际结果。</summary>
-    private async void CheckUpdateButton_Click(object sender, RoutedEventArgs e)
+    private void CheckUpdateButton_Click(object sender, RoutedEventArgs e)
     {
         if (_updateCancellation is not null) return;
-        _availableUpdate = null;
-        NotesHeading.Visibility = Visibility.Collapsed;
-        UpdateNotesText.Text = "";
-        if (_preparedPackage is not null) UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(_preparedPackage)!);
-        _downloadSession = new();
-        using var cancellation = BeginUpdateOperation(L.Text("正在连接 GitHub 检查更新…"));
-        using var client = new OnlineUpdateClient(AppContext.BaseDirectory, ReportSourceStatus);
-        try
+        var dialog = new CheckUpdateDialog(_allowUpdateInstall, _log!) { Owner = Window.GetWindow(this) };
+        var install = dialog.ShowDialog() == true;
+        if (_updateClosed || !dialog.CheckSucceeded) return;
+        if (_availableUpdate?.Version != dialog.Release?.Version && _preparedPackage is not null)
         {
-            _availableUpdate = await client.CheckAsync(UpdateLauncher.CurrentVersion, cancellation.Token);
-            if (_updateClosed) return;
-            if (_availableUpdate is null) UpdateStatusText.Text = L.Text("当前已是最新版本，或本地版本高于最新正式版。");
-            else
-            {
-                ShowAvailableUpdate(_availableUpdate);
-            }
+            UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(_preparedPackage)!);
+            _downloadSession = new();
         }
-        catch (OperationCanceledException) { if (!_updateClosed) UpdateStatusText.Text = cancellation.IsCancellationRequested ? L.Text("已取消检查。") : L.Text("检查超时，请确认能访问 GitHub 后重试。"); }
-        catch (Exception ex) { ReportUpdateFailure(L.Text("检查更新"), ex); }
-        finally { EndUpdateOperation(); }
+        _availableUpdate = dialog.Release;
+        UpdateStatusText.Text = "";
+        UpdateNotesText.Text = "";
+        NotesHeading.Visibility = Visibility.Collapsed;
+        if (_availableUpdate is not null) ShowAvailableUpdate(_availableUpdate);
+        EndUpdateOperation();
+        if (install) DownloadUpdateButton_Click(sender, e);
     }
 
     /// <summary>打开设置时直接展示启动检查结果，避免再次请求网络或丢失发布说明。</summary>
@@ -87,10 +83,8 @@ public partial class UpdatePanel : UserControl
     {
         _availableUpdate = update;
         NotesHeading.Visibility = Visibility.Visible;
-        SourceStatusText.Text = L.Format($"当前更新来源：{update.SourceName} · GitHub 优先，连接失败时尝试备用源。");
-        UpdateStatusText.Text = L.Format($"发现 v{update.Version}，完整包 {update.PackageSize / 1024d / 1024d:F1} MB。");
-        if (update.Delta is { } delta)
-            UpdateStatusText.Text += L.Format($"\n可用差异包 {delta.PackageSize / 1024d / 1024d:F1} MB；无法复用时使用完整包。");
+        SourceStatusText.Text = L.Format($"当前更新来源：{update.SourceName}。");
+        UpdateStatusText.Text = L.Format($"发现新版本 v{update.Version}");
         UpdateNotesText.Text = string.IsNullOrWhiteSpace(update.Notes) ? L.Text("本次发布未填写更新说明。") : update.Notes;
         var reason = UpdateLauncher.InstallationUnavailableReason(AppContext.BaseDirectory);
         if (reason is not null) UpdateStatusText.Text += "\n" + reason;
@@ -114,7 +108,7 @@ public partial class UpdatePanel : UserControl
                 UpdateStatusText.Text = percent < 100 ? L.Format($"正在下载… {percent:F0}%") : L.Text("下载完成，正在校验并解压…");
             }), token), StartPreparedUpdateAsync, _autoInstallUpdates, cancellation.Token);
             if (!_updateClosed && !UpdateRequested)
-                UpdateStatusText.Text = L.Text("下载与校验完成。点击“重启并安装”继续；用户配置、AP 方案和已采集坐标会保留。");
+                UpdateStatusText.Text = L.Text("下载完成，可以重启安装。");
         }
         catch (OperationCanceledException) { if (!_updateClosed) UpdateStatusText.Text = cancellation.IsCancellationRequested ? L.Text("已取消下载，当前版本未修改。") : L.Text("下载超时或连接中断，请重试。"); }
         catch (Exception ex) { ReportUpdateFailure(_preparedPackage is null ? L.Text("下载更新") : L.Text("启动更新器"), ex); }
@@ -153,28 +147,16 @@ public partial class UpdatePanel : UserControl
     }
 
     /// <summary>只在保存成功后改变选项；设置窗口取消不撤回已明确即时保存的更新偏好。</summary>
-    private void AutoInstallUpdatesCheckBox_Click(object sender, RoutedEventArgs e)
+    private void Mode_Click(object sender, RoutedEventArgs e)
     {
-        var enabled = AutoInstallUpdatesCheckBox.IsChecked == true;
-        try
-        {
-            _saveAutoInstall?.Invoke(enabled);
-            _autoInstallUpdates = enabled;
-        }
+        bool enabled = AutomaticMode.IsChecked == true;
+        try { _saveAutoInstall?.Invoke(enabled); }
         catch (Exception ex)
         {
-            AutoInstallUpdatesCheckBox.IsChecked = _autoInstallUpdates;
+            AutomaticMode.IsChecked = !enabled;
+            ReminderMode.IsChecked = enabled;
             ReportUpdateFailure(L.Text("保存更新选项"), ex);
         }
-    }
-
-    /// <summary>分离文字以复用统一复选框模板，同时保留点击文字切换；下载期间不能绕过禁用状态。</summary>
-    private void AutoInstallUpdatesLabel_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (!AutoInstallUpdatesCheckBox.IsEnabled) return;
-        AutoInstallUpdatesCheckBox.IsChecked = AutoInstallUpdatesCheckBox.IsChecked != true;
-        AutoInstallUpdatesCheckBox_Click(sender, e);
-        e.Handled = true;
     }
 
     /// <summary>操作期间仍允许关闭窗口和取消；避免同时发起多个下载或检查。</summary>
@@ -183,7 +165,7 @@ public partial class UpdatePanel : UserControl
         _updateCancellation = new CancellationTokenSource();
         CheckUpdateButton.IsEnabled = false;
         DownloadUpdateButton.IsEnabled = false;
-        AutoInstallUpdatesCheckBox.IsEnabled = false;
+        AutomaticMode.IsEnabled = ReminderMode.IsEnabled = false;
         CancelUpdateButton.Visibility = Visibility.Visible;
         UpdateProgress.Visibility = Visibility.Visible;
         UpdateProgress.IsIndeterminate = true;
@@ -197,7 +179,7 @@ public partial class UpdatePanel : UserControl
         _updateCancellation = null;
         if (_updateClosed) return;
         CheckUpdateButton.IsEnabled = true;
-        AutoInstallUpdatesCheckBox.IsEnabled = true;
+        AutomaticMode.IsEnabled = ReminderMode.IsEnabled = true;
         CancelUpdateButton.Visibility = Visibility.Collapsed;
         UpdateProgress.Visibility = Visibility.Collapsed;
         DownloadUpdateButton.Content = _preparedPackage is null ? L.Text("下载更新") : L.Text("重启并安装");

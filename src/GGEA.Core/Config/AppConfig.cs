@@ -19,6 +19,9 @@ public sealed class AppConfig
     /// <summary>助手界面语言；空值表示尚未保存，首次启动采用 Windows 界面语言。</summary>
     public string? UiLanguage { get; set; }
 
+    /// <summary>只有显式开启才在启动时自动下载并安装，旧版的重启偏好不代表此授权。</summary>
+    public bool AutomaticUpdates { get; set; }
+
     /// <summary>用户主动下载软件更新后，校验成功即自动重启安装；旧配置缺失时默认开启。</summary>
     public bool AutoInstallUpdates { get; set; } = true;
 

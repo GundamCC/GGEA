@@ -7,13 +7,19 @@ public static class UpdatePreferences
 {
     /// <summary>更新选项即时保存，只改该字段，避免把设置窗口尚未保存的编辑或旧快照写回磁盘。</summary>
     public static void SaveAutoInstallUpdates(bool enabled, string path)
+        => Save("autoInstallUpdates", enabled, path);
+
+    public static void SaveAutomaticUpdates(bool enabled, string path)
+        => Save("automaticUpdates", enabled, path);
+
+    private static void Save(string key, bool enabled, string path)
     {
         using var configFile = new Config.SharedConfigFile(path);
         var root = File.Exists(path)
             ? System.Text.Json.Nodes.JsonNode.Parse(configFile.Read()) as System.Text.Json.Nodes.JsonObject
                 ?? throw new InvalidDataException("配置文件不是 JSON 对象，未保存更新选项。")
             : new System.Text.Json.Nodes.JsonObject();
-        root["autoInstallUpdates"] = enabled;
+        root[key] = enabled;
         // 共用刷盘后重命名的原子写入，失败时保留原配置；不使用 Load 的默认值回退覆盖损坏文件。
         GGEA.Updater.UpdateFiles.WriteJson(path, root);
     }

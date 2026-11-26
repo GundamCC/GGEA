@@ -33,6 +33,22 @@ public partial class MainWindow
             if (_windowTasks.IsStopping || _startupUpdate is null) return;
             _logger.Info(L.Format($"发现新版本 v{_startupUpdate.Version}，可在设置中下载更新。"));
             RefreshUpdateBadge();
+            if (!_config.AutomaticUpdates || UpdateLauncher.InstallationUnavailableReason(AppContext.BaseDirectory) is not null) return;
+            // 自动安装仅在启动检查后取得空闲执行权时进行，设备任务期间保留提醒。
+            using var lease = TryBeginHostOperation(false);
+            if (lease is null) return;
+            var update = _startupUpdate;
+            var package = await client.DownloadAsync(update, new Progress<double>(), _windowTasks.Token);
+            try
+            {
+                await ((App)Application.Current).StartUpdateAsync(package, update.Version.ToString(4), false, _windowTasks.Token);
+                CloseForUpdate();
+            }
+            catch
+            {
+                UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(package)!);
+                throw;
+            }
         }
         catch (OperationCanceledException) when (_windowTasks.IsStopping) { }
         catch (Exception ex)
@@ -54,16 +70,16 @@ public partial class MainWindow
     /// <summary>打开设置即视为已读，关闭或取消设置不再次提示同一启动检查结果。</summary>
     private void AcknowledgeStartupUpdate()
     {
-        _startupUpdateAcknowledged = true;
+        _startupUpdateAcknowledged = _startupUpdate is not null;
         RefreshUpdateBadge();
     }
 
     /// <summary>磁盘保存成功后同步主窗口配置，后续其他配置保存不会恢复旧的更新选项。</summary>
     private void SaveUpdatePreference(bool enabled)
     {
-        UpdatePreferences.SaveAutoInstallUpdates(enabled,
+        UpdatePreferences.SaveAutomaticUpdates(enabled,
             Path.Combine(AppContext.BaseDirectory, "config", "ggea.config.json"));
-        _config.AutoInstallUpdates = enabled;
+        _config.AutomaticUpdates = enabled;
     }
 
     /// <summary>事件先释放执行租约，随后正常关闭，保证设备任务和 插件 完成收尾。</summary>
