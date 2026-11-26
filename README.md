@@ -2,7 +2,7 @@
   <h1>GGEA</h1>
   <p>🌟 GGEA SD高达G世纪永恒小助手 🌟</p>
   <p><a href="README.md">简体中文</a> | <a href="README.ja.md">日本語</a></p>
-  <p>快速开始：<a href="https://github.com/GundamCC/GGEA/releases/latest">下载最新版</a>并访问<a href="https://www.gundamc.com/ggea/docs/guide/install/">使用文档</a>。</p>
+  <p>快速开始：<a href="https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases/latest">下载最新版</a>并访问<a href="https://www.gundamc.com/ggea/docs/guide/install/">使用文档</a>。</p>
   <p><a href="https://www.gundamc.com/ggea/">官网</a> · <a href="CHANGELOG.md">更新记录</a> · <a href="https://www.gundamc.com/ggea/docs/guide/faq/download/">FAQ</a></p>
 </div>
 
@@ -21,7 +21,7 @@
 ## 快速开始
 ### 下载方式
 #### 方式一：GitHub Releases（推荐）
-前往 [Releases](https://github.com/GundamCC/GGEA/releases) 下载正式版本。主仓库尚无正式包时，可使用[旧客户端兼容下载](https://github.com/GundamCC/GGEA-Release/releases)。源码更新不代表安装包已经发布。
+前往 [Releases](https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases) 下载正式版本。主仓库尚无正式包时，可使用[旧客户端兼容下载](https://github.com/GundamCC/GGEA-Release/releases)。源码更新不代表安装包已经发布。
 #### 方式二：QQ群组文件下载
 GGEA官方群：[1002150086](https://qm.qq.com/q/zkxGhEiVQQ)
 
@@ -59,7 +59,7 @@ Release 附件提供同名 `.zip.sha256` 文件，可用 PowerShell 的 `Get-Fil
 
 ## 问题反馈
 
-请在 [Issues](https://github.com/GundamCC/GGEA/issues) 中写明 GGEA 版本、Windows 与模拟器环境、复现步骤，以及出问题前后的操作。日志位于解压目录的 `logs/`。
+请在 [Issues](https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/issues) 中写明 GGEA 版本、Windows 与模拟器环境、复现步骤，以及出问题前后的操作。日志位于解压目录的 `logs/`。
 <br/>
 或通过GGEA官方群：[1002150086](https://qm.qq.com/q/zkxGhEiVQQ)  进行BUG反馈、功能建议。
 
@@ -72,7 +72,7 @@ Release 附件提供同名 `.zip.sha256` 文件，可用 PowerShell 的 `Get-Fil
 
 开发路线图与战舰区域搜索使用连续触点拖动画布。手指沿起点和终点之间的直线加速、减速，在终点短暂停留后抬起。开发版可在「截图与操作」设置起点、终点和时长，点击「精确拖动」试用。首次使用会通过 ADB 将随包的拖动组件复制到所选设备。
 
-源码版本：**v1.4.5.5** · 正式发布 / Release。每日消耗 AP 进入《SEED DESTINY》时，若作品 Logo 因游戏缩小渲染而模糊，助手会在候选位置复核完整标志，再按原规则确认作品。
+源码版本：**v1.4.5.6** · 正式发布 / Release。在线更新和备用更新源发现改用 GitHub 主仓库的新名称，继续严格校验发布版本、附件路径和 SHA-256。旧版若因仓库改名无法在线更新，请手动下载并校验官方完整包。
 
 多开时，每台模拟器同时只接受一个窗口的任务。第二个窗口点击开始会提示“设备正在使用”，任务结束或中止完成后可再次开始。不同模拟器可以并行执行任务。
 

@@ -2,13 +2,15 @@
 
 ## 入口与当前状态
 
-GGEA 主仓库统一承载源码、Issues、版本标签和后续正式 Release。1.3.4.0 已完成正式打包并发布至 [GGEA 主仓库](https://github.com/GundamCC/GGEA/releases/tag/v1.3.4.0)，[GGEA-Release 兼容过渡版](https://github.com/GundamCC/GGEA-Release/releases/tag/v1.3.4.0)提供字节完全一致的安装包及校验文件。源码提交为 `a1c650021a190948bb1ec2072c3c70247afab008`，ZIP SHA-256 为 `c33f090bd6eac644a3aa5c4f6dbc091df9efd2459f64988393f4f927b7c85db1`。网站发布快照已切换主仓库，网站部署独立进行。
+GGEA 主仓库统一承载源码、Issues、版本标签和后续正式 Release。1.3.4.0 已完成正式打包并发布至 [GGEA 主仓库](https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases/tag/v1.3.4.0)，[GGEA-Release 兼容过渡版](https://github.com/GundamCC/GGEA-Release/releases/tag/v1.3.4.0)提供字节完全一致的安装包及校验文件。源码提交为 `a1c650021a190948bb1ec2072c3c70247afab008`，ZIP SHA-256 为 `c33f090bd6eac644a3aa5c4f6dbc091df9efd2459f64988393f4f927b7c85db1`。网站发布快照已切换主仓库，网站部署独立进行。
 
 验证范围：正式构建、核心冒烟与在线更新测试、ZIP 解压与文件摘要、EXE 自检、两仓库发布状态及附件摘要核对已通过。真实旧客户端的完整升级流程尚未完成验证，不能据此关闭旧仓库兼容入口；网站尚未部署。
 
-新版客户端只访问 `GundamCC/GGEA` 的最新正式 Release，并严格绑定同仓库、同标签的 ZIP 与校验文件。主仓库缺少正式版时检查会失败，不伪报“已经最新”，也不自动回退到旧仓库。网站可以在确认主仓库存在但尚无正式版时展示经核验的旧仓库版本；网络失败、限流和不完整发布不会触发该回退。
+新版客户端只访问 `GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant` 的最新正式 Release，并严格绑定同仓库、同标签的 ZIP 与校验文件。主仓库缺少正式版时检查会失败，不伪报“已经最新”，也不自动回退到旧仓库。网站可以在确认主仓库存在但尚无正式版时展示经核验的旧仓库版本；网络失败、限流和不完整发布不会触发该回退。
 
-新版来源发现地址为 `https://raw.githubusercontent.com/GundamCC/GGEA/main/update-sources.json`。旧版继续读取 `https://raw.githubusercontent.com/GundamCC/GGEA-Release/main/update-sources.json`。两处保留 v1 协议，初始均为空列表；空列表会清空远程来源缓存，但不影响独立的本地导入配置。此文件仅提供备用源清单，不是主仓库重定向。以后增设备用源时，应分别核验两处配置的服务对象和协议，不能把 GitHub Release API 填为静态版本清单。
+新版来源发现地址为 `https://raw.githubusercontent.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/main/update-sources.json`。旧版继续读取 `https://raw.githubusercontent.com/GundamCC/GGEA-Release/main/update-sources.json`。两处保留 v1 协议，初始均为空列表；空列表会清空远程来源缓存，但不影响独立的本地导入配置。此文件仅提供备用源清单，不是主仓库重定向。以后增设备用源时，应分别核验两处配置的服务对象和协议，不能把 GitHub Release API 填为静态版本清单。
+
+已安装版本如果仍按旧短名校验 GitHub 附件，仓库重定向也无法使它接受新地址。请关闭程序，备份原目录，通过主仓库正式发布页下载完整 Windows ZIP 与同名 SHA-256 文件，校验后解压至新目录，再按需迁移用户设置；不要直接覆盖旧目录。旧兼容仓库 GGEA-Release 与旧短名是两件事，不把旧短名作为新客户端的备用来源。
 
 ## 获得发布授权后的执行顺序
 

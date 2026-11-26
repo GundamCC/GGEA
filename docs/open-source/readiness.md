@@ -4,10 +4,10 @@
 
 ## 公开入口
 
-- 源码：[GundamCC/GGEA](https://github.com/GundamCC/GGEA)，后续在该仓库的 `main` 分支开发。
-- 问题反馈：[GitHub Issues](https://github.com/GundamCC/GGEA/issues)。
-- 正式版：[v1.3.4.0 发行页](https://github.com/GundamCC/GGEA/releases/tag/v1.3.4.0)。
-- 下载：[Windows x64 ZIP](https://github.com/GundamCC/GGEA/releases/download/v1.3.4.0/GGEA-v1.3.4.0-win-x64.zip) · [SHA-256 校验文件](https://github.com/GundamCC/GGEA/releases/download/v1.3.4.0/GGEA-v1.3.4.0-win-x64.zip.sha256)。
+- 源码：[GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant](https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant)，后续在该仓库的 `main` 分支开发。
+- 问题反馈：[GitHub Issues](https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/issues)。
+- 正式版：[v1.3.4.0 发行页](https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases/tag/v1.3.4.0)。
+- 下载：[Windows x64 ZIP](https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases/download/v1.3.4.0/GGEA-v1.3.4.0-win-x64.zip) · [SHA-256 校验文件](https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases/download/v1.3.4.0/GGEA-v1.3.4.0-win-x64.zip.sha256)。
 
 ## 已完成
 
@@ -15,7 +15,7 @@
 - 补齐第三方软件许可、来源及摘要，并随构建输出分发。参见 [组件声明](../../resources/common/licenses/NOTICE.txt) 与 [OCR 说明](../../resources/common/ocr/NOTICE.txt)。
 - 建立 [633 张图片的来源与隐私清单](assets.md)，完成所记录范围的目视检查；授权依据仍为待确认，未替换图标或修改识别模板。
 - 依赖本机研究目录的实机脚本移出公共工具。发布管理器仅保留本地构建和打包；远程发布、凭证工具及维护者配置保存在被忽略的本机目录。
-- 原私有仓库完成分支整合后，将已提交源码导出到新仓库，形成独立初始提交 [`9fbe302`](https://github.com/GundamCC/GGEA/commit/9fbe30250579a2e87393de4aeb5aaead0ba09100)。1141 个文件与导出源树核对一致，未携带旧 Git 历史、本机私有目录或构建缓存。
+- 原私有仓库完成分支整合后，将已提交源码导出到新仓库，形成独立初始提交 [`9fbe302`](https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/commit/9fbe30250579a2e87393de4aeb5aaead0ba09100)。1141 个文件与导出源树核对一致，未携带旧 Git 历史、本机私有目录或构建缓存。
 - 新仓库 `main` 已推送至 GitHub，并核对远程提交与本地一致；原私有仓库保留，未将整个 `.git` 或其他分支、引用镜像到新仓库。
 - 在新仓库完成独立 Build 与 30 项核心冒烟、版本及资源检查；正式打包使用固定源码提交的导出快照。
 - v1.3.3.2 完成 Release Build、30 项核心冒烟、资源与版本一致性、ZIP 解压、逐文件摘要、防混用检查及 EXE 启动自检。另核验许可证文件与 39 份上游许可摘要，确认私有发布工具和未使用的 FFmpeg DLL 不在包内。

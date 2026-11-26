@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   update:
-    if: github.repository == 'GundamCC/GGEA' && github.ref == 'refs/heads/main'
+    if: github.repository_id == '1435670943' && github.ref == 'refs/heads/main'
     runs-on: windows-latest
     timeout-minutes: 10
     permissions:

@@ -2,7 +2,7 @@
   <h1>GGEA</h1>
   <p>🌟 SDガンダム ジージェネレーション エターナル アシスタント 🌟</p>
   <p><a href="README.md">简体中文</a> | <a href="README.ja.md">日本語</a></p>
-  <p>はじめに：<a href="https://github.com/GundamCC/GGEA/releases/latest">最新版をダウンロード</a>して、<a href="https://www.gundamc.com/ggea/docs/ja/guide/install/">ドキュメント</a>をご覧ください。</p>
+  <p>はじめに：<a href="https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases/latest">最新版をダウンロード</a>して、<a href="https://www.gundamc.com/ggea/docs/ja/guide/install/">ドキュメント</a>をご覧ください。</p>
   <p><a href="https://www.gundamc.com/ggea/ja/">公式サイト</a> · <a href="CHANGELOG.md">更新履歴</a> · <a href="https://www.gundamc.com/ggea/docs/ja/guide/faq/download/">FAQ</a></p>
 </div>
 
@@ -22,7 +22,7 @@
 
 ### ダウンロード
 
-[GitHub Releases](https://github.com/GundamCC/GGEA/releases) から正式版をダウンロードしてください。主リポジトリに正式版がまだない場合は、[旧版の互換ダウンロード](https://github.com/GundamCC/GGEA-Release/releases)を利用してください。ソースの更新と正式パッケージの公開は別です。
+[GitHub Releases](https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases) から正式版をダウンロードしてください。主リポジトリに正式版がまだない場合は、[旧版の互換ダウンロード](https://github.com/GundamCC/GGEA-Release/releases)を利用してください。ソースの更新と正式パッケージの公開は別です。
 
 ### 使い方
 
@@ -41,7 +41,7 @@ VC++ v14 x64 ランタイムは別途必要です。現在のソースでは起�
 - 対応するゲーム内言語：簡体字中国語、日本語。これはGGEA自体の表示言語とは異なります。
 - 動作確認済みのエミュレーター：MuMu 6、MuMu 12、LDPlayer 14、BlueStacks 5。環境によって動作が異なる場合があります。
 - 対応OS：Windows 10/11 x64。配布パッケージには.NETランタイムが含まれており、別途インストールする必要はありません。
-- ソース版 v1.4.5.5：AP消費で『SEED DESTINY』のロゴが縮小表示でぼやけた場合、候補位置でロゴ全体を再照合してから作品を選択します。
+- ソース版 v1.4.5.6：オンライン更新と予備更新元の取得先を新しい GitHub リポジトリ名に変更しました。リリースのバージョン、添付ファイルのパス、SHA-256 の検証は維持しています。旧版でオンライン更新ができない場合は、公式の完全版 ZIP を手動で取得して検証してください。
 - ソース版 v1.4.5.4：デイリーの開発・強化で機体候補の検出から0.5秒後に再確認します。開発タイトル全体が一致しない場合は、同じ位置で文字を照合します。タイトルと機体の位置を確認してからタップします。
 - ソース版 v1.4.5.3：ゲーム画面の照会には設定済みの ADB コマンドタイムアウトを使用します。画面照会が1.5秒を超えるとAP消費が中断する場合がある問題を修正しました。
 - ソース版 v1.4.3.2 では、メインウィンドウのコードを機能別に整理し、デイリータスクと AP 消費のリストで並べ替え処理を共通化しました。
@@ -73,7 +73,7 @@ Releaseには、ZIPと同名の `.zip.sha256` ファイルも添付されてい�
 
 ## 不具合・要望
 
-[Issues](https://github.com/GundamCC/GGEA/issues) に、GGEAのバージョン、Windowsとエミュレーターの環境、再現手順、問題発生前後の操作を記載してください。ログは展開先の `logs/` に保存されます。共有前に個人情報や認証情報が含まれていないか確認してください。
+[Issues](https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/issues) に、GGEAのバージョン、Windowsとエミュレーターの環境、再現手順、問題発生前後の操作を記載してください。ログは展開先の `logs/` に保存されます。共有前に個人情報や認証情報が含まれていないか確認してください。
 
 [公式QQグループ：1002150086](https://qm.qq.com/q/zkxGhEiVQQ) でも不具合報告や機能の提案を受け付けています。
 

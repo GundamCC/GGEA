@@ -19,13 +19,13 @@ public sealed partial class OnlineUpdateTests
         {
             var url = request.RequestUri!.AbsoluteUri;
             requests.Add(url);
-            return url == "https://raw.githubusercontent.com/GundamCC/GGEA/main/update-sources.json"
+            return url == "https://raw.githubusercontent.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/main/update-sources.json"
                 ? JsonReply(Catalog()) : new(HttpStatusCode.NotFound);
         }));
         await Assert.ThrowsAsync<HttpRequestException>(() => client.CheckAsync(new Version(1, 3, 4, 0), default));
         Assert.Equal(2, requests.Count);
-        Assert.Contains("https://raw.githubusercontent.com/GundamCC/GGEA/main/update-sources.json", requests);
-        Assert.Contains("https://api.github.com/repos/GundamCC/GGEA/releases/latest", requests);
+        Assert.Contains("https://raw.githubusercontent.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/main/update-sources.json", requests);
+        Assert.Contains("https://api.github.com/repos/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases/latest", requests);
         Assert.Empty(new UpdateSourceStore(temp.Path).Load());
     }
 
