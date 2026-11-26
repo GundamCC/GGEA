@@ -89,6 +89,8 @@ public sealed class MedalExchangeReplayTests
         var secondSupply = Scene("supply");
         Paste(secondSupply, Load(Fixtures + "balance-2847"), 1762, 33);
         frames["second-supply"] = Encode(secondSupply);
+        frames["reward"] = SortieTapToNextSamples.CreateFrame();
+        frames["second-reward"] = frames["reward"];
         frames["stale"] = ResultWithBalance(2847);
         frames["settled"] = ResultWithBalance(2347);
         var reviewed = ImageCodec.DecodePng(frames["early"]);
@@ -118,7 +120,9 @@ public sealed class MedalExchangeReplayTests
                 ("supply", > 1510 and < 1830, > 800 and < 906) when !startFull => "early",
                 ("early", > 825 and < 1092, > 929 and < 1055) => "result",
                 ("result", > 1230 and < 1360, > 937 and < 1057) => "second-supply",
-                ("second-supply", > 1510 and < 1830, > 800 and < 920) when ++secondOrders == 1 => "stale",
+                ("second-supply", > 1510 and < 1830, > 800 and < 920) when ++secondOrders == 1 => "reward",
+                ("reward", > 700 and < 1220, > 920 and < 1070) => "second-reward",
+                ("second-reward", > 700 and < 1220, > 920 and < 1070) => "stale",
                 ("settled", > 55 and < 288, > 949 and < 1060) => ++statusClicks == 1 ? "settled" : "reviewed",
                 ("reviewed", > 825 and < 1092, > 929 and < 1055) => "finished",
                 ("full", > 479 and < 573, > 778 and < 874) => "checked",

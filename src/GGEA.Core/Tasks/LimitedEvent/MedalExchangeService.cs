@@ -151,6 +151,8 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         long nextAttempt = 0;
         TemplateMatchResult? lastButton = null;
         int? lastBalance = null;
+        TemplateMatchResult? lastReward = null;
+        long nextRewardTap = 0;
         do
         {
             var frame = await Capture(ct);
@@ -167,6 +169,17 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
                     page = await Match(frame, Supply, ct);
                 }
             }
+            // 只有已提交本批兑换才会出现奖励展示。连续确认底部完整文字后推进，再重新识别当前页。
+            var reward = previousBalance.HasValue && page is null ? automation.TapToNext.Recognize(frame, ct) : null;
+            if (reward is not null && lastReward is not null && Math.Abs(reward.CenterX - lastReward.CenterX) <= 4 &&
+                Math.Abs(reward.CenterY - lastReward.CenterY) <= 4 && Environment.TickCount64 >= nextRewardTap)
+            {
+                log.Info("奖章兑换：已连续确认奖励展示的 TAP TO NEXT。");
+                await Tap(reward, ct);
+                nextRewardTap = Environment.TickCount64 + 1500;
+                reward = null;
+            }
+            lastReward = reward;
             var button = page is null ? null : await Match(frame, visible == Supply ? SupplyStatus : ResultStatus, ct);
             // 已经确认离开上轮结果并从补给页提交；结果余额可读时，再检查本批的实际扣款。
             int? current = null;
