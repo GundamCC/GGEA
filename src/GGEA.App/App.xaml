@@ -360,22 +360,29 @@
 
         <!-- 对勾在固定 18px 坐标系内绘制，路径边界围绕 (9,9) 居中，不受描边和布局舍入挤动。 -->
         <Style x:Key="TaskCheckBox" TargetType="CheckBox">
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
                         <!-- 偶数尺寸使标记与外框同心；标记独立于边框内边距，焦点变化不挤动内容。 -->
-                        <Grid Width="18" Height="18" Background="Transparent"
-                              HorizontalAlignment="Center" VerticalAlignment="Center" UseLayoutRounding="True">
-                            <Border x:Name="BoxBorder" CornerRadius="3"
-                                    Background="{DynamicResource Brush.CardAlt}"
-                                    BorderBrush="{DynamicResource Brush.CheckBorder}" BorderThickness="1"/>
-                            <Path x:Name="CheckMark" Data="M 4,9 L 7.5,13 L 14,5" Stretch="None"
-                                  Stroke="{DynamicResource Brush.TextDim}" StrokeThickness="1.5"
-                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                                  Visibility="Collapsed"/>
-                        </Grid>
+                        <StackPanel Orientation="Horizontal" Background="Transparent" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}">
+                            <Grid Width="18" Height="18" Background="Transparent"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" UseLayoutRounding="True">
+                                <Border x:Name="BoxBorder" CornerRadius="3"
+                                        Background="{DynamicResource Brush.CardAlt}"
+                                        BorderBrush="{DynamicResource Brush.CheckBorder}" BorderThickness="1"/>
+                                <Path x:Name="CheckMark" Data="M 4,9 L 7.5,13 L 14,5" Stretch="None"
+                                      Stroke="{DynamicResource Brush.TextDim}" StrokeThickness="1.5"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                      Visibility="Collapsed"/>
+                            </Grid>
+                            <ContentPresenter x:Name="OptionLabel" Margin="7,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                        </StackPanel>
                         <ControlTemplate.Triggers>
+                            <Trigger Property="Content" Value="{x:Null}">
+                                <Setter TargetName="OptionLabel" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="BoxBorder" Property="Background" Value="{DynamicResource Brush.CardAlt}"/>
                                 <Setter TargetName="BoxBorder" Property="BorderBrush" Value="{DynamicResource Brush.TextDim}"/>
