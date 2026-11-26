@@ -26,7 +26,7 @@ public sealed class SkipExecutionDialogRecognizer(bool eventLayout = false)
         ct.ThrowIfCancellationRequested();
         if (screen.Width != 1920 || screen.Height != 1080) return null;
         var execute = _buttons.Match(screen, _execute, eventLayout ? new(945, 910, 445, 170) : ExecuteRegion, .90, ct);
-        if (execute is null || !IsEnabled(screen, execute)) return null;
+        if (execute is null || !StageEntryButtonRecognizer.HasEnabledBlueFill(screen, execute)) return null;
         var cancel = _buttons.Match(screen, _cancel, eventLayout ? new(555, 910, 435, 170) : CancelRegion, .90, ct);
         return cancel is null ? null : new(screen, execute, cancel);
     }
@@ -41,16 +41,4 @@ public sealed class SkipExecutionDialogRecognizer(bool eventLayout = false)
         return true;
     }
 
-    private static bool IsEnabled(ScreenImage screen, TemplateMatchResult button)
-    {
-        var blue = 0;
-        for (var y = button.Y; y < button.Y + button.Height; y++)
-        for (var x = button.X; x < button.X + button.Width; x++)
-        {
-            var i = (y * screen.Width + x) * 4;
-            if (screen.Bgra[i] >= 180 && screen.Bgra[i] > screen.Bgra[i + 2] + 50 &&
-                screen.Bgra[i + 1] > screen.Bgra[i + 2] + 20) blue++;
-        }
-        return blue >= button.Width * button.Height * .20;
-    }
 }

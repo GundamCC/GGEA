@@ -38,6 +38,7 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         ResultClose = new("common/close", new(1060, 902, 460, 175), .89),
         Ok = new("dialog/button_ok", new(727, 751, 465, 185), .89);
 
+    private readonly StageEntryButtonRecognizer buttons = new();
     private readonly MedalPoolReader reader = new(ocr);
 
     public async Task RunAsync(CancellationToken ct)
@@ -48,9 +49,15 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         var entry = await StableObservation.WaitAsync<Target>(async () =>
         {
             var frame = await Capture(ct);
+            if (await IsResetReceipt(frame, ct)) return Complete;
             if (await Match(frame, Supply, ct) is not null) return Supply;
             return await Match(frame, Story, ct) is not null ? Story : null;
         }, (a,b) => a == b, GameTiming.RecognitionTimeoutMs, ct) ?? throw Uncertain();
+        if (entry == Complete)
+        {
+            var underlying = await CloseResetReceipt(ct);
+            if (underlying == Results) await Click(Results, ResultClose, ct);
+        }
         if (entry == Story) await automation.TapAsync(serial, 1656, 720, ct);
         await Click(Supply, OpenSettings, ct);
         await Configure(ct);
@@ -58,6 +65,7 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         var balance = await ReadBalance(ct);
         await OpenStatus(Supply, ct);
         var pool = await ReadPool(ct);
+        if (entry == Complete && !pool.IsNew) throw Uncertain();
         var parent = Supply;
 
         while (true)
@@ -194,8 +202,26 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         if (await Match(frame, Checked, ct) is null) await Click(Status, Unchecked, ct);
         frame = await WaitPair(Status, Checked, ct);
         await Tap(await Match(frame, Reset, ct) ?? throw Uncertain(), ct);
-        frame = await WaitPair(Complete, ResetMessage, ct);
-        await Tap(await Match(frame, Ok, ct) ?? throw Uncertain(), ct);
+        return await CloseResetReceipt(ct);
+    }
+
+    private async Task<bool> IsResetReceipt(ScreenImage frame, CancellationToken ct) =>
+        await Match(frame, Complete, ct) is not null && await Match(frame, ResetMessage, ct) is not null;
+
+    private async Task<Target> CloseResetReceipt(CancellationToken ct)
+    {
+        // 完成提示的蓝色按钮会发光。先核对标题和正文，再用同一通用 OK 素材的字形与蓝色亮态复核。
+        var ok = await StableObservation.WaitAsync(async () =>
+        {
+            var frame = await Capture(ct);
+            if (!await IsResetReceipt(frame, ct)) return null;
+            return await Match(frame, Ok, ct) ?? buttons.MatchBlueLabel(frame,
+                ConfigService.ResolvePath($"resources/templates/{Ok.Key}.png"), Ok.Area, .90, ct);
+        }, (a,b) => Math.Abs(a.CenterX-b.CenterX) <= 4 && Math.Abs(a.CenterY-b.CenterY) <= 4,
+            GameTiming.RecognitionTimeoutMs, ct);
+        if (ok is null) throw new InvalidOperationException("奖章兑换：未连续确认重置完成提示与 OK 按钮。");
+        log.Info($"奖章兑换：已确认重置完成，点击 OK ({ok.CenterX},{ok.CenterY})。");
+        await Tap(ok, ct);
         return await WaitParent(ct);
     }
 

@@ -35,12 +35,13 @@ public sealed class MedalExchangeReplayTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task ActualControlsProtectExchangeAndReset(bool startFull)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ActualControlsProtectExchangeAndReset(bool startFull, bool resumeReceipt)
     {
         using var owner = new CancellationTokenSource(TimeSpan.FromSeconds(45));
-        var state = startFull ? "supply" : "story";
+        var state = resumeReceipt ? "reset" : startFull ? "supply" : "story";
         var supply = Scene("supply");
         if (startFull)
         {
@@ -61,7 +62,7 @@ public sealed class MedalExchangeReplayTests
         var frames = new Dictionary<string, byte[]> {
             ["story"] = Encode(story), ["supply"] = Encode(supply), ["settings"] = Encode(Scene("settings")),
             ["settings-wrong"] = Encode(settingsWrong), ["settings-on"] = Encode(settingsOn),
-            ["result"] = Encode(Scene("result")), ["reset"] = Encode(Scene("reset")),
+            ["result"] = Encode(Scene("result")), ["reset"] = Encode(Scene("reset-live")),
             ["full"] = PoolFrame("pool-full-key", "pool-full-general", false),
             ["checked"] = PoolFrame("pool-full-key", "pool-full-general", true),
             ["new"] = PoolFrame("pool-next-key", "pool-next-general", false),
@@ -103,7 +104,7 @@ public sealed class MedalExchangeReplayTests
             if (state == "stale" && ++staleFrames > 3) state = "settled";
             return views.TryGetValue((state, device.Swipes.LastOrDefault().Y2 == 395), out var view) ? view : frames[state];
         };
-        bool reset = false, submitted = false;
+        bool reset = resumeReceipt, submitted = false;
         device.TapFailure = (x, y) =>
         {
             state = (state, x, y) switch {

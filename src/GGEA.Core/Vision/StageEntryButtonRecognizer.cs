@@ -27,6 +27,36 @@ public sealed class StageEntryButtonRecognizer
     }
 
     /// <summary>完整验证当前物理素材，复合条件不得跨候选拼接。</summary>
+    internal TemplateMatchResult? MatchBlueLabel(ScreenImage screen, string path, Roi area, double threshold, CancellationToken ct)
+    {
+        return TemplateFallback.Match(path, candidate =>
+        {
+            var template = Load(candidate);
+            var bounds = template.TextBounds;
+            var text = _matcher.Match(screen.Bgra, screen.Width, screen.Height, template.Text,
+                bounds.Width, bounds.Height, threshold, area, ct: ct);
+            if (text is null) return null;
+            var region = new Roi(text.X - bounds.X, text.Y - bounds.Y, template.Full.Width, template.Full.Height);
+            if (region.X < area.X || region.Y < area.Y || region.X + region.Width > area.X + area.Width ||
+                region.Y + region.Height > area.Y + area.Height) return null;
+            var button = new TemplateMatchResult(region, text.Confidence);
+            return HasEnabledBlueFill(screen, button) ? button : null;
+        }, ct);
+    }
+
+    internal static bool HasEnabledBlueFill(ScreenImage screen, TemplateMatchResult button)
+    {
+        var blue = 0;
+        for (var y = button.Y; y < button.Y + button.Height; y++)
+        for (var x = button.X; x < button.X + button.Width; x++)
+        {
+            var i = (y * screen.Width + x) * 4;
+            if (screen.Bgra[i] >= 180 && screen.Bgra[i] > screen.Bgra[i + 2] + 50 &&
+                screen.Bgra[i + 1] > screen.Bgra[i + 2] + 20) blue++;
+        }
+        return blue >= button.Width * button.Height * .20;
+    }
+
     private TemplateMatchResult? MatchSingle(ScreenImage screen, string path, Roi searchArea, double threshold,
         CancellationToken ct, double templateScale)
     {
