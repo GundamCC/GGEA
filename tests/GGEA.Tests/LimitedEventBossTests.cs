@@ -9,7 +9,7 @@ namespace GGEA.Tests;
 /// <summary>用采集到的卡片和券不足弹窗回放。只允许点击稀有卡略过和取消。</summary>
 public sealed class LimitedEventBossTests
 {
-    private const string Assets = "resources/templates/stage/limited_event/";
+    private const string Assets = "resources/templates/stage/event/limited_time_event/";
     private static byte[] Frame(params (string Path, int X, int Y)[] parts)
     {
         var pixels = TestImageFactory.CreateBgra(1920, 1080, 15);

@@ -9,7 +9,7 @@ namespace GGEA.App.Tasks;
 /// <summary>只接管玩家打开的故事事件。每次结果返回后丢弃上一轮卡片位置。</summary>
 public sealed class LimitedEventBossService(AutomationService automation, OnnxTextRecognizer ocr, IGgeaLog log, string serial)
 {
-    private const string Event = "stage/limited_event/";
+    private const string Event = "stage/event/limited_time_event/";
     private const string Max = "develop/button/set_max_button";
     private readonly FierceEnemyDifficultyRecognizer labels = new(ocr, new(1035, 128, 125, 776));
     private static readonly Roi Title = new(190, 0, 375, 96);
