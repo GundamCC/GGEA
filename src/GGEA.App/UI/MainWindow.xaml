@@ -213,14 +213,6 @@
                                 <ui:FierceEnemyAssaultView x:Name="FierceEnemyAssaultView"/>
                             </TabItem>
                             <!-- 大师联盟完整流程；编制与败北刷新分别授权，默认均关闭。 -->
-                            <TabItem x:Name="MasterLeagueTab" Header="{loc:Text Source='大师联盟'}">
-                                <ui:MasterLeagueView x:Name="MasterLeagueView"/>
-                            </TabItem>
-                            <!-- 铁球工厂入口。 -->
-                            <TabItem x:Name="BallFactoryTab" Header="{loc:Text Source='铁球工厂'}">
-                                <ui:BallFactoryView x:Name="BallFactoryView"/>
-                            </TabItem>
-                            <!-- 截图 / 操作：开发版显示，发布版不显示。 -->
                             <TabItem x:Name="LimitedEventTab" Header="{loc:Text Source='限时活动'}">
                                 <StackPanel Margin="0,14,0,0">
                                     <TextBlock Text="{loc:Text Source='请先手动进入故事事件界面。'}" Style="{StaticResource HintText}"/>
@@ -230,10 +222,20 @@
                                     </ComboBox>
                                     <Button x:Name="LimitedStart" Content="{loc:Text Source='开始 BOSS 略过'}" Click="LimitedStart_Click"
                                             Style="{StaticResource ButtonPrimary}" HorizontalAlignment="Left" Margin="0,16,0,0"/>
+                                    <Button x:Name="MedalStart" Content="{loc:Text Source='开始奖章自动兑换'}" Click="LimitedStart_Click"
+                                            Style="{StaticResource ButtonPrimary}" HorizontalAlignment="Left" Margin="0,8,0,0"/>
                                     <TextBlock x:Name="LimitedStatus" Style="{StaticResource StatusText}" Margin="0,12,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </TabItem>
 
+                            <TabItem x:Name="MasterLeagueTab" Header="{loc:Text Source='大师联盟'}">
+                                <ui:MasterLeagueView x:Name="MasterLeagueView"/>
+                            </TabItem>
+                            <!-- 铁球工厂入口。 -->
+                            <TabItem x:Name="BallFactoryTab" Header="{loc:Text Source='铁球工厂'}">
+                                <ui:BallFactoryView x:Name="BallFactoryView"/>
+                            </TabItem>
+                            <!-- 截图 / 操作：开发版显示，发布版不显示。 -->
                             <TabItem x:Name="ScreenshotTab" Header="{loc:Text Source='截图与操作'}" Visibility="Collapsed">
                                 <ui:ScreenshotView x:Name="ScreenshotView"/>
                             </TabItem>

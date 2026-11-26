@@ -27,6 +27,7 @@ public sealed class ThemeTests
                 Assert.Equal("EXPERT", ((ComboBoxItem)window.LimitedDifficulty.SelectedItem).Content);
                 RenderLocalizationPreview(window, 1064, 660, "limited-event-offscreen");
                 Assert.True(window.LimitedStart.ActualWidth > 0);
+                Assert.True(window.MedalStart.ActualWidth > 0);
                 window.ApConsumptionTab.IsSelected = true;
                 VerifyHeaderHoverDelay(window);
                 VerifyFierceEnemyTasks(window);
@@ -661,7 +662,8 @@ public sealed class ThemeTests
         var fierce = (TabItem)window.FindName("FierceEnemyAssaultTab");
         Assert.Equal(tabs.Items.IndexOf(progress) + 1, tabs.Items.IndexOf(fierce));
         var league = (TabItem)window.FindName("MasterLeagueTab");
-        Assert.Equal(tabs.Items.IndexOf(fierce) + 1, tabs.Items.IndexOf(league));
+        Assert.Equal(tabs.Items.IndexOf(fierce) + 1, tabs.Items.IndexOf(window.LimitedEventTab));
+        Assert.Equal(tabs.Items.IndexOf(window.LimitedEventTab) + 1, tabs.Items.IndexOf(league));
         Assert.Equal(tabs.Items.IndexOf(league) + 1, tabs.Items.IndexOf(factory));
         Assert.Equal(Visibility.Visible, factory.Visibility);
         tabs.SelectedItem = factory;
