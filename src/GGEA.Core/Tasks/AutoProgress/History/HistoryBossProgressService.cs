@@ -142,6 +142,12 @@ public sealed class HistoryBossProgressService(AutomationService automation, His
     private async Task ScrollAsync(int movement, CancellationToken ct)
     {
         await ConfirmBossPageAsync(ct);
+        await ScrollListAsync(automation, serial, movement, log, ct);
+    }
+
+    /// <summary>历史和限时 BOSS 共用右侧列表的手势边界与稳定等待，调用方先确认当前页面。</summary>
+    internal static async Task ScrollListAsync(AutomationService automation, string serial, int movement, IGgeaLog log, CancellationToken ct)
+    {
         // 手指方向与列表浏览方向相反；限制手势在卡片视口内，避免触及底部导航。
         movement = Math.Clamp(movement, -420, 420);
         var startY = movement < 0 ? 800 : 350;

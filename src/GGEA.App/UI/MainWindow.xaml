@@ -221,6 +221,19 @@
                                 <ui:BallFactoryView x:Name="BallFactoryView"/>
                             </TabItem>
                             <!-- 截图 / 操作：开发版显示，发布版不显示。 -->
+                            <TabItem x:Name="LimitedEventTab" Header="{loc:Text Source='限时活动'}">
+                                <StackPanel Margin="0,14,0,0">
+                                    <TextBlock Text="{loc:Text Source='请先手动进入故事事件界面。'}" Style="{StaticResource HintText}"/>
+                                    <TextBlock Text="{loc:Text Source='常驻 BOSS 难度'}" Style="{StaticResource HintText}" Margin="0,14,0,6"/>
+                                    <ComboBox x:Name="LimitedDifficulty" Style="{StaticResource ComboBoxDark}" Width="140" HorizontalAlignment="Left" SelectedIndex="0">
+                                        <ComboBoxItem Content="EXPERT"/><ComboBoxItem Content="HARD"/><ComboBoxItem Content="NORMAL"/>
+                                    </ComboBox>
+                                    <Button x:Name="LimitedStart" Content="{loc:Text Source='开始 BOSS 略过'}" Click="LimitedStart_Click"
+                                            Style="{StaticResource ButtonPrimary}" HorizontalAlignment="Left" Margin="0,16,0,0"/>
+                                    <TextBlock x:Name="LimitedStatus" Style="{StaticResource StatusText}" Margin="0,12,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </TabItem>
+
                             <TabItem x:Name="ScreenshotTab" Header="{loc:Text Source='截图与操作'}" Visibility="Collapsed">
                                 <ui:ScreenshotView x:Name="ScreenshotView"/>
                             </TabItem>

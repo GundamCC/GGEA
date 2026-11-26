@@ -23,6 +23,11 @@ public sealed class ThemeTests
                 app.InitializeComponent();
                 VerifyControlGeometry(app);
                 var window = new MainWindow();
+                window.LimitedEventTab.IsSelected = true;
+                Assert.Equal("EXPERT", ((ComboBoxItem)window.LimitedDifficulty.SelectedItem).Content);
+                RenderLocalizationPreview(window, 1064, 660, "limited-event-offscreen");
+                Assert.True(window.LimitedStart.ActualWidth > 0);
+                window.ApConsumptionTab.IsSelected = true;
                 VerifyHeaderHoverDelay(window);
                 VerifyFierceEnemyTasks(window);
                 VerifyAutoProgressSelector(window);
@@ -273,6 +278,7 @@ public sealed class ThemeTests
             Assert.Equal("设置", System.Windows.Automation.AutomationProperties.GetName(restartedSettingsButton));
             Assert.Equal("Microsoft YaHei UI", restarted.FontFamily.Source);
             RenderLocalizationPreview(restarted, 1280, 780, "main-zh-offscreen");
+
         }
         finally { GGEA.App.Localization.L.Initialize(previousLanguage); }
     }
