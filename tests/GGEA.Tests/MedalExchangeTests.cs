@@ -31,6 +31,16 @@ public sealed class MedalExchangeTests
         Assert.Equal(new RewardCount(obtained, total), new MedalPoolReader(ocr).Count(frame, 409, default));
     }
 
+    [Theory]
+    [InlineData(2347)]
+    [InlineData(2847)]
+    public void ResultBalanceExcludesNextExchangePreview(int balance)
+    {
+        using var ocr = new OnnxTextRecognizer();
+        var frame = LoadStrip($"medal-result-balance-{balance}", 740, 989);
+        Assert.Equal(balance, new MedalPoolReader(ocr).ResultBalance(frame, default));
+    }
+
     [Fact]
     public void ReadMedalBalanceWithThousandsSeparator()
     {

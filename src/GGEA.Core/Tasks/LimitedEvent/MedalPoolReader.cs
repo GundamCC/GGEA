@@ -41,6 +41,13 @@ internal sealed class MedalPoolReader(OnnxTextRecognizer ocr)
         return Number(text.Replace(",", ""), out var n) ? n : null;
     }
 
+    /// <summary>结果页“持有”右侧的当前余额，避开箭头和下一次兑换预览。</summary>
+    public int? ResultBalance(ScreenImage frame, CancellationToken ct)
+    {
+        var text = Read(frame, new(782, 995, 147, 36), false, ct);
+        return Number(text.Replace(",", ""), out var n) ? n : null;
+    }
+
     private static bool Number(string text, out int value) =>
         int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out value);
 

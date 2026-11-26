@@ -77,8 +77,28 @@ public sealed class MedalExchangeReplayTests
             Array.Clear(view.Bgra, (lower ? 391 : 520) * view.Width * 4, 90 * view.Width * 4);
             views[(modal, lower)] = Encode(view);
         }
-        device.ScreenshotProvider = () => views.TryGetValue((state, device.Swipes.LastOrDefault().Y2 == 395), out var view)
-            ? view : frames[state];
+        // 模拟中断现场：再次交换后旧结果仍可见，新结果的第一次“目前获得状况”点击失效。
+        byte[] ResultWithBalance(int balance)
+        {
+            var result = Scene("result");
+            Paste(result, Load(Fixtures + $"result-balance-{balance}"), 740, 989);
+            return Encode(result);
+        }
+        frames["stale"] = ResultWithBalance(2847);
+        frames["settled"] = ResultWithBalance(2347);
+        var reviewed = ImageCodec.DecodePng(frames["early"]);
+        var amount = Load(Fixtures + "count-exchange100-after-general");
+        // 685/793 → 785/793，使用同行分母的 7。
+        for (int y = 0; y < amount.Height; y++)
+            Buffer.BlockCopy(amount.Bgra, (y * amount.Width + 151) * 4, amount.Bgra, (y * amount.Width + 65) * 4, 22 * 4);
+        Paste(reviewed, amount, 1185, 534 + Load(Assets + "medal_general_rewards").Height / 2 - 19);
+        frames["reviewed"] = Encode(reviewed);
+        int staleFrames = 0, statusClicks = 0, againClicks = 0;
+        device.ScreenshotProvider = () =>
+        {
+            if (state == "stale" && ++staleFrames > 3) state = "settled";
+            return views.TryGetValue((state, device.Swipes.LastOrDefault().Y2 == 395), out var view) ? view : frames[state];
+        };
         bool reset = false, submitted = false;
         device.TapFailure = (x, y) =>
         {
@@ -92,7 +112,9 @@ public sealed class MedalExchangeReplayTests
                 ("partial" or "new", > 825 and < 1092, > 929 and < 1055) => "supply",
                 ("supply", > 1510 and < 1830, > 800 and < 906) when !startFull => "early",
                 ("early", > 825 and < 1092, > 929 and < 1055) => "result",
-                ("result", > 1500 and < 1820, > 937 and < 1057) => "finished",
+                ("result", > 1500 and < 1820, > 937 and < 1057) when ++againClicks == 1 => "stale",
+                ("settled", > 55 and < 288, > 949 and < 1060) => ++statusClicks == 1 ? "settled" : "reviewed",
+                ("reviewed", > 825 and < 1092, > 929 and < 1055) => "finished",
                 ("full", > 479 and < 573, > 778 and < 874) => "checked",
                 ("checked", > 1044 and < 1451, > 778 and < 877) => "reset",
                 ("reset", > 825 and < 1092, > 792 and < 923) => "supply",
@@ -116,6 +138,9 @@ public sealed class MedalExchangeReplayTests
         {
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.RunAsync(owner.Token));
             Assert.True(submitted);
+            Assert.Equal(1, againClicks);
+            Assert.Equal(2, statusClicks);
+            Assert.Contains(log.Entries, entry => entry.Message.Contains("785/793"));
             Assert.False(reset);
         }
     }
