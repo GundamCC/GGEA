@@ -15,6 +15,7 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
     private static readonly Roi Title = new(190, 0, 375, 96);
     private static readonly Roi Cancel = new(550, 762, 435, 161);
     private static readonly Roi Execute = new(945, 762, 450, 161);
+    private static readonly Roi RemainingTickets = new(1280, 607, 165, 43);
     private static readonly Roi Quantity = new(1210, 385, 200, 160);
 
     public async Task RunAsync(FierceEnemyDifficulty difficulty, CancellationToken ct)
@@ -37,8 +38,9 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
             var cancel = await Find(frame, "dialog/cancel", Cancel, ct);
             if (cancel is null) throw Unknown();
             // 只接受同一挑战券对话框中的负数红字与暗态执行，余额数字本身随玩家而变。
-            if (await Find(frame, Event + "insufficient_execute", Execute, ct, .96) is not null &&
-                HasDeficit(frame))
+            if (DiamondSafetyChecker.CountRedPixels(frame.Bgra, frame.Width, RemainingTickets) >=
+                DiamondSafetyChecker.DefaultRedPixelThreshold &&
+                await Find(frame, Event + "insufficient_execute", Execute, ct, .96) is not null)
             {
                 await Tap(cancel, ct);
                 await WaitBoss(ct);
@@ -104,19 +106,6 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
 
     private Task Scroll(int movement, CancellationToken ct) =>
         HistoryBossProgressService.ScrollListAsync(automation, serial, movement, log, ct);
-
-    private static bool HasDeficit(ScreenImage frame)
-    {
-        // 余额不足时右侧显示红色向下图标和负余额。充足时执行按钮亮起。
-        var red = 0;
-        for (var y = 607; y < 650; y++)
-        for (var x = 1280; x < 1445; x++)
-        {
-            var i = (y * frame.Width + x) * 4;
-            if (frame.Bgra[i + 2] > frame.Bgra[i + 1] + 55 && frame.Bgra[i + 2] > frame.Bgra[i] + 55) red++;
-        }
-        return red >= 30;
-    }
 
     private async Task<ScreenImage> Capture(CancellationToken ct)
     {
