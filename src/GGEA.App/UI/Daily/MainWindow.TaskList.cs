@@ -18,7 +18,7 @@ public partial class MainWindow
         DailyView.DailyStartButton.Click += DailyStartButton_Click;
         DailyView.Bind(_dailyTasks, message => _logger?.Info(message), () =>
         {
-            if (_dailyTasks.Any(task => task.Kind == DailyTaskKind.FierceEnemySkip)) SaveFierceEnemyDailyTask();
+            if (_dailyTasks.Any(task => task.CanRemove)) SaveDynamicDailyTasks();
         });
     }
 
@@ -87,7 +87,7 @@ public partial class MainWindow
     private void DailyTask_StateChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(DailyTaskItem.IsChecked) &&
-            sender is DailyTaskItem { Kind: DailyTaskKind.FierceEnemySkip }) SaveFierceEnemyDailyTask();
+            sender is DailyTaskItem { CanRemove: true }) SaveDynamicDailyTasks();
         if (e.PropertyName is nameof(DailyTaskItem.IsChecked) or nameof(DailyTaskItem.IsSupported))
         {
             UpdateDailySelectAllState();
@@ -111,6 +111,10 @@ public partial class MainWindow
                 _logger?.Info(L.Text("已打开 奖励 设置页"));
                 break;
 
+            case DailyTaskKind.LimitedEvent:
+                if (task.LimitedEventSelection is { } choice) ShowLimitedDaily(choice);
+                LimitedEventTab.IsSelected = true;
+                break;
             case DailyTaskKind.FierceEnemySkip:
                 FierceEnemyAssaultTab.IsSelected = true;
                 _logger?.Info(L.Text("已打开 强敌来袭 页"));

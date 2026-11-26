@@ -108,8 +108,9 @@ public partial class MainWindow
         FierceEnemyAssaultView.FierceEnemySelectionPanel.IsEnabled = !busy && FierceEnemyAssaultView.FierceEnemyUnitBox.Items.Count > 0;
         FierceEnemyAssaultView.FierceEnemyAssaultStartButton.IsEnabled = !_windowTasks.IsStopping && (!busy || _fierceEnemyAssaultCts?.IsCancellationRequested == false);
         LimitedDifficulty.IsEnabled = !busy;
-        LimitedStart.IsEnabled = !_windowTasks.IsStopping && (!busy || !_exchangingMedals && _limitedCts?.IsCancellationRequested == false);
-        MedalStart.IsEnabled = !_windowTasks.IsStopping && (!busy || _exchangingMedals && _limitedCts?.IsCancellationRequested == false);
+        foreach (var button in new[] { LimitedStart, MedalStart, EventProgress, EventDaily })
+            button.IsEnabled = !_windowTasks.IsStopping && (!busy || _limitedButton == button && _limitedCts?.IsCancellationRequested == false);
+        EventDailyOptions.IsEnabled = !busy && !_windowTasks.IsStopping;
         MasterLeagueView.MasterLeagueAutoFormationCheck.IsEnabled = !busy;
         MasterLeagueView.MasterLeagueRetryDefeatedCheck.IsEnabled = !busy;
         MasterLeagueView.MasterLeagueStartButton.IsEnabled = !_windowTasks.IsStopping && (!busy || _masterLeagueCts?.IsCancellationRequested == false);

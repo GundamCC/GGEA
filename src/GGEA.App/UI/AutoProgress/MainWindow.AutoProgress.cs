@@ -135,9 +135,7 @@ public partial class MainWindow
             void Report(string message) { AutoProgressView.AutoProgressStatusText.Text = message; _logger.Info(message); }
             if (!await EnsureDeviceCompatibilityAsync(serial, ct))
             { AutoProgressView.AutoProgressStatusText.Text = L.Text("设备画面不兼容，已停止自动推图。"); return; }
-            var formation = new AutoFormationService(automation, _matcher, _logger, AutoFormationTemplates.FromConfig(_config));
             var progressTemplates = AutoProgressFlowTemplates.FromDefaults();
-            var homeDetector = CreateMainScreenDetector();
             sortieFlow.ValidateAutoProgressFlow(progressTemplates);
             // 只观察当前截图的选中节点，复用既有 OCR 与几何，不在返回确认时导航或修改作品进度。
             using var returnMainNodes = new StageNodeRecognizer(_adb!, _matcher, _logger,
@@ -148,29 +146,7 @@ public partial class MainWindow
             // 三种页面共享战斗执行，返回标题按任务绑定；历史 NORMAL 终点不强制等待主线专属奖励包。
             AutoProgressBattleService CreateBattle(AutoProgressFlowTemplates templates, bool requireSeriesReward,
                 Func<ScreenImage, CancellationToken, bool>? confirmStageNodes = null)
-                => new(automation, formation,
-                ConfigService.ResolvePath("resources/templates/stage/sortie/button_sortie_preparations.png"),
-                async (kind, allowEmpty, allowTerrain, watchEntry, token) => kind == WorkStageKind.Hard && !watchEntry
-                    ? await sortieFlow.ConfirmHardProgressReturnAsync(serial,
-                        await sortieFlow.ExecuteAfterSortieAsync(serial,
-                            allowDownload: _config.AllowGgeaDownload, allowEmptySlotSortie: allowEmpty,
-                            moreRoundsRemaining: false, allowTerrainUnsuitableSortie: allowTerrain, ct: token,
-                            recoverySortieTemplate: ConfigService.ResolvePath(_config.SortieTemplate), forAutoProgress: true),
-                        templates.SelectStageTitle, token, confirmSelectedNode: confirmStageNodes ?? returnMainNodes.HasSelectedNode,
-                        confirmPreparation: formation.IsPreparationPageAsync)
-                    // 正常 HARD 仍走原结算流程；两条路径均在两分钟无进展后才启用恢复。
-                    : await sortieFlow.ExecuteForProgressAsync(serial,
-                    allowDownload: _config.AllowGgeaDownload, allowEmptySlotSortie: allowEmpty,
-                    allowTerrainUnsuitableSortie: allowTerrain, templates: templates,
-                    confirmHome: homeToken => homeDetector.IsMainScreenAsync(serial, homeToken), ct: token,
-                    // BOSS 已由队列按作品 NORMAL 数量校验，沿用本轮记录，不重新导航来推断终点。
-                    requireSeriesCompleteClose: requireSeriesReward && kind == WorkStageKind.Boss,
-                    confirmPreparation: formation.IsPreparationPageAsync,
-                    confirmSelectedNode: confirmStageNodes ?? returnMainNodes.HasSelectedNode, watchEntry: watchEntry),
-                directSortieTemplate: ConfigService.ResolvePath("resources/templates/stage/sortie/button_sortie.png"),
-                watchTemplate: ConfigService.ResolvePath("resources/templates/stage/sortie/watch.png"),
-                // 观看与直接出击确认统一使用对话框执行素材，沿用当前语言及通用回退。
-                executeTemplate: ConfigService.ResolvePath("resources/templates/dialog/execute.png"));
+                => CreateProgressBattle(serial, templates, requireSeriesReward, confirmStageNodes ?? returnMainNodes.HasSelectedNode);
             var battle = CreateBattle(progressTemplates, true);
             battle.Validate(settings);
             var runner = new AutoProgressRunner(async (work, token) =>
@@ -305,5 +281,37 @@ public partial class MainWindow
         if (_busy) return;
         if (sender is Button { Tag: AutoProgressTarget work }) _autoProgressQueue.Remove(work);
         AutoProgressView.AutoProgressEmptyText.Visibility = AvailableAutoProgressTargets().Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private AutoProgressBattleService CreateProgressBattle(string serial, AutoProgressFlowTemplates templates,
+        bool requireSeriesReward, Func<ScreenImage, CancellationToken, bool> confirmStageNodes)
+    {
+        var automation = _automation!;
+        var sortieFlow = _sortieFlowService!;
+        var homeDetector = CreateMainScreenDetector();
+        var formation = new AutoFormationService(automation, _matcher, _logger!, AutoFormationTemplates.FromConfig(_config));
+        return new(automation, formation,
+                ConfigService.ResolvePath("resources/templates/stage/sortie/button_sortie_preparations.png"),
+                async (kind, allowEmpty, allowTerrain, watchEntry, token) => kind == WorkStageKind.Hard && !watchEntry
+                    ? await sortieFlow.ConfirmHardProgressReturnAsync(serial,
+                        await sortieFlow.ExecuteAfterSortieAsync(serial,
+                            allowDownload: _config.AllowGgeaDownload, allowEmptySlotSortie: allowEmpty,
+                            moreRoundsRemaining: false, allowTerrainUnsuitableSortie: allowTerrain, ct: token,
+                            recoverySortieTemplate: ConfigService.ResolvePath(_config.SortieTemplate), forAutoProgress: true),
+                        templates.SelectStageTitle, token, confirmSelectedNode: confirmStageNodes,
+                        confirmPreparation: formation.IsPreparationPageAsync)
+                    // 正常 HARD 仍走原结算流程；两条路径均在两分钟无进展后才启用恢复。
+                    : await sortieFlow.ExecuteForProgressAsync(serial,
+                    allowDownload: _config.AllowGgeaDownload, allowEmptySlotSortie: allowEmpty,
+                    allowTerrainUnsuitableSortie: allowTerrain, templates: templates,
+                    confirmHome: homeToken => homeDetector.IsMainScreenAsync(serial, homeToken), ct: token,
+                    // BOSS 已由队列按作品 NORMAL 数量校验，沿用本轮记录，不重新导航来推断终点。
+                    requireSeriesCompleteClose: requireSeriesReward && kind == WorkStageKind.Boss,
+                    confirmPreparation: formation.IsPreparationPageAsync,
+                    confirmSelectedNode: confirmStageNodes, watchEntry: watchEntry),
+                directSortieTemplate: ConfigService.ResolvePath("resources/templates/stage/sortie/button_sortie.png"),
+                watchTemplate: ConfigService.ResolvePath("resources/templates/stage/sortie/watch.png"),
+                // 观看与直接出击确认统一使用对话框执行素材，沿用当前语言及通用回退。
+                executeTemplate: ConfigService.ResolvePath("resources/templates/dialog/execute.png"));
     }
 }

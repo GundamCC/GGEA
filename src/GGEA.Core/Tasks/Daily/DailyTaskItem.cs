@@ -29,6 +29,7 @@ public enum DailyTaskKind
 
     /// <summary>按添加时的单位与难度执行强敌来袭略过。</summary>
     FierceEnemySkip,
+    LimitedEvent,
 }
 
 /// <summary>每日任务列表中的一行；列表顺序即执行顺序。</summary>
@@ -45,22 +46,24 @@ public sealed class DailyTaskItem : INotifyPropertyChanged
     public string Name { get; init; } = string.Empty;
 
     /// <summary>强敌任务的不可变选择；其他任务为空。</summary>
+    public GGEA.App.Config.LimitedEventDailySettings? LimitedEventSelection { get; init; }
+
     public FierceEnemySkipSelection? FierceEnemySelection { get; init; }
 
     /// <summary>任务选择说明与兼容性原因共用悬浮提示。</summary>
-    public string? Description => UnsupportedReason ?? (FierceEnemySelection is { } choice ? $"{choice.Unit.Name} / {choice.Difficulty}" : null);
+    public string? Description => UnsupportedReason ?? LimitedEventSelection?.Describe() ?? (FierceEnemySelection is { } choice ? $"{choice.Unit.Name} / {choice.Difficulty}" : null);
 
     /// <summary>带兼容状态的界面名称；不支持时明确标记，避免用户误以为任务会执行。</summary>
     public string DisplayName => IsSupported ? Name : L.Format($"{Name}（当前模拟器不支持）");
 
     /// <summary>只有用户添加的强敌任务提供删除入口。</summary>
-    public bool CanRemove => Kind == DailyTaskKind.FierceEnemySkip;
+    public bool CanRemove => Kind is DailyTaskKind.FierceEnemySkip or DailyTaskKind.LimitedEvent;
 
     /// <summary>是否显示齿轮设置入口；只有带独立设置页的任务显示。</summary>
     public bool HasSettings => Kind is DailyTaskKind.ClaimRewards or DailyTaskKind.ConsumeAp;
 
     /// <summary>任务行可跳转到对应页面；强敌行保留删除图标，不额外显示齿轮。</summary>
-    public bool CanOpenSettings => HasSettings || Kind == DailyTaskKind.FierceEnemySkip;
+    public bool CanOpenSettings => HasSettings || CanRemove;
 
     /// <summary>是否勾选执行；拖拽排序时只移动整行，不影响勾选状态。</summary>
     public bool IsChecked

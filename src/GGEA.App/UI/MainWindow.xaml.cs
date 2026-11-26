@@ -87,7 +87,16 @@ public partial class MainWindow : Window
             }
             catch (Exception ex) { _logger.Warn(L.Format($"界面语言保存失败：{ex.Message}")); }
             ConfigService.ApplyResourceLanguage(_config);
-            RestoreFierceEnemyDailyTask();
+            if (_config.LimitedEventDaily?.Index < _config.FierceEnemyDaily?.Index)
+            {
+                RestoreLimitedDaily();
+                RestoreFierceEnemyDailyTask();
+            }
+            else
+            {
+                RestoreFierceEnemyDailyTask();
+                RestoreLimitedDaily();
+            }
             ((App)Application.Current).SetTheme(_config.IsDarkMode);
             UpdateThemeButton();
             _plugins = new Plugins.PluginManager(baseDir, _logger);

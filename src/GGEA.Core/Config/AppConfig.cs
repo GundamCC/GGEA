@@ -25,6 +25,9 @@ public sealed class AppConfig
     /// <summary>用户主动下载软件更新后，校验成功即自动重启安装；旧配置缺失时默认开启。</summary>
     public bool AutoInstallUpdates { get; set; } = true;
 
+    /// <summary>限时活动的三个子项共享一个每日队列位置。</summary>
+    public LimitedEventDailySettings? LimitedEventDaily { get; set; }
+
     /// <summary>已加入每日的强敌任务；为空表示未添加或已经删除。</summary>
     public FierceEnemyDailySettings? FierceEnemyDaily { get; set; }
 

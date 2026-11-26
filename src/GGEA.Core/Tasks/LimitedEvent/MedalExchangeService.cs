@@ -229,6 +229,10 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
     private async Task<MedalPool> ReadPool(CancellationToken ct) =>
         new(await ReadCategory(Key, true, ct), await ReadCategory(General, false, ct));
 
+    private async Task<bool> IsGeneralOnly(ScreenImage frame, CancellationToken ct)
+        => await Match(frame, Event("medal_status_top_note", new(480, 141, 225, 89)), ct) is not null &&
+           await Match(frame, Event("medal_general_rewards", new(478, 388, 300, 85)), ct) is not null;
+
     private async Task<RewardCount> ReadCategory(Target header, bool backToTop, CancellationToken ct)
     {
         for (var i = 0; i < 24; i++)
@@ -243,6 +247,12 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
                     reader.Count(next, again.CenterY, ct) == count) return count;
                 if (i < 2) continue;
                 throw Uncertain();
+            }
+            // 后续奖池可能只有一般报酬。顶部注意事项和首个分类同帧成立才确认关键报酬为空。
+            if (backToTop && await IsGeneralOnly(frame, ct))
+            {
+                await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
+                if (await IsGeneralOnly(await WaitPage(Status, ct), ct)) return new RewardCount(0, 0);
             }
             if (i == 23) break;
             int from = backToTop ? 395 : 684, to = backToTop ? 684 : 395;

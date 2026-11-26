@@ -2,6 +2,8 @@ using System.Windows;
 using System.Windows.Controls;
 using GGEA.App.Localization;
 using GGEA.App.Tasks;
+using GGEA.App.Config;
+using GGEA.App.Vision;
 
 namespace GGEA.App.UI;
 
@@ -9,13 +11,13 @@ public partial class MainWindow
 {
     private CancellationTokenSource? _limitedCts;
 
-    private bool _exchangingMedals;
+    private Button? _limitedButton;
 
     /// <summary>手动进入事件后才接管设备，关闭窗口或点击中止均释放本次设备占用。</summary>
     private async void LimitedStart_Click(object sender, RoutedEventArgs e) =>
-        await RunWindowTaskAsync(() => RunLimitedEventAsync(sender == MedalStart));
+        await RunWindowTaskAsync(() => RunLimitedEventAsync((Button)sender));
 
-    private async Task RunLimitedEventAsync(bool medals)
+    private async Task RunLimitedEventAsync(Button button)
     {
         if (_limitedCts is not null)
         {
@@ -30,16 +32,23 @@ public partial class MainWindow
         var difficulty = Enum.Parse<FierceEnemyDifficulty>((string)((ComboBoxItem)LimitedDifficulty.SelectedItem).Content);
         using var owner = CancellationTokenSource.CreateLinkedTokenSource(_windowTasks.Token);
         _limitedCts = owner;
-        _exchangingMedals = medals;
-        var button = medals ? MedalStart : LimitedStart;
-        button.Content = medals ? L.Text("中止兑换") : L.Text("中止略过");
-        LimitedStatus.Text = medals ? L.Text("正在兑换奖章机体补给…") : L.Text("正在略过限时活动 BOSS…");
+        _limitedButton = button;
+        var original = button.Content;
+        button.Content = L.Text("中止");
+        LimitedStatus.Text = original?.ToString();
         UpdateBusyState();
         try
         {
             if (!await EnsureDeviceCompatibilityAsync(serial, owner.Token))
-                throw new InvalidOperationException(medals ? L.Text("设备画面不兼容，已停止兑换。") : L.Text("设备画面不兼容，已停止略过。"));
-            if (medals)
+                throw new InvalidOperationException(L.Text("设备画面不兼容。"));
+            if (button == EventProgress)
+                LimitedStatus.Text = await RunEventProgressAsync(serial, owner.Token);
+            else if (button == EventDaily)
+            {
+                await RunEventStagesDailyAsync(serial, owner.Token);
+                LimitedStatus.Text = L.Text("事件每日关卡及使命领取完成。");
+            }
+            else if (button == MedalStart)
             {
                 var service = new MedalExchangeService(_automation, GetTextOcr(), _logger, serial);
                 await Task.Run(() => service.RunAsync(owner.Token), owner.Token);
@@ -54,14 +63,53 @@ public partial class MainWindow
             _logger.Info(LimitedStatus.Text);
         }
         catch (OperationCanceledException) when (owner.IsCancellationRequested)
-        { LimitedStatus.Text = medals ? L.Text("奖章兑换已中止。") : L.Text("限时活动略过已中止。"); }
+        { LimitedStatus.Text = L.Text("限时活动任务已中止。"); }
         catch (Exception ex)
         { LimitedStatus.Text = ex.Message; _logger.Error(ex.Message); }
         finally
         {
             _limitedCts = null;
-            button.Content = medals ? L.Text("开始奖章自动兑换") : L.Text("开始 BOSS 略过");
+            _limitedButton = null;
+            button.Content = original;
             UpdateBusyState();
         }
+    }
+
+    private Task RunEventStagesDailyAsync(string serial, CancellationToken ct)
+    {
+        var title = new SelectStageTitleRecognizer(EventStagesService.PathFor("stage_title"));
+        var settlement = CreateStageSkipService(false, title.Recognize);
+        return new EventStagesService(_automation!, serial).DailyAsync(settlement, _stageLayout, GetTextOcr(), ct);
+    }
+
+    private async Task<string> RunEventProgressAsync(string serial, CancellationToken ct)
+    {
+        var stages = new EventStagesService(_automation!, serial);
+        if (!await stages.EnterAsync(true, ct)) return L.Text("事件关卡攻略度已达 100%。");
+        var work = new HardStageEntry { Work = L.Text("事件关卡"), NormalCount = 7, HardCount = 4 };
+        using var nodes = new StageNodeRecognizer(_adb!, _matcher, _logger!, ConfigService.ResolvePath(_config.StageNodeTemplateDirectory),
+            numberRecognizer: new OnnxStageNumberRecognizer(GetTextOcr()), layout: StageNodeLayout.History);
+        var reader = _stageService!.CreateProgressReader(nodes);
+        var path = EventStagesService.PathFor("stage_title");
+        var title = new SelectStageTitleRecognizer(path);
+        var battle = CreateProgressBattle(serial, AutoProgressFlowTemplates.FromDefaults() with { SelectStageTitle = path },
+            false, title.Recognize);
+        var settings = _config.AutoProgress.Snapshot();
+        battle.Validate(settings);
+        var formation = new AutoFormationSession();
+        async Task<StageNodeRecognition> Read(HardStageEntry target, CancellationToken token)
+        {
+            await stages.EnterAsync(false, token);
+            return await reader.ReadCurrentWorkForProgressAsync(serial, target, token);
+        }
+        void Report(string message) { LimitedStatus.Text = message; _logger!.Info(message); }
+        var runner = new AutoProgressRunner(Read, Read,
+            (node, token) => battle.RunAsync(serial, settings, node.Kind, Report, token,
+                initialFormation: node is { Kind: WorkStageKind.Normal, Number: 1 } ? formation : null),
+            (target, node, token) => reader.AdvanceAfterBattleAsync(serial, target, node, token),
+            async (_, token) => !await stages.EnterAsync(true, token));
+        var result = await runner.RunAsync([work], Report, ct);
+        if (!result.Completed) throw new InvalidOperationException(result.Message);
+        return result.Message;
     }
 }

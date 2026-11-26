@@ -33,10 +33,13 @@ public partial class MainWindow
     }
 
     /// <summary>增删、勾选和拖拽后立即保存；写入失败明确提示当前变更尚未落盘。</summary>
-    private void SaveFierceEnemyDailyTask()
+    private void SaveDynamicDailyTasks()
     {
         var item = _dailyTasks.FirstOrDefault(task => task.Kind == DailyTaskKind.FierceEnemySkip);
         var edit = SnapshotConfig();
+        var limited = _dailyTasks.FirstOrDefault(task => task.Kind == DailyTaskKind.LimitedEvent);
+        _config.LimitedEventDaily = limited?.LimitedEventSelection is { } selection
+            ? selection with { Index = _dailyTasks.IndexOf(limited), IsChecked = limited.IsChecked } : null;
         _config.FierceEnemyDaily = item?.FierceEnemySelection is { } choice
             ? new FierceEnemyDailySettings { UnitId = choice.Unit.Id, Difficulty = choice.Difficulty,
                 IsChecked = item.IsChecked, Index = _dailyTasks.IndexOf(item) }
@@ -45,13 +48,15 @@ public partial class MainWindow
         if (_logger is null) return;
         try
         {
+            edit.LimitedEventDaily = _config.LimitedEventDaily;
             edit.FierceEnemyDaily = _config.FierceEnemyDaily;
             new ConfigService(_logger).Save(edit, ConfigService.ResolvePath(DefaultConfigFile));
         }
         catch (Exception ex)
         {
             FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = L.Text("每日任务已在当前窗口更新，但保存失败，重启后可能丢失，请检查配置目录。");
-            _logger.Warn(L.Format($"强敌每日任务保存失败: {ex.GetType().Name}"));
+            LimitedStatus.Text = FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text;
+            _logger.Warn(L.Format($"每日任务保存失败: {ex.GetType().Name}"));
         }
     }
     private CancellationTokenSource? _fierceEnemyAssaultCts;
@@ -97,7 +102,7 @@ public partial class MainWindow
             _dailyTasks.Insert(ap is null ? _dailyTasks.Count : _dailyTasks.IndexOf(ap), item);
         }
         FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = $"{(existing is null ? L.Text("已添加") : L.Text("已替换"))}：{unit.Name} / {difficulty}。";
-        SaveFierceEnemyDailyTask();
+        SaveDynamicDailyTasks();
         UpdateDailySelectAllState();
         UpdateBusyState();
     }
@@ -106,10 +111,11 @@ public partial class MainWindow
     private void RemoveFierceEnemyTask(DailyTaskItem item)
     {
         if (_busy || _windowTasks.IsStopping ||
-            item.Kind != DailyTaskKind.FierceEnemySkip || !_dailyTasks.Remove(item)) return;
+            !item.CanRemove || !_dailyTasks.Remove(item)) return;
         item.PropertyChanged -= DailyTask_StateChanged;
-        FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = L.Text("已删除每日任务中的强敌来袭略过。");
-        SaveFierceEnemyDailyTask();
+        if (item.Kind == DailyTaskKind.LimitedEvent) LimitedStatus.Text = L.Text("已移除限时活动每日任务。");
+        else FierceEnemyAssaultView.FierceEnemyAssaultStatusText.Text = L.Text("已删除每日任务中的强敌来袭略过。");
+        SaveDynamicDailyTasks();
         UpdateDailySelectAllState();
         UpdateBusyState();
     }

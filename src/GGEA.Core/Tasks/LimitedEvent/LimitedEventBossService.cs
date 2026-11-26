@@ -52,9 +52,32 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
                 }, ct) ?? throw Unknown();
                 await Tap(execute.Button, ct);
             }
-            // 活动略过直接交回列表。等待动画结束并复核新帧，整轮不依赖普通略过结果页。
-            await WaitBoss(ct, 90);
+            await ReturnAfterSkip(ct);
         }
+    }
+
+    private async Task ReturnAfterSkip(CancellationToken ct)
+    {
+        // 结算可能直接回列表，也可能出现 SKIP RESULT 和稀有登场。每种过场最多确认一次。
+        bool resultClosed = false, warningClosed = false;
+        for (int i = 0; i < 3; i++)
+        {
+            var state = await WaitStable(async frame =>
+            {
+                if (!resultClosed && await Find(frame, "stage/skip/skip_result", new(820, 30, 330, 80), ct, .85) is not null &&
+                    await Find(frame, "dialog/button_ok", new(1440, 895, 460, 185), ct, .86) is { } ok)
+                    return new Observation("result", ok);
+                if (!warningClosed && await Find(frame, Event + "rare_warning_title", new(740, 40, 480, 150), ct, .90) is not null &&
+                    automation.TapToNext.Recognize(frame, ct) is { } next)
+                    return new Observation("warning", new TemplateMatchResult(new Roi(next.CenterX-2, next.CenterY-2, 5, 5), 1));
+                return await Find(frame, Event + "boss", Title, ct, BossTitleThreshold) is { } boss ? new Observation("boss", boss) : null;
+            }, ct, 90000) ?? throw Unknown();
+            if (state.Kind == "boss") return;
+            if (state.Kind == "result") resultClosed = true;
+            else warningClosed = true;
+            await Tap(state.Button, ct);
+        }
+        throw Unknown();
     }
 
     /// <summary>先复核列表顶部的稀有标记，再向下浏览玩家所选难度，每次手势后重新截图。</summary>

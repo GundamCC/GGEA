@@ -29,7 +29,16 @@ public sealed class ThemeTests
                 Assert.True(window.LimitedStart.ActualWidth > 0);
                 Assert.True(window.MedalStart.ActualWidth > 0);
                 window.ApConsumptionTab.IsSelected = true;
+                window.UpdateLayout();
                 VerifyHeaderHoverDelay(window);
+                var eventWindow = new MainWindow();
+                eventWindow.IncludeBoss.IsChecked = false;
+                eventWindow.AddLimitedDaily.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                eventWindow.IncludeMedals.IsChecked = false;
+                eventWindow.AddLimitedDaily.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                var limited = Assert.Single(eventWindow.DailyView.DailyTaskList.Items.OfType<GGEA.App.Tasks.DailyTaskItem>(),
+                    item => item.Kind == GGEA.App.Tasks.DailyTaskKind.LimitedEvent);
+                Assert.True(limited.LimitedEventSelection is { Stages: true, Boss: false, Medals: false });
                 VerifyFierceEnemyTasks(window);
                 VerifyAutoProgressSelector(window);
                 VerifyBallFactoryTab(window);
@@ -126,11 +135,19 @@ public sealed class ThemeTests
         Advance(180);
         Assert.Equal(1, highlight.Opacity);
         Assert.Equal(System.Windows.Media.Colors.Transparent, ((SolidColorBrush)border.Background).Color);
-        Leave();
-        Assert.False(HoverFeedback.GetIsActive(button));
-        Advance(40);
-        Assert.InRange(highlight.Opacity, 0.66, 0.99);
-        Advance(180);
+        // 按渲染帧观察淡出，避免调度器繁忙时一次定时采样跨过整个动画。
+        bool observedFade = false;
+        void ObserveFade(object? sender, EventArgs args) =>
+            observedFade |= highlight.Opacity is >= 0.66 and <= 0.99;
+        CompositionTarget.Rendering += ObserveFade;
+        try
+        {
+            Leave();
+            Assert.False(HoverFeedback.GetIsActive(button));
+            Advance(220);
+        }
+        finally { CompositionTarget.Rendering -= ObserveFade; }
+        Assert.True(observedFade);
         Assert.Equal(0.65, highlight.Opacity);
         Assert.Same(normalBorder, border.BorderBrush);
         Enter();

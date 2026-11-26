@@ -154,6 +154,18 @@ public partial class MainWindow
                     break;
                 }
 
+                case DailyTaskKind.LimitedEvent:
+                    try
+                    {
+                        await RunLimitedDailyTaskAsync(serial, task.LimitedEventSelection!, ct);
+                        taskSucceeded = true;
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        return StopDailyQueue(task, ex.Message, DailyQueueOutcome.Interrupted);
+                    }
+                    break;
+
                 case DailyTaskKind.FierceEnemySkip:
                 {
                     var selection = task.FierceEnemySelection ?? throw new InvalidOperationException(L.Text("强敌任务缺少选择"));
