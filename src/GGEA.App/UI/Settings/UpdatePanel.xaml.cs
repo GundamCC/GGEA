@@ -98,15 +98,17 @@ public partial class UpdatePanel : UserControl
         if (_preparedPackage is not null) { await InstallPreparedUpdateAsync(); return; }
         using var cancellation = BeginUpdateOperation(L.Text("正在准备更新下载…"));
         using var client = new OnlineUpdateClient(AppContext.BaseDirectory, ReportSourceStatus);
+        var traffic = new UpdateDownloadTraffic();
+        void ShowTraffic() => DownloadAmount.Text = L.Format($"本次已下载 {traffic.Bytes / 1_000_000d:F2} MB");
+        UpdateStatusText.Text = "";
+        ShowTraffic();
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        timer.Tick += (_, _) => ShowTraffic();
+        timer.Start();
         try
         {
-            await _downloadSession.RunAsync(token => client.DownloadAsync(_availableUpdate, new Progress<double>(percent =>
-            {
-                if (_updateClosed || _preparedPackage is not null) return;
-                UpdateProgress.IsIndeterminate = false;
-                UpdateProgress.Value = percent;
-                UpdateStatusText.Text = percent < 100 ? L.Format($"正在下载… {percent:F0}%") : L.Text("下载完成，正在校验并解压…");
-            }), token), StartPreparedUpdateAsync, _autoInstallUpdates, cancellation.Token);
+            await _downloadSession.RunAsync(token => client.DownloadAsync(_availableUpdate, new Progress<double>(), token, traffic),
+                StartPreparedUpdateAsync, _autoInstallUpdates, cancellation.Token);
             if (!_updateClosed && !UpdateRequested)
                 UpdateStatusText.Text = L.Text("下载完成，可以重启安装。");
         }
@@ -114,6 +116,8 @@ public partial class UpdatePanel : UserControl
         catch (Exception ex) { ReportUpdateFailure(_preparedPackage is null ? L.Text("下载更新") : L.Text("启动更新器"), ex); }
         finally
         {
+            timer.Stop();
+            ShowTraffic();
             if (_updateClosed && !UpdateRequested && _preparedPackage is not null)
                 UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(_preparedPackage)!);
             EndUpdateOperation();
@@ -207,7 +211,7 @@ public partial class UpdatePanel : UserControl
     private void ReportSourceStatus(UpdateSourceStatus status)
     {
         if (_updateClosed) return;
-        SourceStatusText.Text = status.Message;
+
         if (status.IsWarning) _log?.Warn(status.Message);
         else _log?.Info(status.Message);
     }

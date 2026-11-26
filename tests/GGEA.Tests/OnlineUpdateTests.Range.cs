@@ -14,6 +14,7 @@ public sealed partial class OnlineUpdateTests
     [InlineData("updater-blocks")]
     [InlineData("blocks")]
     [InlineData("block-unavailable")]
+    [InlineData("block-interrupted")]
     [InlineData("block-corrupt")]
     [InlineData("range")]
     [InlineData("unsupported")]
@@ -58,7 +59,9 @@ public sealed partial class OnlineUpdateTests
           Blocks = useBlocks && !updater ? new(new("https://github.com/program.blocks"), blocks.Length) : null };
         int fullRequests = 0, rangeBytes = 0, blockBytes = 0;
         using var cancellation = new CancellationTokenSource();
-        using var client = new GitHubUpdateClient(new ReplyHandler(request =>
+        var traffic = new UpdateDownloadTraffic();
+        var log = new List<string>();
+        using var client = new OnlineUpdateClient(old, status => log.Add(status.Message), new ReplyHandler(request =>
         {
             if (request.RequestUri!.AbsolutePath == "/index") return new(HttpStatusCode.OK) { Content = new ByteArrayContent(indexBytes) };
             if (request.Headers.Range?.Ranges.Single() is not { } range)
@@ -73,6 +76,7 @@ public sealed partial class OnlineUpdateTests
             if (isBlock && scenario == "block-unavailable") return new(HttpStatusCode.NotFound);
             var source = isBlock ? blocks : bytes;
             var part = source[from..(to + 1)];
+            if (isBlock && scenario == "block-interrupted") part = part[..(part.Length / 2)];
             if (isBlock) blockBytes += part.Length;
             if (isBlock && scenario == "block-corrupt") Array.Fill(part, (byte)255);
             rangeBytes += part.Length;
@@ -82,13 +86,19 @@ public sealed partial class OnlineUpdateTests
             return new(HttpStatusCode.PartialContent) { Content = content };
         }));
         if (scenario == "cancel")
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => client.DownloadAsync(update, old, new Progress<double>(), cancellation.Token));
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => client.DownloadAsync(update, new Progress<double>(), cancellation.Token, traffic));
         else if (scenario is "corrupt" or "block-corrupt")
-            await Assert.ThrowsAsync<InvalidDataException>(() => client.DownloadAsync(update, old, new Progress<double>(), default));
+            await Assert.ThrowsAsync<InvalidDataException>(() => client.DownloadAsync(update, new Progress<double>(), default, traffic));
         else
         {
-            var prepared = await client.DownloadAsync(update, old, new Progress<double>(), default);
+            var prepared = await client.DownloadAsync(update, new Progress<double>(), default, traffic);
             UpdateManifest.Read(prepared).Verify(prepared);
+            Assert.Equal(indexBytes.LongLength + rangeBytes + fullRequests * bytes.LongLength, traffic.Bytes);
+            if (scenario == "block-interrupted")
+            {
+                Assert.True(blockBytes > 0);
+                Assert.Contains(log, message => message.Contains("回退整文件") && message.Contains("下载中断"));
+            }
             if (scenario == "blocks" || updater) Assert.InRange(blockBytes, 1, blocks.Length / 2);
             if (scenario == "range") Assert.InRange(rangeBytes, 1, bytes.Length - 1);
         }

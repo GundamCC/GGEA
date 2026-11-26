@@ -16,17 +16,22 @@ internal static class ExeBlockDownload
     public static async Task<bool> TryPrepareAsync(UpdateHttpTransport http, UpdateRelease update, UpdateBlockAsset asset,
         JsonElement map, string installation, string relativePath, FileStream output, long targetSize, long wholeFileCost, CancellationToken token)
     {
-        if (map.GetProperty("algorithm").GetString() != "gear-v1") return false;
+        bool Fallback(string reason)
+        {
+            http.Trace($"{relativePath} 回退整文件：{reason}");
+            return Reset(output);
+        }
+        if (map.GetProperty("algorithm").GetString() != "gear-v1") return Fallback("不支持的分块算法");
         FileStream source;
         Dictionary<string, ExeChunker.Chunk> local = new(StringComparer.Ordinal);
         try
         {
             source = File.OpenRead(UpdateFiles.SafePath(installation, relativePath));
         }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return false; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return Fallback("本机文件无法打开"); }
         using (source)
         {
-            if (source.Length > UpdatePackage.MaximumPackageBytes) return false;
+            if (source.Length > UpdatePackage.MaximumPackageBytes) return Fallback("本机文件超限");
             try
             {
                 foreach (var chunk in ExeChunker.Scan(source))
@@ -35,7 +40,7 @@ internal static class ExeBlockDownload
                     local.TryAdd(chunk.Hash, chunk);
                 }
             }
-            catch (IOException) { return false; }
+            catch (IOException) { return Fallback("本机文件扫描失败"); }
             var plan = new List<Block>();
             long packed = 0, expanded = 0, remoteCost = 0;
             foreach (var item in map.GetProperty("chunks").EnumerateArray())
@@ -54,7 +59,7 @@ internal static class ExeBlockDownload
                 expanded += size;
             }
             if (expanded != targetSize || packed != asset.Size) throw new InvalidDataException("可执行文件块索引不完整。");
-            if (remoteCost >= wholeFileCost) return false;
+            if (remoteCost >= wholeFileCost) return Fallback("整文件传输量更小或相同");
 
             var buffer = new byte[ExeChunker.Maximum];
             for (var i = 0; i < plan.Count;)
@@ -65,7 +70,7 @@ internal static class ExeBlockDownload
                 {
                     source.Position = localOffset;
                     try { await source.ReadExactlyAsync(buffer.AsMemory(0, block.Size), token); }
-                    catch (IOException) { return Reset(output); }
+                    catch (IOException) { return Fallback("本机块读取失败"); }
                     await WriteVerifiedAsync(output, buffer, block, token);
                     i++;
                     continue;
@@ -83,7 +88,7 @@ internal static class ExeBlockDownload
                 }
                 catch (Exception ex) when (!token.IsCancellationRequested && ex is HttpRequestException or OperationCanceledException)
                 {
-                    return Reset(output);
+                    return Fallback(ex is OperationCanceledException ? "块请求超时" : ex.Message);
                 }
                 for (; i < end; i++)
                 {
@@ -95,6 +100,7 @@ internal static class ExeBlockDownload
                     await WriteVerifiedAsync(output, buffer, next, token);
                 }
             }
+            http.Trace($"{relativePath} 分块完成：下载 {remoteCost} B");
             return true;
         }
     }
@@ -116,7 +122,7 @@ internal static class ExeBlockDownload
         if (response.StatusCode != HttpStatusCode.PartialContent || range?.Unit != "bytes" ||
             range.From != offset || range.To != last || range.Length != asset.Size)
             throw new InvalidDataException("可执行文件块响应范围不匹配。");
-        using var stream = await response.Content.ReadAsStreamAsync(token);
+        using var stream = await http.OpenBodyAsync(response, token);
         var bytes = new byte[count];
         int received = 0;
         while (received < count)

@@ -59,9 +59,12 @@ public sealed class OnlineUpdateClient : IDisposable
     }
 
     /// <summary>下载失败后只选择完全相同版本与大小的镜像；已知摘要必须一致，不能偷偷换包或升级版本。</summary>
-    public async Task<string> DownloadAsync(UpdateRelease update, IProgress<double> progress, CancellationToken cancellationToken)
+    public async Task<string> DownloadAsync(UpdateRelease update, IProgress<double> progress, CancellationToken cancellationToken,
+        UpdateDownloadTraffic? traffic = null)
     {
-        var downloader = new UpdatePackageDownloader(_http, _report);
+        traffic ??= new();
+        using var http = new UpdateHttpTransport(_http, traffic, _report);
+        var downloader = new UpdatePackageDownloader(http, _report);
         var expectedHash = update.Sha256;
         try
         {
@@ -76,7 +79,7 @@ public sealed class OnlineUpdateClient : IDisposable
                 cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    var mirror = await ReadMirrorAsync(source, cancellationToken);
+                    var mirror = await ReadMirrorAsync(source, cancellationToken, http);
                     if (mirror.Version != update.Version || mirror.PackageName != update.PackageName || mirror.PackageSize != update.PackageSize)
                     {
                         _report?.Invoke(new(L.Format($"备用源 {source.Name} 尚无匹配版本，已跳过。")));
@@ -93,6 +96,7 @@ public sealed class OnlineUpdateClient : IDisposable
             }
             throw new HttpRequestException(L.Text("下载源无法连接，且没有可用的同版本备用包。请稍后重试或从官方发布页手动下载。"), ex);
         }
+        finally { http.Trace($"本次下载响应正文：{traffic.Bytes} B"); }
     }
 
     /// <summary>配置入口未发布、离线或格式错误都不覆盖缓存，也不影响 GitHub 正常更新。</summary>
@@ -116,11 +120,11 @@ public sealed class OnlineUpdateClient : IDisposable
     }
 
     /// <summary>每个备用版本清单有独立超时，读取范围与下载相同；不跨来源扩大域名授权。</summary>
-    private async Task<UpdateRelease> ReadMirrorAsync(UpdateSource source, CancellationToken cancellationToken)
+    private async Task<UpdateRelease> ReadMirrorAsync(UpdateSource source, CancellationToken cancellationToken, UpdateHttpTransport? http = null)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(15));
-        var json = await _http.ReadSmallAsync(new Uri(source.ManifestUrl), 1024 * 1024, source.AllowedHosts, timeout.Token);
+        var json = await (http ?? _http).ReadSmallAsync(new Uri(source.ManifestUrl), 1024 * 1024, source.AllowedHosts, timeout.Token);
         return UpdateSourceCatalog.ParseRelease(json, source);
     }
 

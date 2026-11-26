@@ -12,6 +12,25 @@ internal sealed class UpdateHttpTransport : IDisposable
     public static readonly string[] GitHubHosts = ["api.github.com", "github.com", "raw.githubusercontent.com", "release-assets.githubusercontent.com", "objects.githubusercontent.com"];
     private readonly HttpClient _http;
 
+    private readonly UpdateDownloadTraffic? _traffic;
+    private readonly Action<UpdateSourceStatus>? _report;
+
+    // 每次下载独享计数，复用客户端连接；重试与换源持续累加。
+    internal UpdateHttpTransport(UpdateHttpTransport parent, UpdateDownloadTraffic traffic, Action<UpdateSourceStatus>? report)
+    {
+        _http = parent._http;
+        _traffic = traffic;
+        _report = report;
+    }
+
+    internal void Trace(string message) => _report?.Invoke(new(message));
+
+    internal async Task<Stream> OpenBodyAsync(HttpResponseMessage response, CancellationToken token)
+    {
+        var stream = await response.Content.ReadAsStreamAsync(token);
+        return _traffic is null ? stream : new DownloadBody(stream, _traffic);
+    }
+
     /// <summary>测试只替换传输 handler，实际解析与信任校验仍执行生产代码。</summary>
     public UpdateHttpTransport(HttpMessageHandler? handler = null)
     {
@@ -24,7 +43,7 @@ internal sealed class UpdateHttpTransport : IDisposable
     public async Task<string> ReadSmallAsync(Uri uri, int maximum, IReadOnlyCollection<string> hosts, CancellationToken cancellationToken)
     {
         using var response = await GetAsync(uri, hosts, cancellationToken);
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        await using var stream = await OpenBodyAsync(response, cancellationToken);
         using var memory = new MemoryStream();
         var buffer = new byte[8192];
         while (true)
@@ -77,5 +96,5 @@ internal sealed class UpdateHttpTransport : IDisposable
     }
 
     /// <summary>所有请求结束后释放连接。</summary>
-    public void Dispose() => _http.Dispose();
+    public void Dispose() { if (_traffic is null) _http.Dispose(); }
 }

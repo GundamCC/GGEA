@@ -34,7 +34,10 @@ public sealed class UpdatePackageDownloader
     /// <summary>下载完整包并验证服务端摘要及逐文件清单；失败时不留下可误用的半成品。</summary>
     public async Task<string> DownloadAsync(UpdateRelease update, string installation, IProgress<double> progress, CancellationToken cancellationToken)
     {
-        if (update.Index is { } index && File.Exists(UpdateFiles.SafePath(installation, "build-info.json")))
+        var hasManifest = File.Exists(UpdateFiles.SafePath(installation, "build-info.json"));
+        if (!hasManifest || update.Index is null)
+            _http.Trace(hasManifest ? "跳过按需下载：来源未提供可用索引。" : "跳过增量下载：本机缺少版本清单。");
+        if (update.Index is { } index && hasManifest)
         {
             try
             {
@@ -44,10 +47,11 @@ public sealed class UpdatePackageDownloader
             catch (Exception error) when (!cancellationToken.IsCancellationRequested &&
                 error is HttpRequestException or OperationCanceledException)
             {
+                _http.Trace($"按需更新回退：{error.Message}");
                 progress.Report(0);
             }
         }
-        if (update.Delta is { } delta && File.Exists(UpdateFiles.SafePath(installation, "build-info.json")))
+        if (update.Delta is { } delta && hasManifest)
         {
             var differential = update with
             {
@@ -63,6 +67,7 @@ public sealed class UpdatePackageDownloader
             catch (Exception error) when (!cancellationToken.IsCancellationRequested &&
                 error is UpdateBaseUnavailableException or HttpRequestException or OperationCanceledException)
             {
+                _http.Trace($"差异包回退：{error.Message}");
                 _report?.Invoke(new(L.Text("差异包不可用或本机文件无法复用，正在改用完整更新包。")));
                 progress.Report(0);
             }
@@ -86,7 +91,7 @@ public sealed class UpdatePackageDownloader
             {
                 if (response.Content.Headers.ContentLength is long length && length != update.PackageSize)
                     throw new InvalidDataException(L.Text("下载长度与 GitHub 附件信息不一致。"));
-                await using var input = await response.Content.ReadAsStreamAsync(timeout.Token);
+                await using var input = await _http.OpenBodyAsync(response, timeout.Token);
                 await using var output = new FileStream(archive, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, true);
                 var buffer = new byte[81920];
                 long received = 0;

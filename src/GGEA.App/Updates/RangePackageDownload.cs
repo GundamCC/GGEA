@@ -27,7 +27,7 @@ internal static class RangePackageDownload
             var bytes = new byte[index.Size];
             using (var response = await http.GetAsync(index.Url, update.AllowedHosts, token))
             {
-                using var stream = await response.Content.ReadAsStreamAsync(token);
+                using var stream = await http.OpenBodyAsync(response, token);
                 var received = 0;
                 while (received < bytes.Length)
                 {
@@ -92,6 +92,9 @@ internal static class RangePackageDownload
                     progress.Report(100.0 * written / Math.Max(1, total));
                     continue;
                 }
+                if (mapName.Length > 0 && (blocks is null || !root.TryGetProperty(mapName, out _)))
+                    http.Trace($"{file.Path} 回退整文件：缺少分块附件或索引。");
+                http.Trace($"整文件：{file.Path}（{file.Compressed} B 压缩数据）");
                 if (file.Compressed == 0 && file.Size == 0) continue;
                 var last = file.Offset + file.Compressed - 1;
                 using var response = await http.GetAsync(update.PackageUrl, update.AllowedHosts, token, new(file.Offset, last));
@@ -100,7 +103,7 @@ internal static class RangePackageDownload
                 if (response.StatusCode != HttpStatusCode.PartialContent || range?.Unit != "bytes" ||
                     range.From != file.Offset || range.To != last || range.Length != update.PackageSize)
                     throw new InvalidDataException("更新源返回的字节范围不匹配。");
-                using var stream = await response.Content.ReadAsStreamAsync(token);
+                using var stream = await http.OpenBodyAsync(response, token);
                 using var decoder = file.Method == 8 ? new DeflateStream(stream, CompressionMode.Decompress, true) : null;
                 Stream input = decoder is null ? stream : decoder;
                 long fileBytes = 0;

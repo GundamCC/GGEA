@@ -20,6 +20,7 @@
                             <RadioButton x:Name="AutomaticMode" Content="{loc:Text Source='自动更新'}" Foreground="{DynamicResource Brush.Text}" Margin="0,0,18,0" Click="Mode_Click"/>
                             <RadioButton x:Name="ReminderMode" Content="{loc:Text Source='有新版本时提醒我'}" Foreground="{DynamicResource Brush.Text}" Click="Mode_Click"/>
                         </WrapPanel>
+                        <TextBlock x:Name="DownloadAmount" Style="{StaticResource HintText}"/>
                         <ProgressBar x:Name="UpdateProgress" Height="5" Minimum="0" Maximum="100"
                                      Visibility="Collapsed" Margin="0,2,0,8"/>
                         <TextBlock x:Name="UpdateStatusText" Style="{StaticResource HintText}" TextWrapping="Wrap"/>
