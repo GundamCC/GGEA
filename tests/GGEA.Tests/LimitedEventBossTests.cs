@@ -50,7 +50,17 @@ public sealed class LimitedEventBossTests
         var dialog = Frame(("Fixtures/Navigation/event-dialog.png", 423, 165));
         var log = new TestLog();
         var device = new FakeAdbService(story);
-        device.ScreenshotProvider = () => (device.Taps.Count + (fromBoss ? 1 : 0)) switch { 0 => story, 2 => dialog, _ => boss };
+        var transition = Frame();
+        int previousStep = -1, samples = 0;
+        device.ScreenshotProvider = () =>
+        {
+            int step = device.Taps.Count;
+            if (step != previousStep) { previousStep = step; samples = 0; }
+            samples++;
+            if (samples == 2 && step == 0) return fromBoss ? story : boss;
+            if (samples <= 3) return transition;
+            return (step + (fromBoss ? 1 : 0)) switch { 0 => story, 2 => dialog, _ => boss };
+        };
         using var automation = new AutomationService(device, new TemplateMatcher(), log);
         using var ocr = new OnnxTextRecognizer();
         await new LimitedEventBossService(automation, ocr, log, "serial").RunAsync(FierceEnemyDifficulty.NORMAL, default);

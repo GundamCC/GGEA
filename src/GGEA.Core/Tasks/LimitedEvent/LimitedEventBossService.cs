@@ -23,85 +23,79 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
         if (!System.IO.File.Exists(ConfigService.ResolvePath("resources/templates/" + Event + "story.png")))
             throw new InvalidOperationException(L.Text("当前游戏语言缺少故事事件识别素材。"));
         ocr.Validate();
-        var frame = await Capture(ct);
-        if (await Find(frame, Event + "boss", Title, ct, .94) is null)
+        var entry = await WaitStable(async frame =>
         {
-            if (await Find(frame, Event + "story", Title, ct) is null)
-                throw new InvalidOperationException(L.Text("请进入故事事件或 BOSS 战斗界面。"));
-            await automation.TapAsync(serial, 1650, 314, ct);
-            frame = await WaitBoss(ct);
-        }
+            if (await Find(frame, Event + "boss", Title, ct, .94) is { } boss) return new Observation("boss", boss);
+            return await Find(frame, Event + "story", Title, ct) is { } story ? new Observation("story", story) : null;
+        }, ct) ?? throw new InvalidOperationException(L.Text("请进入故事事件或 BOSS 战斗界面。"));
+        if (entry.Kind == "story") await automation.TapAsync(serial, 1650, 314, ct);
+        await WaitBoss(ct);
         while (true)
         {
-            var (button, rare) = await Locate(frame, difficulty, ct);
+            var (button, rare) = await Locate(difficulty, ct);
             log.Info(rare ? L.Text("略过稀有 BOSS 一次。") : $"BOSS / {difficulty}");
             await Tap(button, ct);
-            await WaitFor(Event + "ticket_dialog", new(725, 287, 480, 92), ct);
-            frame = await Capture(ct);
-            var cancel = await Find(frame, "dialog/cancel", Cancel, ct);
-            if (cancel is null) throw Unknown();
-            // 只接受同一挑战券对话框中的负数红字与暗态执行，余额数字本身随玩家而变。
-            if (DiamondSafetyChecker.CountRedPixels(frame.Bgra, frame.Width, RemainingTickets) >=
-                DiamondSafetyChecker.DefaultRedPixelThreshold &&
-                await Find(frame, Event + "insufficient_execute", Execute, ct, .96) is not null)
+            var choice = await WaitStable(frame => DialogAction(frame, rare, ct), ct) ?? throw Unknown();
+            await Tap(choice.Button, ct);
+            if (choice.Kind == "cancel")
             {
-                await Tap(cancel, ct);
                 await WaitBoss(ct);
                 return;
             }
-            if (!rare)
+            if (choice.Kind == "max")
             {
-                var max = await Find(frame, Max, Quantity, ct);
-                if (max is not null)
+                var execute = await WaitStable(async frame =>
                 {
-                    await Tap(max, ct);
-                    await WaitFor(Max + "_disabled", Quantity, ct);
-                }
+                    var next = await DialogAction(frame, rare, ct);
+                    return next?.Kind == "execute" ? next : null;
+                }, ct) ?? throw Unknown();
+                await Tap(execute.Button, ct);
             }
-            frame = await Capture(ct);
-            if (await Find(frame, Event + "ticket_dialog", new(725, 287, 480, 92), ct) is null ||
-                await Find(frame, Max + "_disabled", Quantity, ct) is null) throw Unknown();
-            await Tap(await Find(frame, "dialog/execute", Execute, ct) ?? throw Unknown(), ct);
             // 活动略过直接交回列表。等待动画结束并复核新帧，整轮不依赖普通略过结果页。
             await WaitBoss(ct, 90);
-            await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
-            frame = await WaitBoss(ct);
         }
     }
 
     /// <summary>先复核列表顶部的稀有标记，再向下浏览玩家所选难度，每次手势后重新截图。</summary>
-    private async Task<(TemplateMatchResult, bool)> Locate(ScreenImage frame, FierceEnemyDifficulty difficulty, CancellationToken ct)
+    private async Task<(TemplateMatchResult, bool)> Locate(FierceEnemyDifficulty difficulty, CancellationToken ct)
     {
-        // 稀有卡的标识在同一卡片内。可见时直接定位，避免结算后重复滚动。
-        var rare = await FindRare(frame, ct);
-        if (rare is null)
+        async Task<Observation?> Card(ScreenImage frame, bool rareOnly)
         {
-            // 最多四张卡片，溢出高度小于两段手势。先回顶检查被视口遮挡的稀有卡。
-            for (var i = 0; i < 2; i++)
-            {
-                await Scroll(420, ct);
-                frame = await WaitBoss(ct);
-                rare = await FindRare(frame, ct);
-                if (rare is not null) break;
-            }
-        }
-        for (var i = 0; i < 6; i++)
-        {
+            if (await Find(frame, Event + "boss", Title, ct, .94) is null) return null;
+            var rare = await FindRare(frame, ct);
+            if (rareOnly && rare is null) return null;
             Roi? label = rare is null
                 ? await Task.Run(() => labels.Find(frame, difficulty, ct), ct)
                 : new Roi(1040, rare.Y + 55, 100, 30);
-            if (label is { } found && FierceEnemyDifficultyRecognizer.GetSkipRegion(found) is { } region)
-            {
-                var button = await Find(frame, "stage/event/button_skip", new Roi(region.X - 25, region.Y - 16, region.Width + 50, region.Height + 32), ct, .88);
-                if (button is null) throw Unknown();
-                return (button, rare is not null);
-            }
+            if (label is not { } found || FierceEnemyDifficultyRecognizer.GetSkipRegion(found) is not { } region) return null;
+            var button = await Find(frame, "stage/event/button_skip", new Roi(region.X - 25, region.Y - 16, region.Width + 50, region.Height + 32), ct, .88);
+            return button is null ? null : new Observation(rare is null ? "regular" : "rare", button);
+        }
+        for (int i = 0; i < 2; i++)
+        {
+            if (await WaitStable(f => Card(f, true), ct, 1500) is { } rare) return (rare.Button, true);
+            await Scroll(420, ct);
+            await WaitBoss(ct);
+        }
+        for (int i = 0; i < 6; i++)
+        {
+            if (await WaitStable(f => Card(f, false), ct, 2000) is { } card) return (card.Button, card.Kind == "rare");
             if (i == 5) break;
             await Scroll(-245, ct);
-            frame = await WaitBoss(ct);
-            rare = await FindRare(frame, ct);
+            await WaitBoss(ct);
         }
         throw Unknown();
+    }
+
+    private async Task<Observation?> DialogAction(ScreenImage frame, bool rare, CancellationToken ct)
+    {
+        if (await Find(frame, Event + "ticket_dialog", new(725, 287, 480, 92), ct) is null ||
+            await Find(frame, "dialog/cancel", Cancel, ct) is not { } cancel) return null;
+        if (DiamondSafetyChecker.CountRedPixels(frame.Bgra, frame.Width, RemainingTickets) >= DiamondSafetyChecker.DefaultRedPixelThreshold &&
+            await Find(frame, Event + "insufficient_execute", Execute, ct, .96) is not null) return new("cancel", cancel);
+        if (!rare && await Find(frame, Max, Quantity, ct) is { } max) return new("max", max);
+        if (await Find(frame, Max + "_disabled", Quantity, ct) is null) return null;
+        return await Find(frame, "dialog/execute", Execute, ct) is { } execute ? new("execute", execute) : null;
     }
 
     private Task<TemplateMatchResult?> FindRare(ScreenImage frame, CancellationToken ct) =>
@@ -123,20 +117,29 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
             new WaitOptions { Roi = roi, Threshold = threshold }, ct);
     private static InvalidOperationException Unknown() => new(L.Text("未确认限时活动画面或可用按钮，已停止略过。"));
 
-    private async Task<ScreenImage> WaitBoss(CancellationToken ct, int seconds = 20)
+    private sealed record Observation(string Kind, TemplateMatchResult Button);
+
+    // 动画中控件可能短暂出现或移动。只读轮询，每次操作前须在相邻两帧确认同一状态和位置。
+    private async Task<Observation?> WaitStable(Func<ScreenImage, Task<Observation?>> recognize,
+        CancellationToken ct, int timeoutMs = GameTiming.ShortRecognitionTimeoutMs)
     {
-        var deadline = Environment.TickCount64 + seconds * 1000;
+        var deadline = Environment.TickCount64 + timeoutMs;
+        Observation? previous = null;
         do
         {
-            var frame = await Capture(ct);
-            if (await Find(frame, Event + "boss", Title, ct, .94) is not null) return frame;
-            await Task.Delay(350, ct);
+            var current = await recognize(await Capture(ct));
+            if (current is not null && previous?.Kind == current.Kind &&
+                Math.Abs(previous.Button.CenterX - current.Button.CenterX) <= 3 &&
+                Math.Abs(previous.Button.CenterY - current.Button.CenterY) <= 3) return current;
+            previous = current;
+            await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
         } while (Environment.TickCount64 < deadline);
-        throw Unknown();
+        return null;
     }
 
-    private async Task<TemplateMatchResult> WaitFor(string key, Roi roi, CancellationToken ct) =>
-        await automation.WaitForImageAsync(serial, ConfigService.ResolvePath($"resources/templates/{key}.png"),
-            new WaitOptions { Roi = roi, Threshold = .92, PollIntervalMs = GameTiming.ConfirmationIntervalMs, TimeoutMs = GameTiming.ShortRecognitionTimeoutMs, AllowGlobalContinuation = false }, ct)
-            ?? throw Unknown();
+    private async Task WaitBoss(CancellationToken ct, int seconds = 20)
+    {
+        _ = await WaitStable(async frame => await Find(frame, Event + "boss", Title, ct, .94) is { } boss
+            ? new Observation("boss", boss) : null, ct, seconds * 1000) ?? throw Unknown();
+    }
 }
