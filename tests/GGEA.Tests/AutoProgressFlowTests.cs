@@ -790,7 +790,7 @@ public sealed partial class AutoProgressFlowTests
         public TestLog Log { get; } = new();
 
         /// <summary>新增识别使用原始素材；其余提示使用互不相似的隔离字形，避免单色模板假阳性。</summary>
-        public Scene(bool eventAttempts = false)
+        public Scene(bool eventAttempts = false, bool realResultButtons = false)
         {
             Directory.CreateDirectory(_directory);
             foreach (var name in new[] { "menu", "skip", "story", "auto_close", "auto_all", "auto_enemy", "continue",
@@ -820,6 +820,12 @@ public sealed partial class AutoProgressFlowTests
             }
             _paths["speed_on"] = ConfigService.ResolvePath("resources/templates/stage/sortie/double_speed_on.png");
             _paths["speed_off"] = ConfigService.ResolvePath("resources/templates/stage/sortie/double_speed_close.png");
+            if (realResultButtons)
+            {
+                var config = new AppConfig();
+                _paths["again"] = ConfigService.ResolvePath(config.AgainTemplate);
+                _paths["select"] = ConfigService.ResolvePath(config.SelectStageTemplate);
+            }
             if (eventAttempts) _paths["confirm"] = ConfigService.ResolvePath("resources/templates/dialog/sortie.png");
             foreach (var (name, path) in _paths) _images[name] = ImageCodec.DecodePng(File.ReadAllBytes(path));
             Adb = new FakeAdbService(Frame());
@@ -835,6 +841,12 @@ public sealed partial class AutoProgressFlowTests
                 _paths["terrain"], _paths["download_hint"]);
             _templates = new(_paths["menu"], _paths["skip"], _paths["story"], _paths["title"], _paths["auto_close"], _paths["auto_all"], _paths["auto_enemy"], _paths["series_close"], _paths["main_title"], _paths["series_title"]);
         }
+
+        public Task<SortieFlowResult> RunHardRewardReturn() =>
+            _service.ExecuteAfterSortieAsync("test", true, true, false, forAutoProgress: true,
+                pollIntervalMs: 1, tapToNextPollIntervalMs: 1, continueStartDelayMs: 0,
+                continuePollIntervalMs: 1, againStartDelayMs: 1, againPollIntervalMs: 1,
+                againWaitTimeoutMs: 5000, tapToNextWaitTimeoutMs: 5000, continueWaitTimeoutMs: 5000);
 
         public Task<SortieFlowResult> RunEventOpening(bool hard, bool allowDownload)
         {

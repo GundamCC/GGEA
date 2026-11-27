@@ -46,7 +46,7 @@ public sealed partial class SortieFlowService
             // 首张下载后截图也参与识别，避免丢掉短暂出现的开场帧。
             tapToNext = await MatchTapToNextAsync(screen, ct, recovery.ForAutoProgress);
             if (tapToNext is not null) { recovery.Watchdog.Observe(SortiePage.TapToNext); break; }
-            settlementReady = IsSettlementPage(screen);
+            settlementReady = IsSettlementPage(screen, recovery.ForAutoProgress);
             if (settlementReady)
             {
                 _log.Info("下载后已识别到结算页面，接续本轮结算，不再等待开场 TAP TO NEXT。");

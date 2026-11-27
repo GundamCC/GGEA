@@ -7,6 +7,21 @@ namespace GGEA.Tests;
 
 public sealed partial class AutoProgressFlowTests
 {
+    [Fact]
+    public async Task HardRewardWithRemainingCount_ReturnsToStageSelection()
+    {
+        using var scene = new Scene(realResultButtons: true);
+        scene.Steps(scene.Frame(("download_hint", 800, 100), ("download", 600, 850), ("cancel", 1000, 850)),
+            ReturnFixture("event-hard-reward-buttons.png", 1095, 905), ReturnFixture("select-stage-z-mumu5558.png"));
+        var result = await scene.RunHardRewardReturn();
+        Assert.Equal(SortieFlowResult.AllRoundsCompleted, result);
+        Assert.Equal(SortieFlowResult.ProgressStageCompleted, await scene.ConfirmHardReturn(new ManualProgressTime(), result: result));
+        Assert.Equal(2, scene.Adb.Taps.Count);
+        var tap = scene.Adb.Taps[1];
+        Assert.InRange(tap.X, 1650, 1685);
+        Assert.InRange(tap.Y, 975, 1005);
+    }
+
     /// <summary>当前功能解放原帧应在正常推图轮询中被点击继续；随后仍须真实故事和返回页才能计为完成。</summary>
     [Fact]
     public async Task FeatureUnlock_ProgressFlow_ContinuesWithoutStallRecovery()

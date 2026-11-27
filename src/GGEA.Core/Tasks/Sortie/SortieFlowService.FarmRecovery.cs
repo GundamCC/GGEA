@@ -41,7 +41,7 @@ public sealed partial class SortieFlowService
         // 战斗/加载期间只做低频 AUTO 检查；看不到控件不能视为关闭，也不能缩短正常长战斗总时限。
         if (stage == FarmRecoveryStage.Battle || stage == FarmRecoveryStage.NextBattle &&
             !TryRecognizeResultPageBeforeContinue(screen,
-                Match(screen, _continueTemplatePath, ContinueButtonRoi(screen), ContinueTemplateThreshold), out _, out _))
+                Match(screen, _continueTemplatePath, ContinueButtonRoi(screen), ContinueTemplateThreshold), out _, out _, recovery.ForAutoProgress))
         {
             if (!recovery.Watchdog.TryInspect()) return new();
             _log.Info("自动刷本等待战斗结束，定期检查 AUTO 是否为蓝色全部自动。");
@@ -55,7 +55,7 @@ public sealed partial class SortieFlowService
         if (!recovery.Watchdog.TryInspect()) return new();
         _log.Info("自动刷本连续 2 分钟无阶段进展，重新检测当前画面以恢复运行；保持本轮与剩余次数。");
         var currentContinue = Match(screen, _continueTemplatePath, ContinueButtonRoi(screen), ContinueTemplateThreshold);
-        var resultPage = TryRecognizeResultPageBeforeContinue(screen, currentContinue, out var again, out _);
+        var resultPage = TryRecognizeResultPageBeforeContinue(screen, currentContinue, out var again, out _, recovery.ForAutoProgress);
         var terrain = MatchIfConfigured(screen, _terrainTemplatePath, TerrainHintRoi(screen), StageSortieTemplateThreshold);
         var empty = MatchEmptySlotDialog(screen);
         var download = MatchIfConfigured(screen, _sortieDownloadTemplatePath, DownloadHintRoi(screen), StageSortieTemplateThreshold);

@@ -12,7 +12,7 @@ public sealed partial class SortieFlowService
     private bool TryRecognizeResultPage(
         ScreenImage screen,
         out TemplateMatchResult? again,
-        out TemplateMatchResult? selectStage)
+        out TemplateMatchResult? selectStage, bool forProgress = false)
     {
         // 兼容旧配置：未提供新模板时不做终局页识别，但也不能把空路径交给模板加载器。
         if (string.IsNullOrWhiteSpace(_selectStageTemplatePath))
@@ -24,6 +24,16 @@ public sealed partial class SortieFlowService
 
         again = Match(screen, _againTemplatePath, AgainButtonRoi(screen), StageSortieTemplateThreshold);
         selectStage = Match(screen, _selectStageTemplatePath, SelectStageButtonRoi(screen), StageSortieTemplateThreshold);
+        // HARD 奖励页的“再次出击”下方会显示剩余次数。先确认右侧确实是“选择关卡”，
+        // 再按左侧固定文字和蓝色可用状态补认，避免把相似的“继续”外框放行。
+        if (forProgress && again is null && selectStage is not null &&
+            _progressButtons.MatchBlueLabel(screen, _selectStageTemplatePath, SelectStageButtonRoi(screen),
+                StageSortieTemplateThreshold, default) is { } confirmedSelect)
+        {
+            again = _progressButtons.MatchBlueLabel(screen, _againTemplatePath, AgainButtonRoi(screen),
+                StageSortieTemplateThreshold, default);
+            if (again is not null) selectStage = confirmedSelect;
+        }
         return again is not null && selectStage is not null;
     }
 
@@ -32,9 +42,9 @@ public sealed partial class SortieFlowService
         ScreenImage screen,
         TemplateMatchResult? continueMatch,
         out TemplateMatchResult? again,
-        out TemplateMatchResult? selectStage)
+        out TemplateMatchResult? selectStage, bool forProgress = false)
     {
-        if (!TryRecognizeResultPage(screen, out again, out selectStage)) return false;
+        if (!TryRecognizeResultPage(screen, out again, out selectStage, forProgress)) return false;
         // 左侧相似图案不能把明确的右侧“继续”变成终局；同分时仍保留双按钮布局证据。
         // 只比较同一右侧按钮，避免其他位置的继续候选否决真实的选择关卡按钮。
         var sameButton = continueMatch is not null &&
@@ -52,10 +62,10 @@ public sealed partial class SortieFlowService
                 || selectStageMatch.Confidence - continueMatch.Confidence < ResultPageContinueConfidenceMargin);
 
     /// <summary>下载已发生在本轮出击后；只有明确的继续按钮或双按钮终局证据才允许转入结算。</summary>
-    private bool IsSettlementPage(ScreenImage screen)
+    private bool IsSettlementPage(ScreenImage screen, bool forProgress = false)
     {
         var currentContinue = Match(screen, _continueTemplatePath, ContinueButtonRoi(screen), ContinueTemplateThreshold);
-        var resultPage = TryRecognizeResultPageBeforeContinue(screen, currentContinue, out _, out var selectStage);
+        var resultPage = TryRecognizeResultPageBeforeContinue(screen, currentContinue, out _, out var selectStage, forProgress);
         return resultPage || currentContinue is not null && IsCurrentContinueCandidate(currentContinue, selectStage);
     }
 

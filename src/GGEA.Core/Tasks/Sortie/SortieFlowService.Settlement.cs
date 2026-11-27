@@ -77,7 +77,7 @@ public sealed partial class SortieFlowService
             var match = Match(fresh, _continueTemplatePath, ContinueButtonRoi(fresh), ContinueTemplateThreshold);
             // “选择关卡”与“继续”模板存在相似度；终局页双按钮命中时，只有选择关卡模板
             // 明显优于继续模板，才把它当成终局页，避免中间继续页的背景误匹配抢先结束流程。
-            var resultPage = TryRecognizeResultPageBeforeContinue(fresh, match, out var again, out var selectStage);
+            var resultPage = TryRecognizeResultPageBeforeContinue(fresh, match, out var again, out var selectStage, recovery.ForAutoProgress);
             if (resultPage)
             {
                 _log.Info(
@@ -161,7 +161,7 @@ public sealed partial class SortieFlowService
 
             // 页面标题可能被奖励横幅遮挡；根据当前按钮和双按钮置信度判定页面，不能依赖标题单点。
             var currentContinue = Match(fresh, _continueTemplatePath, ContinueButtonRoi(fresh), ContinueTemplateThreshold);
-            var resultPage = TryRecognizeResultPageBeforeContinue(fresh, currentContinue, out var again, out var selectStage);
+            var resultPage = TryRecognizeResultPageBeforeContinue(fresh, currentContinue, out var again, out var selectStage, recovery.ForAutoProgress);
             if (resultPage)
             {
                 _log.Info(
@@ -280,7 +280,7 @@ public sealed partial class SortieFlowService
             }
 
             var currentContinue = Match(fresh, _continueTemplatePath, ContinueButtonRoi(fresh), ContinueTemplateThreshold);
-            var resultPage = TryRecognizeResultPageBeforeContinue(fresh, currentContinue, out var match, out var selectStage);
+            var resultPage = TryRecognizeResultPageBeforeContinue(fresh, currentContinue, out var match, out var selectStage, recovery.ForAutoProgress);
             if (!resultPage && currentContinue is null && StopForUnexpectedFarmPreparation(fresh, recovery, ct))
                 return SortieFlowResult.UnexpectedPreparation;
             if (!resultPage && currentContinue is not null && IsCurrentContinueCandidate(currentContinue, selectStage))
@@ -298,7 +298,7 @@ public sealed partial class SortieFlowService
                     var retryContinue = Match(retryScreen, _continueTemplatePath, ContinueButtonRoi(retryScreen), ContinueTemplateThreshold);
                     if (retryContinue is null && StopForUnexpectedFarmPreparation(retryScreen, recovery, ct))
                         return SortieFlowResult.UnexpectedPreparation;
-                    var retryResultPage = TryRecognizeResultPageBeforeContinue(retryScreen, retryContinue, out _, out var retrySelectStage);
+                    var retryResultPage = TryRecognizeResultPageBeforeContinue(retryScreen, retryContinue, out _, out var retrySelectStage, recovery.ForAutoProgress);
                     if (!retryResultPage && IsCurrentContinueCandidate(retryContinue, retrySelectStage))
                     {
                         await _automation.TapAsync(serial, retryContinue!.CenterX, retryContinue.CenterY, ct);
@@ -324,13 +324,10 @@ public sealed partial class SortieFlowService
                     return SortieFlowResult.RoundCompleted;
                 }
 
-                await _automation.TapAsync(
-                    serial,
-                    BackToStageSelectButtonCenter.X,
-                    BackToStageSelectButtonCenter.Y,
-                    ct);
-                _log.Info(
-                    $"全部刷取次数完成，已点击回到选择关卡: ({BackToStageSelectButtonCenter.X},{BackToStageSelectButtonCenter.Y})");
+                var target = recovery.ForAutoProgress && selectStage is not null
+                    ? (X: selectStage.CenterX, Y: selectStage.CenterY) : BackToStageSelectButtonCenter;
+                await _automation.TapAsync(serial, target.X, target.Y, ct);
+                _log.Info($"全部刷取次数完成，已点击回到选择关卡: ({target.X},{target.Y})");
                 return SortieFlowResult.AllRoundsCompleted;
             }
 

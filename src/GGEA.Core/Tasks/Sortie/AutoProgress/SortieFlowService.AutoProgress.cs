@@ -311,7 +311,7 @@ public sealed partial class SortieFlowService
                 var story = _progressButtons.Match(screen, templates.Story, ContinueButtonRoi(screen), StageSortieTemplateThreshold, ct);
                 var next = _progressButtons.Match(screen, _continueTemplatePath, ContinueButtonRoi(screen), ContinueTemplateThreshold, ct);
                 var continuation = story is not null && (next is null || story.Confidence >= next.Confidence) ? story : next;
-                if (TryRecognizeResultPageBeforeContinue(screen, continuation, out _, out var selectStage))
+                if (TryRecognizeResultPageBeforeContinue(screen, continuation, out _, out var selectStage, true))
                 {
                     await Click(selectStage!, "结算页选择关卡", SortiePage.Result);
                     waitingForStageReturn = true;

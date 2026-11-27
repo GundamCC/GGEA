@@ -38,7 +38,7 @@ public sealed partial class SortieFlowService
         var story = _progressButtons.Match(screen, templates.Story, ContinueButtonRoi(screen), StageSortieTemplateThreshold, ct);
         var next = _progressButtons.Match(screen, _continueTemplatePath, ContinueButtonRoi(screen), ContinueTemplateThreshold, ct);
         var continuation = story is not null && (next is null || story.Confidence >= next.Confidence) ? story : next;
-        if (TryRecognizeResultPageBeforeContinue(screen, continuation, out _, out _)) return new(SortiePage.Result);
+        if (TryRecognizeResultPageBeforeContinue(screen, continuation, out _, out _, true)) return new(SortiePage.Result);
         if (continuation is not null) return new(ReferenceEquals(continuation, story) ? SortiePage.Story : SortiePage.Continue);
         if (Match(screen, _playerLevelUpTemplatePath, PlayerLevelUpRoi(screen)) is not null) return new(SortiePage.LevelUp);
         if (Find(templates.Skip, ProgressSkipRoi) is not null) return new(SortiePage.Skip);
