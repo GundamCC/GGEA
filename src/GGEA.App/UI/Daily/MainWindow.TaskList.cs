@@ -33,6 +33,12 @@ public partial class MainWindow
         });
         _dailyTasks.Add(new DailyTaskItem
         {
+            Kind = DailyTaskKind.CharacterRequests,
+            Name = L.Text("承接角色要求（个人基地）"),
+            IsChecked = false,
+        });
+        _dailyTasks.Add(new DailyTaskItem
+        {
             Kind = DailyTaskKind.ShopFreeGift,
             Name = L.Text("商店购买免费礼包"),
             IsChecked = true,

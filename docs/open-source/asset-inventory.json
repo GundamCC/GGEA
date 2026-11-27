@@ -3193,6 +3193,16 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/zh-CN/templates/base/character_requests/card_request_rank.png",
+      "sha256": "325c399efed22b3ca0a0bb00bbc72a403871b1126c98d1ae81a9905b024bdec4",
+      "width": 121,
+      "height": 29,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; zh-CN Character Requests, MuMu 1920x1080, crop (205,621,121,29)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/zh-CN/templates/base/character_requests/character_requests.png",
       "sha256": "6caa9c3054fa332503afad037a77e146c2a0134f8d4bc63a6e5d5188356df3a1",
       "width": 171,

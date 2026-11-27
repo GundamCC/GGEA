@@ -70,6 +70,19 @@ public partial class MainWindow
                     break;
                 }
 
+                case DailyTaskKind.CharacterRequests:
+                    try
+                    {
+                        var submitted = await _personalBaseService!.AcceptCharacterRequestsAsync(serial, _mainLayout, ct);
+                        _logger!.Info(L.Format($"本轮已点击 {submitted} 个角色的承接按钮。"));
+                        taskSucceeded = true;
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        return StopDailyQueue(task, ex.Message, DailyQueueOutcome.Unsafe);
+                    }
+                    break;
+
                 case DailyTaskKind.ShopFreeGift:
                 {
                     var shopOk = await _shopService!.BuyFreePremiumItemAsync(

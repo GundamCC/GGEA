@@ -13,7 +13,12 @@ public partial class MainWindow
 
     /// <summary>每日显示、全选和执行共用同一准入规则，隐藏任务仍保留原来的勾选与顺序。</summary>
     private bool IsDailyTaskAvailable(DailyTaskItem task)
-        => FierceEnemyAvailable || task.Kind != DailyTaskKind.FierceEnemySkip;
+        => task.Kind switch
+        {
+            DailyTaskKind.CharacterRequests => _config.GameLanguage == "zh-CN",
+            DailyTaskKind.FierceEnemySkip => FierceEnemyAvailable,
+            _ => true,
+        };
 
     /// <summary>冻结执行时只取当前区服可用的目标，防止隐藏的旧强敌目标继续导航。</summary>
     private AutoProgressTarget[] AvailableAutoProgressTargets()

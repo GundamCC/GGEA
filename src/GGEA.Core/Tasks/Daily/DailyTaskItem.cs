@@ -30,6 +30,7 @@ public enum DailyTaskKind
     /// <summary>按添加时的单位与难度执行强敌来袭略过。</summary>
     FierceEnemySkip,
     LimitedEvent,
+    CharacterRequests,
 }
 
 /// <summary>每日任务列表中的一行；列表顺序即执行顺序。</summary>

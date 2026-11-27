@@ -1,5 +1,6 @@
 using GGEA.App.Automation;
 using GGEA.App.Logging;
+using GGEA.App.Localization;
 using GGEA.App.UI;
 using GGEA.App.Vision;
 
@@ -42,7 +43,7 @@ public sealed record BattleshipHarvestResult(BattleshipHarvestStatus Status, str
 }
 
 /// <summary>
-/// 个人基地服务：目前实现“收获战舰”。
+/// 个人基地服务：从主界面进入基地并执行战舰回收或角色要求。
 /// 流程：进入个人基地 → 查找“蓝色亮边六边形”战舰区域（找不到则拖动画面）→
 /// 点击战舰 → 等待右下角固定位置的“全部回收” → 点击 → 关闭结果弹窗（OK）。
 /// 若“全部回收”为暗灰色（战舰出航中），则视为暂不可回收，安全跳过不做点击。
@@ -62,6 +63,29 @@ public sealed class PersonalBaseService
         _battleshipLocator = battleshipLocator;
         _log = log;
     }
+
+    /// <summary>从已确认的主界面进入个人基地，复核地图入口后交给本轮的角色栏位流程。</summary>
+    public Task<int> AcceptCharacterRequestsAsync(string serial, UiLayout mainLayout, CancellationToken ct = default) =>
+        Task.Run(async () =>
+        {
+            var service = new CharacterRequestService(_automation, _log);
+            var navBase = mainLayout.Require("navBase", "主界面布局缺少 navBase 锚点");
+            await _automation.TapAsync(serial, navBase.CenterX, navBase.CenterY, ct);
+            await Task.Delay(GameTiming.RecognitionIntervalMs, ct);
+            var entry = await _battleshipLocator.FindCharacterRequestsWithPanAsync(serial, ct: ct);
+            if (entry is not null)
+            {
+                await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
+                var confirmed = await _battleshipLocator.FindCharacterRequestsWithPanAsync(serial, maxDrags: 0, ct: ct);
+                if (confirmed is not null && Math.Abs(confirmed.CenterX - entry.CenterX) <= 3 &&
+                    Math.Abs(confirmed.CenterY - entry.CenterY) <= 3)
+                {
+                    await _automation.TapAsync(serial, confirmed.CenterX, confirmed.CenterY, ct);
+                    return await service.AcceptFromListAsync(serial, ct);
+                }
+            }
+            throw new InvalidOperationException(L.Text("未能确认个人基地的角色要求入口。"));
+        }, ct);
 
     /// <summary>
     /// 收获战舰（完成每日任务“于战舰巡航中获得20AP”）。

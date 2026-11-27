@@ -23,6 +23,18 @@ public sealed class ThemeTests
                 app.InitializeComponent();
                 VerifyControlGeometry(app);
                 var window = new MainWindow();
+                // 离屏窗口不触发 Loaded，显式应用真实启动时的游戏语言与列表过滤。
+                const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+                var profile = (GGEA.App.Config.AppConfig)typeof(MainWindow).GetField("_config", flags)!.GetValue(window)!;
+                GGEA.App.Config.GameProfiles.Normalize(profile);
+                typeof(MainWindow).GetMethod("UpdateFooterText", flags)!.Invoke(window, null);
+                var request = Assert.Single(window.DailyView.DailyTaskList.Items.OfType<GGEA.App.Tasks.DailyTaskItem>(),
+                    item => item.Kind == GGEA.App.Tasks.DailyTaskKind.CharacterRequests);
+                Assert.False(request.IsChecked);
+                Assert.False(window.DailyView.DailySelectAllCheckBox.IsChecked);
+                RenderLocalizationPreview(window, 1064, 660, "character-request-daily");
+                // 下方仍覆盖「其他任务全选，删除未勾选的动态任务后恢复全选」。
+                request.IsChecked = true;
                 window.LimitedEventTab.IsSelected = true;
                 Assert.Equal("EXPERT", ((ComboBoxItem)window.LimitedDifficulty.SelectedItem).Content);
                 RenderLocalizationPreview(window, 1064, 660, "limited-event-offscreen");
@@ -32,6 +44,8 @@ public sealed class ThemeTests
                 window.UpdateLayout();
                 VerifyHeaderHoverDelay(window);
                 var eventWindow = new MainWindow();
+                // 此窗口同样没有 Loaded 事件，先载入活动目录后才能添加每日项。
+                typeof(MainWindow).GetMethod("RestoreLimitedDaily", flags)!.Invoke(eventWindow, null);
                 eventWindow.IncludeBoss.IsChecked = false;
                 eventWindow.AddLimitedDaily.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 eventWindow.IncludeMedals.IsChecked = false;
