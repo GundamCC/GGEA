@@ -43,8 +43,50 @@ public class CharacterRequestPageTests
         var service = new CharacterRequestService(automation, log);
         Assert.Equal(expected, await service.AcceptFromListAsync("serial"));
         var taps = Enumerable.Range(0, expected)
-            .SelectMany(i => new[] { (427 + i * 535, 410), (1622, 857) });
+            .SelectMany(i => new[] { (427 + i * 535, 410), (1623, 857) });
         Assert.Equal(taps, adb.Taps);
+    }
+
+    [Fact]
+    public async Task AcceptFromListAsync_AdvancesOnlyConfirmedDialogueAndLeavesChallengeUntouched()
+    {
+        var list = Encode(CreateList(true, false, true));
+        var detail = Empty();
+        PasteTemplate(detail, "title_character_requests.png", 216, 17);
+        PasteTemplate(detail, "button_next_character.png", 1869, 502);
+        Paste(detail, ConfigService.ResolvePath("resources/templates/common/back.png"), 40, 14);
+        PasteTemplate(detail, "button_accept.png", 1442, 798);
+        var accept = Encode(detail);
+        PasteTemplate(detail, "button_challenge.png", 1584, 837);
+        var challenge = Encode(detail);
+        var dialogue = Empty();
+        PasteTemplate(dialogue, "dialog_com_frame.png", 262, 145);
+        var incomplete = Encode(dialogue);
+        PasteTemplate(dialogue, "dialog_advance.png", 741, 836);
+        var first = Encode(dialogue);
+        dialogue = Empty();
+        PasteTemplate(dialogue, "dialog_com_frame.png", 262, 145);
+        PasteTemplate(dialogue, "dialog_advance.png", 779, 839);
+        var second = Encode(dialogue);
+
+        var adb = new FakeAdbService(list);
+        var pendingFrames = 0;
+        adb.ScreenshotProvider = () => adb.Taps.Count switch
+        {
+            1 => accept,
+            2 when pendingFrames++ < 2 => incomplete,
+            2 => first,
+            3 => second,
+            4 or 6 => challenge,
+            _ => list
+        };
+        var log = new TestLog();
+        using var automation = new AutomationService(adb, new TemplateMatcher(), log);
+        Assert.Equal(1, await new CharacterRequestService(automation, log).AcceptFromListAsync("serial"));
+        var back = ImageCodec.DecodePng(File.ReadAllBytes(ConfigService.ResolvePath("resources/templates/common/back.png")));
+        var backPoint = (40 + back.Width / 2, 14 + back.Height / 2);
+        Assert.Equal(new[] { (427, 410), (1623, 857), (960, 540), (960, 540), backPoint,
+            (962, 410), backPoint }, adb.Taps);
     }
 
     private const string Root = "resources/templates/base/character_requests/";

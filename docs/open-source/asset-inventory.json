@@ -3163,6 +3163,16 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/zh-CN/templates/base/character_requests/button_challenge.png",
+      "sha256": "b8ef77813b406793b54578105a8efe5e0ad557b3e22fbe1bd1fe4eca3952e3c3",
+      "width": 78,
+      "height": 41,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; zh-CN Character Requests, MuMu 1920x1080, crop (1584,837,78,41)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/zh-CN/templates/base/character_requests/button_next_character.png",
       "sha256": "5db6bcd339566552e35534b8f06bf608671443f9414757062a6148898d8f107f",
       "width": 42,
@@ -3213,6 +3223,26 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/zh-CN/templates/base/character_requests/dialog_advance.png",
+      "sha256": "f419f3b70fd5945f30a8c856a79cf2407276aebce017444ec6b800ef8910d9d6",
+      "width": 38,
+      "height": 30,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; zh-CN Character Requests, MuMu 1920x1080, crop (779,839,38,30)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/character_requests/dialog_com_frame.png",
+      "sha256": "2b8c65321b2d91f131a87ec0e5c65fa538a5024c8e4ca8ffd64cb366cee91b39",
+      "width": 133,
+      "height": 58,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; zh-CN Character Requests, MuMu 1920x1080, crop (262,145,133,58)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/zh-CN/templates/base/character_requests/title_character_requests.png",
       "sha256": "8c9fc546f9d780dde93ee3dac2bfadb7b7a3a146f0de692eb78c2a5c96e6bab8",
       "width": 271,
@@ -3229,6 +3259,16 @@
       "height": 47,
       "category": "recognition-resource",
       "source": "Game-derived appearance; zh-CN Character Requests, MuMu 1920x1080, crop (872,70,176,47)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/character_requests/title_strengthen_troops.png",
+      "sha256": "5fe64f0d8f53378880e8c256d1b2ee762ffcacfd2cbb477421d861c57eeec638",
+      "width": 133,
+      "height": 34,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; zh-CN Character Requests, MuMu 1920x1080, crop (1405,248,133,34)",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
