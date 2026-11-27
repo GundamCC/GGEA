@@ -84,6 +84,23 @@ public class EventStagesDailyTests
     }
 
     [Fact]
+    public async Task QueuedEventVerifiesSelectedActivityWhenMultipleEventsShareTheStoryTitle()
+    {
+        byte[] Frame(string name) => File.ReadAllBytes(ConfigService.ResolvePath($"Fixtures/Navigation/{name}.png"));
+        var story = Frame("limited-daily-story_return");
+        var list = Frame("limited-event-list");
+        var device = new FakeAdbService(story);
+        device.ScreenshotProvider = () => device.Taps.Count is 1 or 2 ? list : story;
+        using var automation = new AutomationService(device, new TemplateMatcher(), new TestLog());
+        var activity = LimitedEventDefinition.Load().First();
+        await new EventStagesService(automation, "test", activity).NavigateAsync(EventStagesService.Destination.Stages,
+            _ => throw new InvalidOperationException("不应返回主界面"), default, verifyActivity: true);
+        Assert.Equal(3, device.Taps.Count);
+        Assert.InRange(device.Taps[1].X, 286, 300);
+        Assert.InRange(device.Taps[2].X, 1660, 1690);
+    }
+
+    [Fact]
     public async Task EventListUsesSharedEntryAndVerifiesSelectedPoster()
     {
         var list = File.ReadAllBytes(ConfigService.ResolvePath("Fixtures/Navigation/limited-event-list.png"));

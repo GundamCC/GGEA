@@ -44,9 +44,7 @@ public partial class MainWindow
             var destination = button == LimitedStart ? EventStagesService.Destination.Boss :
                 button == MedalStart ? EventStagesService.Destination.Supply : EventStagesService.Destination.Stages;
             await NavigateLimitedAsync(serial, SelectedActivity, destination, owner.Token);
-            if (button == EventProgress)
-                LimitedStatus.Text = await RunEventProgressAsync(serial, owner.Token);
-            else if (button == EventDaily)
+            if (button == EventDaily)
             {
                 LimitedStatus.Text = await RunEventStagesDailyAsync(serial, owner.Token);
             }
@@ -78,7 +76,7 @@ public partial class MainWindow
     }
 
     private Task NavigateLimitedAsync(string serial, LimitedEventDefinition activity, EventStagesService.Destination destination,
-        CancellationToken ct, bool allowAnnouncement = true)
+        CancellationToken ct, bool allowAnnouncement = true, bool verifyActivity = false)
         => new EventStagesService(_automation!, serial, activity).NavigateAsync(destination, async token =>
         {
             if (!await EnsureMainScreenAsync(serial, token, allowAnnouncement))
@@ -86,7 +84,7 @@ public partial class MainWindow
             var menu = await new StageMenuEntryService(_automation!, _logger!).OpenFromHomeAsync(serial, _mainLayout,
                 _config.StagePageSettleMs, token);
             if (!menu.Success) throw new InvalidOperationException(menu.Message);
-        }, ct);
+        }, ct, verifyActivity);
 
     private async Task<string> RunEventStagesDailyAsync(string serial, CancellationToken ct, bool claimRewards = true, LimitedEventDefinition? activity = null)
     {
@@ -102,18 +100,31 @@ public partial class MainWindow
         new(_adb!, _matcher, _logger!, ConfigService.ResolvePath(_config.StageNodeTemplateDirectory),
             numberRecognizer: new OnnxStageNumberRecognizer(GetTextOcr()), evidence: GetRecognitionEvidence(), layout: StageNodeLayout.History);
 
-    private async Task<string> RunEventProgressAsync(string serial, CancellationToken ct)
+    private void QueueEventProgress_Click(object sender, RoutedEventArgs e)
     {
-        var stages = new EventStagesService(_automation!, serial, SelectedActivity);
-        if (!await stages.EnterAsync(true, ct)) return L.Text("事件关卡攻略度已达 100%。");
-        var work = SelectedActivity.CreateWork();
+        if (_busy || LimitedActivity.SelectedItem is not LimitedEventDefinition activity) return;
+        AutoProgressTab.IsSelected = true;
+        AutoProgressView.AutoProgressTypeCombo.SelectedItem = AutoProgressView.AutoProgressEventTypeItem;
+        var target = AutoProgressView.AutoProgressWorkCombo.Items.OfType<AutoProgressTarget>()
+            .FirstOrDefault(item => item.Activity?.Id == activity.Id);
+        if (target is null) return;
+        AutoProgressView.AutoProgressWorkCombo.SelectedItem = target;
+        AddAutoProgressTarget(target);
+    }
+
+    private async Task<AutoProgressResult> RunEventProgressAsync(string serial, LimitedEventDefinition activity,
+        AutoProgressSettings settings, Action<string> report, CancellationToken ct)
+    {
+        await NavigateLimitedAsync(serial, activity, EventStagesService.Destination.Stages, ct, verifyActivity: _limitedActivities.Length > 1);
+        var stages = new EventStagesService(_automation!, serial, activity);
+        if (!await stages.EnterAsync(true, ct)) return new(true, 1, 0, L.Text("事件关卡攻略度已达 100%。"));
+        var work = activity.CreateWork();
         using var nodes = CreateEventNodeRecognizer();
         var reader = _stageService!.CreateProgressReader(nodes);
         var path = EventStagesService.PathFor("stage_title");
         var title = new SelectStageTitleRecognizer(path);
         var battle = CreateProgressBattle(serial, AutoProgressFlowTemplates.FromDefaults() with { SelectStageTitle = path },
             false, title.Recognize);
-        var settings = _config.AutoProgress.Snapshot();
         battle.Validate(settings);
         var formation = new AutoFormationSession();
         async Task<StageNodeRecognition> Read(HardStageEntry target, CancellationToken token)
@@ -121,14 +132,11 @@ public partial class MainWindow
             await stages.EnterAsync(false, token);
             return await reader.ReadCurrentWorkForProgressAsync(serial, target, token);
         }
-        void Report(string message) { LimitedStatus.Text = message; _logger!.Info(message); }
         var runner = new AutoProgressRunner(Read, Read,
-            (node, token) => battle.RunAsync(serial, settings, node.Kind, Report, token,
+            (node, token) => battle.RunAsync(serial, settings, node.Kind, report, token,
                 initialFormation: node is { Kind: WorkStageKind.Normal, Number: 1 } ? formation : null),
             (target, node, token) => reader.AdvanceAfterBattleAsync(serial, target, node, token),
             async (_, token) => !await stages.EnterAsync(true, token));
-        var result = await runner.RunAsync([work], Report, ct);
-        if (!result.Completed) throw new InvalidOperationException(result.Message);
-        return result.Message;
+        return await runner.RunAsync([work], report, ct);
     }
 }

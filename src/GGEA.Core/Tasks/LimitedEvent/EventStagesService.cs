@@ -79,7 +79,7 @@ internal sealed class EventStagesService(AutomationService automation, string se
     internal enum Destination { Stages, Boss, Supply, Story }
 
     /// <summary>先在已知路径上接续；只有不在活动路径时才交给通用主界面导航。</summary>
-    internal async Task NavigateAsync(Destination destination, Func<CancellationToken, Task> openMenuFromElsewhere, CancellationToken ct)
+    internal async Task NavigateAsync(Destination destination, Func<CancellationToken, Task> openMenuFromElsewhere, CancellationToken ct, bool verifyActivity = false)
     {
         var boss = E("boss", Header, .90);
         var supply = E("medal_supply_title", Header, .90);
@@ -89,6 +89,14 @@ internal sealed class EventStagesService(AutomationService automation, string se
         var list = new Target("stage/event/title_event", pageTitle, .85);
         var seen = await Observe(null, [receipt, Mission, Story, Stage, boss, supply, list, menu], ct, 3500);
         var page = seen?.Target;
+        // 多个活动共享页面标题。队列切换目标时，先在列表复核绑定的活动 LOGO。
+        if (verifyActivity && (page == Story || page == Stage || page == boss || page == supply || page == Mission))
+        {
+            if (page != Story) await Click(page, Back, ct);
+            await Click(Story, Back, ct);
+            await OpenFromListAsync(ct);
+            return;
+        }
         if (page == Story || (destination == Destination.Stages && page == Stage) ||
             (destination == Destination.Boss && page == boss) ||
             (destination == Destination.Supply && (page == supply || page == receipt))) return;

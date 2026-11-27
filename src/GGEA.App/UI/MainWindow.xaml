@@ -230,7 +230,7 @@
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="76"/><ColumnDefinition/></Grid.ColumnDefinitions>
                                         <TextBlock Text="{loc:Text Source='立即执行'}" Foreground="{DynamicResource Brush.Text}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                         <UniformGrid Grid.Column="1" Columns="4" Rows="1">
-                                            <Button x:Name="EventProgress" Content="{loc:Text Source='事件关卡推图'}" Click="LimitedStart_Click" Style="{StaticResource ButtonSecondary}" Margin="0,0,6,0" Padding="5,0"/>
+                                            <Button x:Name="EventProgress" Content="{loc:Text Source='事件关卡推图'}" Click="QueueEventProgress_Click" Style="{StaticResource ButtonSecondary}" Margin="0,0,6,0" Padding="5,0"/>
                                             <Button x:Name="EventDaily" Content="{loc:Text Source='每日10次关卡'}" Click="LimitedStart_Click" Style="{StaticResource ButtonSecondary}" Margin="0,0,6,0" Padding="5,0"/>
                                             <Button x:Name="LimitedStart" Content="{loc:Text Source='BOSS 略过'}" Click="LimitedStart_Click" Style="{StaticResource ButtonSecondary}" Margin="0,0,6,0" Padding="5,0"/>
                                             <Button x:Name="MedalStart" Content="{loc:Text Source='奖章自动兑换'}" Click="LimitedStart_Click" Style="{StaticResource ButtonSecondary}" Margin="0,0,6,0" Padding="5,0"/>

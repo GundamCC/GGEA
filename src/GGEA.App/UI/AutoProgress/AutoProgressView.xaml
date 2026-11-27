@@ -32,6 +32,7 @@
                     <ComboBoxItem Content="{loc:Text Source='主线关卡'}"/>
                     <ComboBoxItem Content="{loc:Text Source='历史关卡'}"/>
                     <ComboBoxItem x:Name="AutoProgressFierceEnemyTypeItem" Content="{loc:Text Source='强敌来袭'}"/>
+                    <ComboBoxItem x:Name="AutoProgressEventTypeItem" Content="{loc:Text Source='限时活动'}"/>
                 </ComboBox>
                 <!-- 显式模板同时用于选中项和弹出列表，避免自定义样式回退为类型名。 -->
                 <ComboBox x:Name="AutoProgressWorkCombo" Grid.Column="1" Height="34" MaxDropDownHeight="280"

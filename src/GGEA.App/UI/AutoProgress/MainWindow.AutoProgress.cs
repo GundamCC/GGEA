@@ -163,7 +163,9 @@ public partial class MainWindow
             {
                 ct.ThrowIfCancellationRequested();
                 AutoProgressResult current;
-                if (target.HistoryWork is { } historyWork)
+                if (target.Activity is { } activity)
+                    current = await RunEventProgressAsync(serial, activity, settings, Report, ct);
+                else if (target.HistoryWork is { } historyWork)
                 {
                     var stageTemplates = progressTemplates with { SelectStageTitle = ConfigService.ResolvePath("resources/templates/stage/history_stage.png") };
                     var bossTemplates = progressTemplates with { SelectStageTitle = ConfigService.ResolvePath("resources/templates/stage/history_boss_title.png") };
@@ -242,13 +244,15 @@ public partial class MainWindow
             AutoProgressView.AutoProgressAddButton.Content = L.Text("添加目标");
             AutoProgressView.AutoProgressHistoryBossCheck.Visibility = history ? Visibility.Visible : Visibility.Collapsed;
             AutoProgressView.AutoProgressAddButton.ToolTip = history ? L.Text("添加历史作品至队列；攻略 BOSS 的勾选状态随目标保存，已有目标需移除后重新添加才能更改。") : null;
-            var targets = history ? LoadHistoryCatalog().Works.AsEnumerable().Reverse().Select(work => new AutoProgressTarget(null, null, work)).ToArray()
+            var isEvent = AutoProgressView.AutoProgressTypeCombo.SelectedItem == AutoProgressView.AutoProgressEventTypeItem;
+            var targets = isEvent ? _limitedActivities.Select(activity => new AutoProgressTarget(null, null) { Activity = activity }).ToArray()
+                : history ? LoadHistoryCatalog().Works.AsEnumerable().Reverse().Select(work => new AutoProgressTarget(null, null, work)).ToArray()
                 : AutoProgressView.AutoProgressTypeCombo.SelectedIndex == 2
                 ? new[] { FierceEnemyUnit.Latest }.Concat(FierceEnemyUnit.Load())
                     .Select(unit => new AutoProgressTarget(null, unit)).ToArray()
                 : _hardStages.Where(work => work.Id != 1).Select(work => new AutoProgressTarget(work, null)).ToArray();
             AutoProgressView.AutoProgressWorkCombo.ItemsSource = targets;
-            AutoProgressView.AutoProgressWorkCombo.SelectedItem = history ? targets.FirstOrDefault() : targets.MaxBy(item => item.MainWork?.Id ?? item.Enemy!.Id);
+            AutoProgressView.AutoProgressWorkCombo.SelectedItem = history || isEvent ? targets.FirstOrDefault() : targets.MaxBy(item => item.MainWork?.Id ?? item.Enemy!.Id);
             AutoProgressView.AutoProgressAddButton.IsEnabled = !_busy && targets.Length > 0;
             AutoProgressView.AutoProgressStatusText.Text = history ? L.Text("历史作品先推进关卡；勾选攻略 BOSS 时继续六关并复核双 100%。") : L.Text("添加目标后点击开始推图。");
         }
@@ -268,6 +272,11 @@ public partial class MainWindow
         if (!FierceEnemyAvailable && work.Enemy is not null) return;
         // 添加时冻结本目标的攻略范围，后续勾选变化不影响已有队列。
         if (work.HistoryWork is not null) work = work with { AttackHistoryBoss = AutoProgressView.AutoProgressHistoryBossCheck.IsChecked == true };
+        AddAutoProgressTarget(work);
+    }
+
+    private void AddAutoProgressTarget(AutoProgressTarget work)
+    {
         var existing = _autoProgressQueue.FirstOrDefault(item => item.Key == work.Key);
         if (existing is null) _autoProgressQueue.Add(work);
         AutoProgressView.AutoProgressQueueList.SelectedItem = existing ?? work;
