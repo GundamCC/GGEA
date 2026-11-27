@@ -110,7 +110,7 @@ public sealed class RoadmapShortcutTests
         Assert.Empty(adb.Swipes);
     }
 
-    /// <summary>快捷拖动未命中后，从当前位置重新走原有上、右归位与逐行扫描，不反复触发快捷路径。</summary>
+    /// <summary>快捷拖动未命中后，从当前位置对齐顶边、短探边后逐行扫描，不反复触发快捷路径。</summary>
     [Theory]
     [InlineData(Prototype, Ball, -1)]
     [InlineData(Ball, Prototype, 1)]
@@ -125,7 +125,7 @@ public sealed class RoadmapShortcutTests
             : adb.Swipes.Skip(2).Any(s => s.X2 < s.X1) ? targetFrame : blank;
         var service = new DevelopService(new AutomationService(adb, new TemplateMatcher(), new TestLog()), new TestLog(), true);
         Assert.NotNull(await service.FindOnRoadmapAsync("device", Template(target), "", maxDragsPerDirection: 3));
-        Assert.Equal(new[] { (direction * 850, 0), (direction * 850, 0), (0, 250), (0, 250), (490, 0), (490, 0), (-490, 0) },
+        Assert.Equal(new[] { (direction * 850, 0), (direction * 850, 0), (0, 250), (0, 250), (163, 0), (163, 0), (-490, 0) },
             adb.Swipes.Select(s => (s.X2 - s.X1, s.Y2 - s.Y1)));
     }
 

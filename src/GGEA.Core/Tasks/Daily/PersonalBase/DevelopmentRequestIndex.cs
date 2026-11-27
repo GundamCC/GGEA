@@ -6,15 +6,18 @@ namespace GGEA.App.Tasks;
 
 internal sealed record DevelopmentOffer(string Id, string SeriesId, string UnitId, string UnitName,
     string Template, int Amount, int Capital);
+internal sealed record DeliveryRoute(string SeriesId, string DiagramId, int Tab, int TabCount, int Level, int Capital);
+internal sealed record DeliveryTarget(string UnitId, string Template, DeliveryRoute Route);
 internal sealed record DevelopmentOrder(DevelopmentOffer Offer, int Progress);
 
 /// <summary>委托指定的作品与角色所属作品分别存储。只把目标作品下可计入进度的基准单位交给开发流程。</summary>
 internal static class DevelopmentRequestIndex
 {
-    private sealed record Offer(string RoleId, string Title, string Kind, string? SeriesId, int Amount);
-    private sealed record Unit(string Name, string[] SeriesIds, string Roadmap);
+    private sealed record Offer(string RoleId, string Title, string Kind, string? SeriesId, int Amount, string? UnitId);
+    private sealed record Unit(string Name, string[] SeriesIds, string Roadmap, DeliveryRoute[]? DeliveryRoutes);
     private sealed record Catalog(Dictionary<string, Unit> Units, Dictionary<string, Offer> Offers);
     private sealed record Baseline(string UnitId, int Capital, Dictionary<string, int> Materials);
+    private static readonly Lazy<Catalog> Data = new(() => LoadFile<Catalog>("character_request_index.json"));
     private static readonly Lazy<Dictionary<(string, string), DevelopmentOffer>> Entries = new(Load);
 
     private static T LoadFile<T>(string name) => JsonSerializer.Deserialize<T>(File.ReadAllBytes(
@@ -22,7 +25,7 @@ internal static class DevelopmentRequestIndex
 
     private static Dictionary<(string, string), DevelopmentOffer> Load()
     {
-        var catalog = LoadFile<Catalog>("character_request_index.json");
+        var catalog = Data.Value;
         var bases = LoadFile<Dictionary<string, Baseline>>("series_development_bases.json");
         var entries = new Dictionary<(string, string), DevelopmentOffer>();
         foreach (var (id, offer) in catalog.Offers)
@@ -35,6 +38,31 @@ internal static class DevelopmentRequestIndex
             entries.Add((offer.RoleId, offer.Title), new(id, offer.SeriesId, basis.UnitId, unit.Name, unit.Roadmap, offer.Amount, basis.Capital));
         }
         return entries;
+    }
+
+    internal static DeliveryTarget? ForDelivery(DeliveryOffer offer, DeliveryProtection protection)
+    {
+        var title = FormattableString.Invariant($"交付机体{offer.Number}");
+        var link = Data.Value.Offers.Values.SingleOrDefault(o => o.RoleId == offer.RoleId && o.Title == title && o.Kind == "交付机体");
+        if (link is not { Amount: 1 } || link.UnitId != offer.UnitId ||
+            !Data.Value.Units.TryGetValue(offer.UnitId, out var unit) || unit.DeliveryRoutes is null) return null;
+        var route = unit.DeliveryRoutes.FirstOrDefault(r => unit.SeriesIds.Contains(r.SeriesId) &&
+            (link.SeriesId is null || link.SeriesId == r.SeriesId) &&
+            r.Tab >= 1 && r.Tab <= r.TabCount && r.Level >= offer.MinimumLevel && r.Capital > 0 &&
+            (!protection.ProtectHighLevel || r.Level < 60));
+        return route is null ? null : new(offer.UnitId, unit.Roadmap, route);
+    }
+
+    // 只有配置真正引用随包原生棋子时才根据 ID 选择作品，自定义素材沿用其入口配置。
+    internal static DeliveryRoute? RouteForTemplate(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        var resolved = ConfigService.ResolvePath(path);
+        var name = Path.GetFileName(resolved);
+        return Data.Value.Units.Values.FirstOrDefault(unit => unit.DeliveryRoutes is { Length: > 0 } &&
+            Path.GetFileName(unit.Roadmap) == name &&
+            string.Equals(ConfigService.ResolvePath(unit.Roadmap), resolved, GGEA.App.IO.FileSystemPaths.Comparison))
+            ?.DeliveryRoutes?[0];
     }
 
     internal static DevelopmentOffer? Find(string roleId, int number) =>

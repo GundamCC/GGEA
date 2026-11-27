@@ -11481,6 +11481,486 @@
       "source": "MuMu zh-CN 1920x1080 UI crop",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_0010.png",
+      "sha256": "5f8988d448e0b89d48eae4731345b37ce37d57b4ed17b195916961370bda751f",
+      "width": 144,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_0010",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_0130.png",
+      "sha256": "013ede420ec160583769775ce3181206f367237a59c8db65c10880129922a9f2",
+      "width": 280,
+      "height": 108,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_0130",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_0170.png",
+      "sha256": "f038ed14a64cbc4c723f9233fc64045256dc5c763bce203d46c8d2f6e59832ec",
+      "width": 280,
+      "height": 106,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_0170",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_0220.png",
+      "sha256": "7fdbf333800650ae9d559f9b4c420bb385007ed6350c823951813a369d6bac53",
+      "width": 280,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_0220",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_0240.png",
+      "sha256": "2cd1cc61e7470f91b9a3315a8f5bdbb9f832d6af2729948252bc593e0a8f39bb",
+      "width": 203,
+      "height": 118,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_0240",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_0320.png",
+      "sha256": "e2c3fae61e6b72679b6e3386a07a5e82856c011a5f15277c905ef64d7290d5c9",
+      "width": 267,
+      "height": 86,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_0320",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_0330.png",
+      "sha256": "2da754771ea8641d4f9b7df043cd12bcabe809acf7ab15b61668d911ea5d6314",
+      "width": 265,
+      "height": 86,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_0330",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_0600.png",
+      "sha256": "968442b8b08f6f9e488f803eb169231be8b5e28c35e28e5db9fa972bf1b5566f",
+      "width": 248,
+      "height": 118,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_0600",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_0810.png",
+      "sha256": "4d2bf21744389b74dd3547fd3e6ef20f4fe1c6289d34991799e0f629dc9f301a",
+      "width": 255,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_0810",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_0950.png",
+      "sha256": "829cf0928c8b34a2a611a2a7a73dc1d1687d18b33555242e1ce3c2455843ca95",
+      "width": 280,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_0950",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_1100.png",
+      "sha256": "d0b92dfaeca4a48717c44a26b7691d267b5ef72ac5b5f8b3c2337d34f5c48a97",
+      "width": 253,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_1100",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_1250.png",
+      "sha256": "d13020672946b225bfd42c0fb1e04d22394db31bf8cf76cd66356ad269e8eac6",
+      "width": 280,
+      "height": 113,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_1250",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_1440.png",
+      "sha256": "927ea74fefd3ebe3f633cbb0bad254b896a64b3a4a8ba82614b8ab45065edf0e",
+      "width": 280,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_1440",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_1500.png",
+      "sha256": "f3d452eafa5a4b93e4d9a4f31b66be2bf1788e08bfd191e18d31d23c76a5bce5",
+      "width": 280,
+      "height": 111,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_1500",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_1620.png",
+      "sha256": "7e57a139bf022523e1249f5946f40b93fc3e24133dd7db457a4ac01ca4f74928",
+      "width": 216,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_1620",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_1750.png",
+      "sha256": "dd382b3bc3f3d8112cdb8fe7353d3d8aa5126c1ae4a229f0b5851e71583f48c2",
+      "width": 177,
+      "height": 119,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_1750",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_2000.png",
+      "sha256": "cfa3bab734a3b1791b462d8bac0c659b1ebfdd0ac1c89d467d847ac1bee468cd",
+      "width": 280,
+      "height": 119,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_2000",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_2100.png",
+      "sha256": "1213abb4ab1c5816258ffc4a71d969a6afaf987162bea73e1dec33c84ca09055",
+      "width": 252,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_2100",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_2170.png",
+      "sha256": "2145f5d57ccd389af06b8c041d468ac1d994f2e4734bee37373e65aeb5119a28",
+      "width": 214,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_2170",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_2190.png",
+      "sha256": "db0c89e0c668d9d90dba4178d6ab10f55fdb529d2c588c5abdc376cae93a871c",
+      "width": 165,
+      "height": 118,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_2190",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_2300.png",
+      "sha256": "c27827896d064fc1e687c0930ffb7b855d9b89e169b953a14278343535181623",
+      "width": 205,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_2300",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_3000.png",
+      "sha256": "f8b33792302b00834bfd13d1efd2263f2dfd90eea661c09c273b1aee1a9aeaf2",
+      "width": 280,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_3000",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_3050.png",
+      "sha256": "4b57dbbf569d7c35de68d4a0bc829bf3905947535b30f310bbc6bd28d6dbdcd3",
+      "width": 241,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_3050",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_3080.png",
+      "sha256": "146b505a94949a1533efe0ba4727eacceed906766c7ad74c60463147a916bb40",
+      "width": 243,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_3080",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_3300.png",
+      "sha256": "655e73c55ebc8cc3dd5ad157175016caea1b74fc5b1b1ebfe72f83938389bea3",
+      "width": 280,
+      "height": 119,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_3300",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_3360.png",
+      "sha256": "dc823da6b8d0e801a750dc1a91e11330b38d55ff416a434bf3b4c982af9d82d6",
+      "width": 280,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_3360",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_3700.png",
+      "sha256": "a3683c40d01ac1a145369ca4c0b8c2ec13d9adb3f2b285462ccd4deb60e524bb",
+      "width": 280,
+      "height": 101,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_3700",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_3760.png",
+      "sha256": "743e7d8ebf5b6c96353ab0c56abea54e6ad1906eed0f674d55e0812a841c158c",
+      "width": 280,
+      "height": 100,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_3760",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_4000.png",
+      "sha256": "25a4ff74a02c435a3e4fca6cd63239acdd1e7d59746fc75dca0fd48676be9749",
+      "width": 280,
+      "height": 109,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_4000",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_4300.png",
+      "sha256": "e41df30fb295194a53b8744e8e39d965861ae282a691a2849a6d4518e69ee5e2",
+      "width": 218,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_4300",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_4310.png",
+      "sha256": "c6a78fda3061019427b4ee14a5877355959e1655680d29e04a87a71bd377b5b7",
+      "width": 224,
+      "height": 120,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_4310",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series/logo_s_series_5010.png",
+      "sha256": "0a3e0149015cf7459cdaf9a5e1af0a68d1fad5ebd05590661fb222f4ca16e286",
+      "width": 280,
+      "height": 114,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite logo_s_series_5010",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/series_list_header.png",
+      "sha256": "727c47542072fe18a56edb182f68007c5ac41b075e18d02203dc0cbf616a8ab4",
+      "width": 311,
+      "height": 67,
+      "category": "recognition-resource",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "resources/common/templates/develop/tabs/ui_developtree_tabbanner_01.png",
+      "sha256": "34199be9be8e6513a6b9aac3dae0c3c23bcd81ab035d0b60c57d11ff219e0f53",
+      "width": 290,
+      "height": 110,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite ui_developtree_tabbanner_01",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/tabs/ui_developtree_tabbanner_02.png",
+      "sha256": "2fcd18373ab76558e39b910ff5d6d06fdf6dfbb1c50bcfbc62e598a312c4e2d8",
+      "width": 290,
+      "height": 110,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite ui_developtree_tabbanner_02",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/tabs/ui_developtree_tabbanner_03.png",
+      "sha256": "7b56a6d1b4995dc38d323aa1f3f0850ac2b27961fea61b29e0f6da0552a552bc",
+      "width": 290,
+      "height": 110,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite ui_developtree_tabbanner_03",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/tabs/ui_developtree_tabbanner_04.png",
+      "sha256": "10536fdb3fe02af8cfdc726226a900d60e2e4cc2632c295ab602d451342c1baa",
+      "width": 290,
+      "height": 110,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite ui_developtree_tabbanner_04",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/tabs/ui_developtree_tabbanner_05.png",
+      "sha256": "d25ec27fdcd3af8243537004acd435b8eb48203fd1057163f69a5a31c24b57fc",
+      "width": 290,
+      "height": 110,
+      "category": "recognition-resource",
+      "source": "OCTO 2.8.1 Sprite ui_developtree_tabbanner_05",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "standalone-game-sprite"
+    },
+    {
+      "path": "resources/common/templates/develop/unit_catalog_card.png",
+      "sha256": "32d0a9414bb943d8f5e3b4f8b44459771fe7272dcd7f130f0f4f67af94a9c8a7",
+      "width": 245,
+      "height": 77,
+      "category": "recognition-resource",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "resources/zh-CN/templates/develop/delivery/cancel.png",
+      "sha256": "a8980d6be8d38079162bb2a3639ccc2eaf8c2d80769bb98862fe24ed96c1b0f5",
+      "width": 107,
+      "height": 66,
+      "category": "recognition-resource",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "resources/zh-CN/templates/develop/delivery/preview.png",
+      "sha256": "4dd3629a10c4f864ee2dd7e0cd4345006b0a47c0f28365ec78f8b9abf810ca68",
+      "width": 173,
+      "height": 64,
+      "category": "recognition-resource",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "resources/zh-CN/templates/develop/delivery/unit_detail.png",
+      "sha256": "4b051089aa9a4db23994215356eba31c32b83676352810898fd93dfd2d776696",
+      "width": 533,
+      "height": 71,
+      "category": "recognition-resource",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Base/delivery_number1.png",
+      "sha256": "cf7c54f2ca48fdbac9ca14f715e6aeb9c03524ff700b1aa97cc65c5435354c23",
+      "width": 32,
+      "height": 42,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Base/delivery_scirocco_portrait.png",
+      "sha256": "d30497f9e186a091ab0eab2aadae9473a63916025c1e063f77f411ef186622da",
+      "width": 115,
+      "height": 115,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Base/delivery_selected_count.png",
+      "sha256": "2cbf0cb32410228518103f80dcf3499e38163a61541d76082f9c7eb9f8ccc3cb",
+      "width": 69,
+      "height": 44,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Develop/second_tab_idle.png",
+      "sha256": "5a819358bd06a9be81c4619b3a2e63041b9da699fdb2971ae0ff58bad4406267",
+      "width": 310,
+      "height": 210,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Develop/second_tab_selected.png",
+      "sha256": "4334b3025d79ba1c55ef13a17579cb746d391560baa0b8e60dd25a0f8ca74d79",
+      "width": 310,
+      "height": 210,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Develop/thunderbolt_band_flower_card.png",
+      "sha256": "2601445c32bd216a3693a053c27d88a9ac3104f7769447311b0405877aeb9767",
+      "width": 319,
+      "height": 163,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
     }
   ]
 }

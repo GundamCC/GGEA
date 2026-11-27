@@ -17,6 +17,10 @@ public sealed partial class DevelopService
             ? ConfigService.ResolvePath("resources/templates/develop/title_develop.png") : request.DevelopTitleTemplatePath;
         if (!await WaitForDevelopTitleAsync(serial, title, request.DevelopLayout, request.TitleThreshold, request.TitleWaitMs,
                 request.RoadmapDisplaySettingsTitleTemplatePath, ct)) throw DevelopmentUnknown();
+        var map = DevelopmentMaps.Get(order.Offer.SeriesId);
+        var first = map.Diagrams.First(g => !g.Ultimate);
+        if (map.Diagrams.Length > 1 && !await new DevelopmentTabNavigator(_automation).SelectAsync(serial, first, title, ct))
+            throw DevelopmentUnknown();
         var unit = await FindOnRoadmapAsync(serial, ConfigService.ResolvePath(order.Offer.Template), "",
             request.MaxDragsPerDirection, request.DragDurationMs, request.Threshold, title, request.TitleThreshold, ct,
             preferLeftEdge: true) ?? throw DevelopmentUnknown();
@@ -50,6 +54,10 @@ public sealed partial class DevelopService
             ?? throw DevelopmentUnknown();
         await _automation.TapAsync(serial, back.CenterX, back.CenterY, ct);
     }
+
+    internal Task<bool> WaitForRequestRoadmapAsync(string serial, DevelopRequest request, CancellationToken ct) =>
+        WaitForDevelopTitleAsync(serial, request.DevelopTitleTemplatePath, request.DevelopLayout, request.TitleThreshold,
+            request.TitleWaitMs, request.RoadmapDisplaySettingsTitleTemplatePath, ct);
 
     private static InvalidOperationException DevelopmentUnknown() =>
         new(L.Text("未能核对委托开发的路线图、机体、数量、消耗或结果，已停止本轮。"));

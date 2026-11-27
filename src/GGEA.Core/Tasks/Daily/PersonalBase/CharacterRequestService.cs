@@ -10,6 +10,7 @@ public sealed record CharacterRequestResult(int Accepted, int Reported, IReadOnl
 /// <summary>按本轮解锁栏位逐人承接。按委托类型核对交付、强化或开发条件，结算后再处理下一栏。</summary>
 public sealed class CharacterRequestService(AutomationService automation, IGgeaLog log, OnnxTextRecognizer? ocr = null, DeliveryProtection? protection = null, DevelopRequest? development = null)
 {
+    internal Func<string, DeliveryTarget, Func<bool>, CancellationToken, Task<bool>>? RestockFromList { get; init; }
     private const string Root = "resources/templates/base/character_requests/";
     private static readonly Roi ActionLabelArea = new(1540, 800, 170, 110);
     private readonly CharacterRequestPage _page = new();
@@ -87,14 +88,14 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                     var initialKind = detail.Title.Kind;
                     if (arrival.Kind == ArrivalKind.List)
                     {
-                        if (initialKind is not (RequestKind.Funding or RequestKind.Development)) continue;
+                        if (initialKind is not (RequestKind.Funding or RequestKind.Development or RequestKind.UnitDelivery)) continue;
                         var list = await WaitForListAsync(serial, ct);
                         if ((list.ActiveMask & (1 << slot)) == 0) continue;
                         await automation.TapAsync(serial, 427 + 535 * slot, 410, ct);
                         detail = await WaitAsync(serial, f => ReadDetail(f, ct), ct) ?? throw Unknown();
                     }
                     else detail = arrival.Detail!;
-                    if (initialKind == RequestKind.Development && detail.Title.Kind != initialKind) throw Unknown();
+                    if (initialKind is (RequestKind.Development or RequestKind.UnitDelivery) && detail.Title.Kind != initialKind) throw Unknown();
                     if (initialKind == RequestKind.Funding &&
                         (detail.Title.Kind != initialKind || detail.Action != Control.Deliver)) throw Unknown();
                 }
@@ -120,17 +121,15 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                     }, ct) ?? throw Unknown();
                     if (evidence.Offer is { } delivery)
                     {
-                        await TapAsync(serial, detail.Button, ct);
-                        var service = new UnitDeliveryService(automation, ocr!, protection ?? new(), delivery.MinimumLevel);
-                        if (await service.SubmitAsync(serial, ct))
+                        var remaining = await DeliverOrRestockAsync(serial, slot, detail, delivery, ct);
+                        if (remaining is null)
                         {
                             await FinishReportAsync(serial, slot, ct, delivering: true);
                             reported++;
                             continue;
                         }
+                        detail = remaining;
                         failures.Add(L.Format($"第 {slot + 1} 栏没有可安全交付的{delivery.Unit}"));
-                        detail = await WaitAsync(serial, frame => ReadDetail(frame, ct) is { Action: Control.Deliver } d ? d : null, ct)
-                            ?? throw Unknown();
                     }
                     else
                         failures.Add(L.Format($"第 {slot + 1} 栏交付委托未能与表格核对"));
@@ -197,6 +196,45 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
             await WaitForListAsync(serial, ct);
             return new CharacterRequestResult(accepted, reported, failures);
         }, ct);
+
+    // 返回详情表示本栏仍未完成。只有确认交付已发送才进入领奖，补开发本身不计为完成。
+    private async Task<Detail?> DeliverOrRestockAsync(string serial, int slot, Detail detail, DeliveryOffer offer, CancellationToken ct)
+    {
+        var attempt = DeliveryProductionAttempt.Start(serial, slot, offer);
+        var guards = protection ?? new DeliveryProtection();
+        var inventory = new UnitDeliveryService(automation, ocr!, guards, offer.MinimumLevel);
+        await TapAsync(serial, detail.Button, ct);
+        if (await inventory.SubmitAsync(serial, ct)) return null;
+
+        detail = await WaitSameDeliveryAsync(serial, offer, ct);
+        var target = DevelopmentRequestIndex.ForDelivery(offer, guards);
+        if (target is null || RestockFromList is null) return detail;
+        await TapAsync(serial, detail.Back, ct);
+        await RequireSlotAsync();
+        var made = await RestockFromList(serial, target, attempt.Reserve, ct);
+        await RequireSlotAsync();
+        await automation.TapAsync(serial, 427 + 535 * slot, 410, ct);
+        detail = await WaitSameDeliveryAsync(serial, offer, ct);
+        if (!made) return detail;
+
+        // 重开库存，只重选一次，仍然执行全部等级与突破保护。
+        await TapAsync(serial, detail.Button, ct);
+        return await inventory.SubmitAsync(serial, ct) ? null : await WaitSameDeliveryAsync(serial, offer, ct);
+
+        async Task RequireSlotAsync()
+        {
+            var list = await WaitForListAsync(serial, ct);
+            if ((list.ActiveMask & (1 << slot)) == 0) throw Unknown();
+        }
+    }
+
+    private async Task<Detail> WaitSameDeliveryAsync(string serial, DeliveryOffer expected, CancellationToken ct) =>
+        await WaitAsync(serial, frame =>
+        {
+            var detail = ReadDetail(frame, ct);
+            return detail is { Action: Control.Deliver, Title.Kind: RequestKind.UnitDelivery } &&
+                _catalog!.ReadDelivery(frame, detail.Title.Region, ct) == expected ? detail : null;
+        }, ct) ?? throw Unknown();
 
     private async Task<DevelopmentScreen> WaitForDevelopmentAsync(string serial, CancellationToken ct) =>
         await WaitAsync(serial, frame =>

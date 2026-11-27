@@ -9,7 +9,7 @@ public sealed partial class DevelopService
 {
     /// <summary>
     /// 在已打开的路线图上搜索，返回连续两帧稳定目标但不点击，供实际画面验证复用。
-    /// 官方单位先同帧检查两张放大立绘，另一单位命中时最多定向拖动两次，每次识别；失败后归位并逐行或逐列扫描。
+    /// 官方单位先同帧检查两张放大立绘，另一单位命中时最多定向拖动两次，每次识别；未命中时对齐一侧边缘，逐行或逐列反向扫描。
     /// 固定工具栏不参与识别或边界比较。步长保留重叠，避免大比例机体跨屏漏检。
     /// </summary>
     public async Task<TemplateMatchResult?> FindOnRoadmapAsync(string serial,
@@ -98,6 +98,7 @@ public sealed partial class DevelopService
         }
 
         // 截图相似只说明未观察到位移，不能用一次未生效的手势直接授权换行或结束扫描。
+        long positionX = 0, positionY = 0, startX = 0, startY = 0;
         async Task<(bool Moved, bool Found)> MoveAsync(int dx, int dy)
         {
             var staticGestures = 0;
@@ -118,6 +119,8 @@ public sealed partial class DevelopService
                 var displacement = RoadmapMotion.Measure(before, previous!, stepX, stepY, out var stationary);
                 if (displacement != 0)
                 {
+                    if (dx != 0) positionX += displacement;
+                    else positionY += displacement;
                     timeout.CancelAfter(TimeSpan.FromMinutes(5));
                     _log.Info($"路线图拖动后已观察到画布位移 {displacement}px（第 {attempt + 1} 次手势）");
                     return (true, false);
@@ -172,53 +175,55 @@ public sealed partial class DevelopService
                     inspectedFrame = null;
                     if (await InspectAsync()) return result;
                 }
-                _log.Info("两次快捷拖动后均未确认目标，继续归位并按实际边界扫描");
+                _log.Info("两次快捷拖动后均未确认目标，从当前视口按实际边界扫描");
             }
         }
         // 实机上 850px 手势可推进约 1300px，缩短扫描步幅以保留整台机体与下一帧的重叠区。
         const int scanStepX = 490;
-        var lastMoveWasHorizontal = false;
-        // 任意起点到角落沿途也属于搜索范围。记住最后实际推进的轴，抵达角落后沿另一轴展开。
-        _log.Info("路线图定位左上角：检查页面与位移，疑似边界先识别目标再复核");
-        // 委托基准机体在起始列，先向右拖画布找左边界，再沿此列搜索。其它任务保留原扫描顺序。
-        var axes = preferLeftEdge ? new[] { (scanStepX, 0), (0, 250) } : new[] { (0, 250), (scanStepX, 0) };
-        foreach (var (dx, dy) in axes)
+        var advance = preferLeftEdge ? (X: -scanStepX, Y: 0) : (X: 0, Y: -250);
+        var firstSweep = preferLeftEdge ? (X: 0, Y: -250) : (X: -scanStepX, Y: 0);
+        var stripName = preferLeftEdge ? "列" : "行";
+
+        // 只向顶边（基准机体向左边）对齐。在当前横坐标开始首行，不再为了找角落先横穿整排。
+        async Task<bool> ReachEdgeAsync(int dx, int dy, byte[]? rejoin = null)
         {
-            var edge = false;
-            for (var i = 0; maxDragsPerDirection == 0 || i < maxDragsPerDirection; i++)
-            {
-                var move = await MoveAsync(dx, dy);
-                if (move.Found) return result;
-                if (!move.Moved) { edge = true; break; }
-                lastMoveWasHorizontal = dx != 0;
-                if (await InspectAsync()) return result;
-            }
-            if (!edge)
-            {
-                // 预算内最后一帧仍有机会命中，但不能在边界未确认时声称覆盖全图。
-                if (await InspectAsync()) return result;
-                _log.Warn("路线图归位达到拖动上限，未确认边界，停止搜索"); return null;
-            }
-        }
-        var alongColumns = preferLeftEdge || lastMoveWasHorizontal;
-        var stripName = alongColumns ? "列" : "行";
-        var sweep = alongColumns ? (X: 0, Y: -250) : (X: -scanStepX, Y: 0);
-        var advance = alongColumns ? (X: -scanStepX, Y: 0) : (X: 0, Y: -250);
-        _log.Info($"路线图已归位，开始逐{stripName}扫描");
-        for (var strip = 0; maxDragsPerDirection == 0 || strip < maxDragsPerDirection; strip++)
-        {
-            var edge = false;
             for (var step = 0; maxDragsPerDirection == 0 || step < maxDragsPerDirection; step++)
             {
-                var move = await MoveAsync(sweep.X, sweep.Y);
-                if (move.Found) return result;
-                if (!move.Moved) { edge = true; break; }
-                if (await InspectAsync()) return result;
+                var move = await MoveAsync(dx, dy);
+                if (move.Found || !move.Moved || await InspectAsync()) return true;
+                if (rejoin is not null && Math.Abs(positionX-startX) < 310 && Math.Abs(positionY-startY) < 160 &&
+                    RoadmapMotion.OverlapsScannedView(rejoin, previous!, dx, dy)) return true;
             }
-            if (!edge) { _log.Warn("路线图扫描达到指定步数上限，停止搜索"); return null; }
+            _log.Warn("路线图扫描达到指定步数上限，未确认边界");
+            return false;
+        }
+        if (!await ReachEdgeAsync(-advance.X, -advance.Y) || result is not null) return result;
+
+        // 只用一个短手势检查首排另一侧是否已经到边，不沿该方向继续归位。
+        var probe = await MoveAsync(-firstSweep.X / 3, -firstSweep.Y / 3);
+        if (probe.Found || (probe.Moved && await InspectAsync())) return result;
+        var start = probe.Moved ? previous : null;
+        (startX, startY) = (positionX, positionY);
+        var sweep = firstSweep;
+        for (var strip = 0; maxDragsPerDirection == 0 || strip < maxDragsPerDirection; strip++)
+        {
+            if (!await ReachEdgeAsync(sweep.X, sweep.Y) || result is not null) return result;
             var advanced = await MoveAsync(advance.X, advance.Y);
             if (advanced.Found) return result;
-            if (!advanced.Moved) { _log.Warn("路线图扫描结束，未找到稳定目标机体"); return null; }
+            if (!advanced.Moved)
+            {
+                if (start is not null)
+                {
+                    // 唯一可能遗漏的是首排起点后方。其他排全部扫完才补这一段。
+                    // 沿当前所在侧直接回首排，避免为补查而横穿已经扫完的末排。
+                    if (strip > 0 && (!await ReachEdgeAsync(-advance.X, -advance.Y) || result is not null)) return result;
+                    if (sweep == firstSweep)
+                        await ReachEdgeAsync(-firstSweep.X, -firstSweep.Y);
+                    else if (!previous!.AsSpan().SequenceEqual(start))
+                        await ReachEdgeAsync(firstSweep.X, firstSweep.Y, start);
+                }
+                return result;
+            }
             if (await InspectAsync()) return result;
             sweep = (-sweep.X, -sweep.Y);
             _log.Info($"路线图换至第 {strip + 2} {stripName}后反向扫描");

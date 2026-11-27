@@ -18,21 +18,34 @@ internal sealed class UnitDeliveryService(AutomationService automation, OnnxText
             view = await ScrollAsync(serial, view, towardBottom: false, ct);
         if (view.Count == 1)
         {
-            if (view.Badge is not { } old) return await CancelAsync(serial, view, ct);
+            if (view.Badge is not { } old) throw SelectionUnknown();
             await automation.TapAsync(serial, old.CenterX, old.CenterY, ct);
             view = await ObserveAsync(serial, ct, expectedCount: 0);
         }
 
         view = await ScrollToBottomAsync(serial, view, ct);
+        var unreadable = view.UnreadableLevel;
         while (view.Candidate is null && !view.AtTop)
+        {
             view = await ScrollAsync(serial, view, towardBottom: false, ct);
+            unreadable |= view.UnreadableLevel;
+        }
+        if (view.Candidate is null && unreadable) throw SelectionUnknown();
+        if (view.Candidate is null && view.ThumbTop < 0)
+        {
+            var before = await automation.CaptureScreenAsync(serial, ct);
+            await automation.DragAsync(serial, 630, 738, 630, 545, 400, ct);
+            view = await ObserveAsync(serial, ct, expectedCount: 0);
+            var after = await automation.CaptureScreenAsync(serial, ct);
+            if (view.ThumbTop >= 0 || view.UnreadableLevel || !InventoryUnmoved(before, after)) throw SelectionUnknown();
+        }
         if (view.Candidate is not { } card) return await CancelAsync(serial, view, ct);
 
         await automation.TapAsync(serial, card.X, card.ArtY + 37, ct);
         view = await ObserveAsync(serial, ct, expectedCount: 1);
         if (view.Badge is not { } badge || Math.Abs(badge.X - (card.X + 25)) > 5 ||
             Math.Abs(badge.Y - (card.ArtY - 32)) > 5 || view.Submit is not { } submit)
-            return await CancelAsync(serial, view, ct);
+            throw SelectionUnknown();
         await automation.TapAsync(serial, submit.CenterX, submit.CenterY, ct);
         return true;
     }
@@ -62,6 +75,22 @@ internal sealed class UnitDeliveryService(AutomationService automation, OnnxText
         }, (a, b) => a == b, GameTiming.RecognitionTimeoutMs, ct)
         ?? throw new InvalidOperationException(L.Text("无法确认交付列表或选中状态，已停止本轮。"));
 
+    private static bool InventoryUnmoved(ScreenImage before, ScreenImage after)
+    {
+        var changed = 0;
+        for (var y = 516; y < 778; y += 4)
+            for (var x = 505; x < 1410; x += 4)
+            {
+                var i = (y * before.Width + x) * 4;
+                if (Math.Abs(before.Bgra[i + 1] - after.Bgra[i + 1]) > 20) changed++;
+            }
+        return changed < 70;
+    }
+
+    private static InvalidOperationException SelectionUnknown() =>
+        new(L.Text("无法确认交付列表或选中状态，已停止本轮。"));
+
+    // false 仅表示遍历库存后没有合格卡片，调用方才可考虑补开发。
     private async Task<bool> CancelAsync(string serial, DeliveryPage.View view, CancellationToken ct)
     {
         await automation.TapAsync(serial, view.Cancel.CenterX, view.Cancel.CenterY, ct);

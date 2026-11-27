@@ -652,7 +652,17 @@
       "SeriesIds": [
         "10"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u00150.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u00150.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "10",
+          "DiagramId": "100101",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 1,
+          "Capital": 7000
+        }
+      ]
     },
     "1001000200": {
       "Name": "钢加农",
@@ -673,7 +683,17 @@
       "SeriesIds": [
         "10"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u00400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u00400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "10",
+          "DiagramId": "100101",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 1,
+          "Capital": 2500
+        }
+      ]
     },
     "1001000500": {
       "Name": "高推进型核心战机",
@@ -687,49 +707,119 @@
       "SeriesIds": [
         "10"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u00600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u00600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "10",
+          "DiagramId": "100101",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 1,
+          "Capital": 2500
+        }
+      ]
     },
     "1001000700": {
       "Name": "铁球",
       "SeriesIds": [
         "10"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u00700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u00700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "10",
+          "DiagramId": "100101",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 1,
+          "Capital": 1000
+        }
+      ]
     },
     "1001000900": {
       "Name": "渣古Ⅱ",
       "SeriesIds": [
         "10"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u00900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u00900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "10",
+          "DiagramId": "100102",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 1,
+          "Capital": 2500
+        }
+      ]
     },
     "1001001300": {
       "Name": "大魔",
       "SeriesIds": [
         "10"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u01300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u01300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "10",
+          "DiagramId": "100102",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 1,
+          "Capital": 4500
+        }
+      ]
     },
     "1001001400": {
       "Name": "里克·大魔",
       "SeriesIds": [
         "10"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u01400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u01400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "10",
+          "DiagramId": "100102",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 1,
+          "Capital": 6500
+        }
+      ]
     },
     "1001001500": {
       "Name": "格鲁古古",
       "SeriesIds": [
         "10"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u01500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u01500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "10",
+          "DiagramId": "100102",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 1,
+          "Capital": 9000
+        }
+      ]
     },
     "1001001700": {
       "Name": "强人",
       "SeriesIds": [
         "10"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u01700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u01700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "10",
+          "DiagramId": "100102",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 1,
+          "Capital": 9000
+        }
+      ]
     },
     "1001001800": {
       "Name": "战蟹",
@@ -757,14 +847,34 @@
       "SeriesIds": [
         "10"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u02600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u02600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "10",
+          "DiagramId": "100102",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 1,
+          "Capital": 6500
+        }
+      ]
     },
     "1001002800": {
       "Name": "布劳·布罗",
       "SeriesIds": [
         "10"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u02800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u02800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "10",
+          "DiagramId": "100102",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 1,
+          "Capital": 13500
+        }
+      ]
     },
     "1001002900": {
       "Name": "爱尔美斯",
@@ -785,7 +895,17 @@
       "SeriesIds": [
         "10"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u03800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0010u03800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "10",
+          "DiagramId": "100101",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 1,
+          "Capital": 1000
+        }
+      ]
     },
     "1007000100": {
       "Name": "原型高达",
@@ -793,7 +913,17 @@
         "70",
         "10"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0070u00100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0070u00100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "10",
+          "DiagramId": "100101",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 1,
+          "Capital": 4500
+        }
+      ]
     },
     "1007000200": {
       "Name": "G-3高达",
@@ -885,7 +1015,17 @@
         "810",
         "950"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u00600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u00600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "810",
+          "DiagramId": "108101",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 7500
+        }
+      ]
     },
     "1080000800": {
       "Name": "超级高达",
@@ -909,7 +1049,17 @@
         "800",
         "810"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u01000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u01000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "810",
+          "DiagramId": "108101",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 7500
+        }
+      ]
     },
     "1080001100": {
       "Name": "里克·迪亚斯",
@@ -917,7 +1067,17 @@
         "800",
         "810"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u01100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u01100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "810",
+          "DiagramId": "108101",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 4500
+        }
+      ]
     },
     "1080001200": {
       "Name": "迪杰",
@@ -933,7 +1093,17 @@
         "800",
         "810"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u01300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u01300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "810",
+          "DiagramId": "108101",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 4500
+        }
+      ]
     },
     "1080001400": {
       "Name": "吉姆Ⅱ (奥古式样)",
@@ -941,7 +1111,17 @@
         "800",
         "810"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u01400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u01400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "810",
+          "DiagramId": "108101",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 2000
+        }
+      ]
     },
     "1080001600": {
       "Name": "高渣古 (提坦斯式样)",
@@ -949,7 +1129,17 @@
         "800",
         "810"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u01600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u01600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "810",
+          "DiagramId": "108102",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 2000
+        }
+      ]
     },
     "1080002100": {
       "Name": "汗布拉比",
@@ -957,7 +1147,17 @@
         "800",
         "810"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u02100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u02100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "810",
+          "DiagramId": "108102",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 17000
+        }
+      ]
     },
     "1080002300": {
       "Name": "加布斯雷",
@@ -965,7 +1165,17 @@
         "800",
         "810"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u02300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u02300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "810",
+          "DiagramId": "108102",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 13500
+        }
+      ]
     },
     "1080002500": {
       "Name": "拜亚兰",
@@ -989,7 +1199,17 @@
         "800",
         "810"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u02800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u02800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "810",
+          "DiagramId": "108102",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 17000
+        }
+      ]
     },
     "1080003000": {
       "Name": "波利诺克·沙曼",
@@ -1029,7 +1249,17 @@
         "800",
         "810"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u03600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0800u03600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "810",
+          "DiagramId": "108102",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 10500
+        }
+      ]
     },
     "1080004200": {
       "Name": "卡碧尼",
@@ -1075,7 +1305,17 @@
         "810",
         "950"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0830u00600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0830u00600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "950",
+          "DiagramId": "109501",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 30,
+          "Capital": 6500
+        }
+      ]
     },
     "1095000100": {
       "Name": "ZZ高达",
@@ -1096,14 +1336,34 @@
       "SeriesIds": [
         "950"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u00400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u00400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "950",
+          "DiagramId": "109501",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 30,
+          "Capital": 3000
+        }
+      ]
     },
     "1095000500": {
       "Name": "加萨D",
       "SeriesIds": [
         "950"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u00500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u00500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "950",
+          "DiagramId": "109502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 30,
+          "Capital": 3000
+        }
+      ]
     },
     "1095001100": {
       "Name": "悍马·悍马",
@@ -1117,7 +1377,17 @@
       "SeriesIds": [
         "950"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u01200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u01200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "950",
+          "DiagramId": "109502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 30,
+          "Capital": 14000
+        }
+      ]
     },
     "1095001300": {
       "Name": "龙飞",
@@ -1131,7 +1401,17 @@
       "SeriesIds": [
         "950"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u01700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u01700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "950",
+          "DiagramId": "109502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 30,
+          "Capital": 9500
+        }
+      ]
     },
     "1095001900": {
       "Name": "改修型格鲁古古",
@@ -1145,7 +1425,17 @@
       "SeriesIds": [
         "950"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u02000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u02000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "950",
+          "DiagramId": "109502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 30,
+          "Capital": 13500
+        }
+      ]
     },
     "1095002200": {
       "Name": "卡斯R",
@@ -1187,14 +1477,34 @@
       "SeriesIds": [
         "950"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u02800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u02800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "950",
+          "DiagramId": "109502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 30,
+          "Capital": 13500
+        }
+      ]
     },
     "1095003200": {
       "Name": "精神感应高达Mk-II",
       "SeriesIds": [
         "950"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u03200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u03200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "950",
+          "DiagramId": "109502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 30,
+          "Capital": 22500
+        }
+      ]
     },
     "1095003400": {
       "Name": "昆曼沙",
@@ -1208,7 +1518,17 @@
       "SeriesIds": [
         "950"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u03500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u03500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "950",
+          "DiagramId": "109502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 30,
+          "Capital": 5500
+        }
+      ]
     },
     "1095003600": {
       "Name": "多瓦吉改",
@@ -1222,28 +1542,68 @@
       "SeriesIds": [
         "950"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u03700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u03700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "950",
+          "DiagramId": "109502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 30,
+          "Capital": 13500
+        }
+      ]
     },
     "1095004000": {
       "Name": "卡普尔",
       "SeriesIds": [
         "950"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u04000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u04000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "950",
+          "DiagramId": "109502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 30,
+          "Capital": 3000
+        }
+      ]
     },
     "1095004200": {
       "Name": "米加炮艇",
       "SeriesIds": [
         "950"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u04200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u04200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "950",
+          "DiagramId": "109501",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 30,
+          "Capital": 10500
+        }
+      ]
     },
     "1095004300": {
       "Name": "渣古Ⅲ",
       "SeriesIds": [
         "950"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u04300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g0950u04300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "950",
+          "DiagramId": "109502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 30,
+          "Capital": 9500
+        }
+      ]
     },
     "1098000400": {
       "Name": "陆战高机动型渣古",
@@ -1273,7 +1633,17 @@
       "SeriesIds": [
         "1100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1100u00200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1100u00200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1100",
+          "DiagramId": "111001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 9500
+        }
+      ]
     },
     "1110000300": {
       "Name": "杰刚",
@@ -1281,14 +1651,34 @@
         "1100",
         "1620"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1100u00300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1100u00300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1100",
+          "DiagramId": "111001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 4000
+        }
+      ]
     },
     "1110000400": {
       "Name": "灵格斯 (B.W.S)",
       "SeriesIds": [
         "1100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1100u00400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1100u00400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1100",
+          "DiagramId": "111001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 16000
+        }
+      ]
     },
     "1110000500": {
       "Name": "沙扎比",
@@ -1309,14 +1699,34 @@
       "SeriesIds": [
         "1100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1100u00700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1100u00700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1100",
+          "DiagramId": "111001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 4000
+        }
+      ]
     },
     "1110000900": {
       "Name": "乍得·多加 (邱尼·盖斯专用)",
       "SeriesIds": [
         "1100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1100u00900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1100u00900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1100",
+          "DiagramId": "111001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 16000
+        }
+      ]
     },
     "1110001000": {
       "Name": "乍得·多加 (葵丝·艾亚专用)",
@@ -1331,7 +1741,17 @@
         "1140",
         "1100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1140u00300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1140u00300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1100",
+          "DiagramId": "111001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 22500
+        }
+      ]
     },
     "1114000900": {
       "Name": "基拉·德卡改",
@@ -1339,7 +1759,17 @@
         "1140",
         "1100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1140u00900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1140u00900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1100",
+          "DiagramId": "111001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 9500
+        }
+      ]
     },
     "1114001000": {
       "Name": "基拉·德卡（精神感应系统实验型）",
@@ -1347,7 +1777,17 @@
         "1140",
         "1100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1140u01000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1140u01000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1100",
+          "DiagramId": "111001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 15000
+        }
+      ]
     },
     "1115000100": {
       "Name": "量产型ν高达（incom装备）",
@@ -1355,7 +1795,17 @@
         "1150",
         "1100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1150u00100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1150u00100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1100",
+          "DiagramId": "111001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 16000
+        }
+      ]
     },
     "1115000200": {
       "Name": "量产型ν高达（飞翼浮游炮装备）",
@@ -1363,7 +1813,17 @@
         "1150",
         "1100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1150u00200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1150u00200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1100",
+          "DiagramId": "111001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 22500
+        }
+      ]
     },
     "1125000100": {
       "Name": "独角兽高达 (独角兽模式)",
@@ -1384,7 +1844,17 @@
       "SeriesIds": [
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u00300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u00300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1250",
+          "DiagramId": "112501",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 50,
+          "Capital": 24500
+        }
+      ]
     },
     "1125000700": {
       "Name": "基拉·祖鲁",
@@ -1405,14 +1875,34 @@
       "SeriesIds": [
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u01600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u01600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1250",
+          "DiagramId": "112501",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 44000
+        }
+      ]
     },
     "1125001900": {
       "Name": "吉姆Ⅱ简易强袭型",
       "SeriesIds": [
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u01900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u01900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1250",
+          "DiagramId": "112501",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 4000
+        }
+      ]
     },
     "1125002100": {
       "Name": "强袭杰刚原型机",
@@ -1426,7 +1916,17 @@
       "SeriesIds": [
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u02200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u02200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1250",
+          "DiagramId": "112501",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 50,
+          "Capital": 19000
+        }
+      ]
     },
     "1125002300": {
       "Name": "杰斯塔",
@@ -1440,21 +1940,51 @@
       "SeriesIds": [
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u02500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u02500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1250",
+          "DiagramId": "112501",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 50,
+          "Capital": 13500
+        }
+      ]
     },
     "1125002700": {
       "Name": "拜亚兰改装型",
       "SeriesIds": [
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u02700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u02700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1250",
+          "DiagramId": "112501",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 20000
+        }
+      ]
     },
     "1125003000": {
       "Name": "基拉·德卡（带袖的）",
       "SeriesIds": [
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u03000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u03000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1250",
+          "DiagramId": "112502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 4000
+        }
+      ]
     },
     "1125003400": {
       "Name": "杰·祖鲁",
@@ -1475,7 +2005,17 @@
       "SeriesIds": [
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u03600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u03600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1250",
+          "DiagramId": "112502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 50,
+          "Capital": 13500
+        }
+      ]
     },
     "1125004100": {
       "Name": "伊夫里特勇士型",
@@ -1496,21 +2036,51 @@
       "SeriesIds": [
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u04500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u04500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1250",
+          "DiagramId": "112502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 50,
+          "Capital": 9500
+        }
+      ]
     },
     "1125004900": {
       "Name": "银弹",
       "SeriesIds": [
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u04900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u04900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1250",
+          "DiagramId": "112501",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 26500
+        }
+      ]
     },
     "1125005300": {
       "Name": "罗森·祖鲁",
       "SeriesIds": [
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u05300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u05300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1250",
+          "DiagramId": "112502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 26500
+        }
+      ]
     },
     "1125005500": {
       "Name": "刹帝利补修型",
@@ -1524,7 +2094,17 @@
       "SeriesIds": [
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u06000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1250u06000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1250",
+          "DiagramId": "112502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 20000
+        }
+      ]
     },
     "1133000100": {
       "Name": "德尔塔高达",
@@ -1548,7 +2128,17 @@
         "1330",
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1330u01500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1330u01500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1250",
+          "DiagramId": "112502",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 20000
+        }
+      ]
     },
     "1144000100": {
       "Name": "NT高达A装备",
@@ -1572,7 +2162,17 @@
         "1440",
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u00300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u00300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1440",
+          "DiagramId": "114401",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 55,
+          "Capital": 26000
+        }
+      ]
     },
     "1144000700": {
       "Name": "新安州·原石",
@@ -1588,7 +2188,17 @@
         "1440",
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u00800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u00800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1440",
+          "DiagramId": "114401",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 55,
+          "Capital": 13500
+        }
+      ]
     },
     "1144000900": {
       "Name": "杰斯塔 (杰札尔队规格B／C装备)",
@@ -1596,7 +2206,17 @@
         "1440",
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u00900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u00900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1440",
+          "DiagramId": "114401",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 8500
+        }
+      ]
     },
     "1144001200": {
       "Name": "银弹·镇压者",
@@ -1604,7 +2224,17 @@
         "1440",
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u01200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u01200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1440",
+          "DiagramId": "114401",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 55,
+          "Capital": 14500
+        }
+      ]
     },
     "1144001300": {
       "Name": "迪杰 (NT版)",
@@ -1612,7 +2242,17 @@
         "1440",
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u01300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u01300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1440",
+          "DiagramId": "114401",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 8500
+        }
+      ]
     },
     "1144001400": {
       "Name": "古斯塔夫·卡尔 (NT版)",
@@ -1620,7 +2260,17 @@
         "1440",
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u01400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u01400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1440",
+          "DiagramId": "114401",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 55,
+          "Capital": 13500
+        }
+      ]
     },
     "1144001600": {
       "Name": "杰刚D型护卫队规格",
@@ -1628,7 +2278,17 @@
         "1440",
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u01600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u01600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1440",
+          "DiagramId": "114401",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 4000
+        }
+      ]
     },
     "1144001700": {
       "Name": "NT高达",
@@ -1636,7 +2296,17 @@
         "1440",
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u01700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u01700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1440",
+          "DiagramId": "114401",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 55,
+          "Capital": 19500
+        }
+      ]
     },
     "1144001800": {
       "Name": "里歇尔C型 (雷比尔将军号配备机)",
@@ -1644,7 +2314,17 @@
         "1440",
         "1250"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u01800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1440u01800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1440",
+          "DiagramId": "114401",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 55,
+          "Capital": 13500
+        }
+      ]
     },
     "1144001900": {
       "Name": "杰刚A2型 (雷比尔将军号配备机)",
@@ -1676,7 +2356,17 @@
         "1500",
         "1100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1500u00600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1500u00600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1500",
+          "DiagramId": "150001",
+          "Tab": 1,
+          "TabCount": 1,
+          "Level": 50,
+          "Capital": 11500
+        }
+      ]
     },
     "1150000700": {
       "Name": "梅萨F02型（布雷型装备）",
@@ -1700,7 +2390,17 @@
         "1550",
         "1620"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1550u00100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1550u00100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1620",
+          "DiagramId": "116201",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 55,
+          "Capital": 15000
+        }
+      ]
     },
     "1155000200": {
       "Name": "高达F90 (A.D.S.混合装备时)",
@@ -1716,7 +2416,17 @@
         "1550",
         "1620"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1550u00300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1550u00300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1620",
+          "DiagramId": "116201",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 55,
+          "Capital": 21500
+        }
+      ]
     },
     "1159000200": {
       "Name": "RF渣古",
@@ -1754,70 +2464,170 @@
       "SeriesIds": [
         "1620"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u00300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u00300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1620",
+          "DiagramId": "116201",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 55,
+          "Capital": 32500
+        }
+      ]
     },
     "1162000400": {
       "Name": "贝尔卡·达拉斯",
       "SeriesIds": [
         "1620"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u00400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u00400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1620",
+          "DiagramId": "116201",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 55,
+          "Capital": 19500
+        }
+      ]
     },
     "1162000500": {
       "Name": "赫比钢",
       "SeriesIds": [
         "1620"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u00500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u00500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1620",
+          "DiagramId": "116201",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 8500
+        }
+      ]
     },
     "1162000600": {
       "Name": "G加农",
       "SeriesIds": [
         "1620"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u00600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u00600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1620",
+          "DiagramId": "116201",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 9000
+        }
+      ]
     },
     "1162000800": {
       "Name": "德南·佐恩",
       "SeriesIds": [
         "1620"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u00800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u00800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1620",
+          "DiagramId": "116201",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 8500
+        }
+      ]
     },
     "1162000900": {
       "Name": "德南·格",
       "SeriesIds": [
         "1620"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u00900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u00900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1620",
+          "DiagramId": "116201",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 13500
+        }
+      ]
     },
     "1162001200": {
       "Name": "贝尔卡·基洛斯",
       "SeriesIds": [
         "1620"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u01200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u01200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1620",
+          "DiagramId": "116201",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 55,
+          "Capital": 26000
+        }
+      ]
     },
     "1162001400": {
       "Name": "达基·伊里斯",
       "SeriesIds": [
         "1620"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u01400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u01400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1620",
+          "DiagramId": "116201",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 55,
+          "Capital": 26000
+        }
+      ]
     },
     "1162001900": {
       "Name": "钢坦克R44",
       "SeriesIds": [
         "1620"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u01900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u01900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1620",
+          "DiagramId": "116201",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 4000
+        }
+      ]
     },
     "1162002000": {
       "Name": "艾维鲁·S",
       "SeriesIds": [
         "1620"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u02000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1620u02000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1620",
+          "DiagramId": "116201",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 4000
+        }
+      ]
     },
     "1163000200": {
       "Name": "贝尔卡·基洛斯武装强化型",
@@ -1832,35 +2642,85 @@
       "SeriesIds": [
         "1750"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u00100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u00100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1750",
+          "DiagramId": "175001",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 27000
+        }
+      ]
     },
     "1175000300": {
       "Name": "钢伊吉",
       "SeriesIds": [
         "1750"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u00300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u00300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1750",
+          "DiagramId": "175001",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 50,
+          "Capital": 14500
+        }
+      ]
     },
     "1175000400": {
       "Name": "杰姆兹刚",
       "SeriesIds": [
         "1750"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u00400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u00400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1750",
+          "DiagramId": "175001",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 50,
+          "Capital": 4000
+        }
+      ]
     },
     "1175000500": {
       "Name": "杰维林",
       "SeriesIds": [
         "1750"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u00500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u00500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1750",
+          "DiagramId": "175001",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 50,
+          "Capital": 9000
+        }
+      ]
     },
     "1175000600": {
       "Name": "索罗",
       "SeriesIds": [
         "1750"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u00600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u00600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1750",
+          "DiagramId": "175002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 50,
+          "Capital": 4000
+        }
+      ]
     },
     "1175000800": {
       "Name": "葛德拉夫＆滚动巨轮",
@@ -1874,7 +2734,17 @@
       "SeriesIds": [
         "1750"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u00900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u00900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1750",
+          "DiagramId": "175002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 50,
+          "Capital": 9500
+        }
+      ]
     },
     "1175001100": {
       "Name": "哥特拉坦",
@@ -1888,7 +2758,17 @@
       "SeriesIds": [
         "1750"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u01500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u01500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1750",
+          "DiagramId": "175001",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 33500
+        }
+      ]
     },
     "1175001900": {
       "Name": "V2高达",
@@ -1902,7 +2782,17 @@
       "SeriesIds": [
         "1750"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u02300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u02300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1750",
+          "DiagramId": "175001",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 20500
+        }
+      ]
     },
     "1175003300": {
       "Name": "梅梅德萨",
@@ -1923,7 +2813,17 @@
       "SeriesIds": [
         "1750"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u04400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u04400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1750",
+          "DiagramId": "175002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 50,
+          "Capital": 9500
+        }
+      ]
     },
     "1175004700": {
       "Name": "夏柯",
@@ -1937,14 +2837,34 @@
       "SeriesIds": [
         "1750"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u04800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u04800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1750",
+          "DiagramId": "175002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 26000
+        }
+      ]
     },
     "1175005100": {
       "Name": "康提奥",
       "SeriesIds": [
         "1750"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u05100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u05100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1750",
+          "DiagramId": "175002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 26500
+        }
+      ]
     },
     "1175005200": {
       "Name": "贾巴克",
@@ -1958,7 +2878,17 @@
       "SeriesIds": [
         "1750"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u05300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g1750u05300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "1750",
+          "DiagramId": "175002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 26000
+        }
+      ]
     },
     "1175005400": {
       "Name": "里格·康提奥",
@@ -2000,35 +2930,85 @@
       "SeriesIds": [
         "2000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u01200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u01200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2000",
+          "DiagramId": "120001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 14500
+        }
+      ]
     },
     "1200001500": {
       "Name": "约翰牛高达",
       "SeriesIds": [
         "2000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u01500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u01500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2000",
+          "DiagramId": "120001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 8500
+        }
+      ]
     },
     "1200001600": {
       "Name": "尼洛斯高达",
       "SeriesIds": [
         "2000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u01600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u01600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2000",
+          "DiagramId": "120001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 13500
+        }
+      ]
     },
     "1200001700": {
       "Name": "死亡军团",
       "SeriesIds": [
         "2000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u01700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u01700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2000",
+          "DiagramId": "120001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1200001900": {
       "Name": "死亡伯迪",
       "SeriesIds": [
         "2000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u01900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u01900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2000",
+          "DiagramId": "120001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 8500
+        }
+      ]
     },
     "1200002100": {
       "Name": "死亡野兽",
@@ -2049,21 +3029,51 @@
       "SeriesIds": [
         "2000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u02400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u02400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2000",
+          "DiagramId": "120001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 13500
+        }
+      ]
     },
     "1200002500": {
       "Name": "洗牌同盟·梅花",
       "SeriesIds": [
         "2000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u02500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u02500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2000",
+          "DiagramId": "120001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 8500
+        }
+      ]
     },
     "1200002700": {
       "Name": "洗牌同盟·黑桃",
       "SeriesIds": [
         "2000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u02700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u02700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2000",
+          "DiagramId": "120001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 8500
+        }
+      ]
     },
     "1200002900": {
       "Name": "洗牌同盟·方块",
@@ -2077,21 +3087,51 @@
       "SeriesIds": [
         "2000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u03100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u03100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2000",
+          "DiagramId": "120001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 13500
+        }
+      ]
     },
     "1200003300": {
       "Name": "卡星",
       "SeriesIds": [
         "2000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u03300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u03300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2000",
+          "DiagramId": "120001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1200003400": {
       "Name": "诺布什",
       "SeriesIds": [
         "2000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u03400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u03400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2000",
+          "DiagramId": "120001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1200003600": {
       "Name": "曼陀罗高达",
@@ -2105,7 +3145,17 @@
       "SeriesIds": [
         "2000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u03700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u03700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2000",
+          "DiagramId": "120001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 8500
+        }
+      ]
     },
     "1200003800": {
       "Name": "人鱼高达",
@@ -2119,7 +3169,17 @@
       "SeriesIds": [
         "2000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u04700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2000u04700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2000",
+          "DiagramId": "120001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 14500
+        }
+      ]
     },
     "1200004800": {
       "Name": "旭日高达",
@@ -2168,14 +3228,34 @@
       "SeriesIds": [
         "2100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u00700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u00700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2100",
+          "DiagramId": "121001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 30,
+          "Capital": 14500
+        }
+      ]
     },
     "1210000800": {
       "Name": "神龙高达",
       "SeriesIds": [
         "2100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u00800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u00800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2100",
+          "DiagramId": "121001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 30,
+          "Capital": 19000
+        }
+      ]
     },
     "1210000900": {
       "Name": "艾比安高达",
@@ -2203,21 +3283,51 @@
       "SeriesIds": [
         "2100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u01300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u01300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2100",
+          "DiagramId": "121001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 30,
+          "Capital": 3000
+        }
+      ]
     },
     "1210001700": {
       "Name": "里奥 (肩部加农炮装备)",
       "SeriesIds": [
         "2100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u01700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u01700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2100",
+          "DiagramId": "121001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 30,
+          "Capital": 6500
+        }
+      ]
     },
     "1210001900": {
       "Name": "艾亚里斯",
       "SeriesIds": [
         "2100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u01900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u01900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2100",
+          "DiagramId": "121001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 30,
+          "Capital": 7000
+        }
+      ]
     },
     "1210002100": {
       "Name": "艾亚里斯 (OZ式样)",
@@ -2231,42 +3341,102 @@
       "SeriesIds": [
         "2100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u02200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u02200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2100",
+          "DiagramId": "121001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 30,
+          "Capital": 10500
+        }
+      ]
     },
     "1210002300": {
       "Name": "比尔哥",
       "SeriesIds": [
         "2100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u02300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u02300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2100",
+          "DiagramId": "121001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 30,
+          "Capital": 15000
+        }
+      ]
     },
     "1210002400": {
       "Name": "比尔哥Ⅱ",
       "SeriesIds": [
         "2100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u02400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u02400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2100",
+          "DiagramId": "121001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 30,
+          "Capital": 19500
+        }
+      ]
     },
     "1210002500": {
       "Name": "韦依埃度",
       "SeriesIds": [
         "2100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u02500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u02500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2100",
+          "DiagramId": "121001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 30,
+          "Capital": 24000
+        }
+      ]
     },
     "1210002600": {
       "Name": "墨丘利",
       "SeriesIds": [
         "2100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u02600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u02600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2100",
+          "DiagramId": "121001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 30,
+          "Capital": 24000
+        }
+      ]
     },
     "1210002700": {
       "Name": "杜拉士 (OZ版本)",
       "SeriesIds": [
         "2100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u02700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u02700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2100",
+          "DiagramId": "121001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 30,
+          "Capital": 11000
+        }
+      ]
     },
     "1210002900": {
       "Name": "杜拉士 (桑古王国式样)",
@@ -2288,7 +3458,17 @@
       "SeriesIds": [
         "2100"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u03500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2100u03500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2100",
+          "DiagramId": "121001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 30,
+          "Capital": 19000
+        }
+      ]
     },
     "1211000300": {
       "Name": "飞翼高达 (EW版)",
@@ -2306,7 +3486,17 @@
         "2100",
         "2190"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2110u00500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2110u00500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2190",
+          "DiagramId": "121901",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 55,
+          "Capital": 16500
+        }
+      ]
     },
     "1211000700": {
       "Name": "死神高达 (EW版/可变蝙翼)",
@@ -2333,7 +3523,17 @@
         "2100",
         "2190"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2110u01000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2110u01000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2190",
+          "DiagramId": "121901",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 10000
+        }
+      ]
     },
     "1211001100": {
       "Name": "多鲁基斯F",
@@ -2342,7 +3542,17 @@
         "2100",
         "2190"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2110u01100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2110u01100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2190",
+          "DiagramId": "121901",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 55,
+          "Capital": 16500
+        }
+      ]
     },
     "1217000700": {
       "Name": "D模组",
@@ -2424,14 +3634,34 @@
       "SeriesIds": [
         "2300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u00700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u00700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2300",
+          "DiagramId": "123001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 23500
+        }
+      ]
     },
     "1230000900": {
       "Name": "华沙哥高达",
       "SeriesIds": [
         "2300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u00900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u00900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2300",
+          "DiagramId": "123001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 23500
+        }
+      ]
     },
     "1230001100": {
       "Name": "GX机动攻击机",
@@ -2445,14 +3675,34 @@
       "SeriesIds": [
         "2300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u01200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u01200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2300",
+          "DiagramId": "123001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1230001700": {
       "Name": "杰尼斯",
       "SeriesIds": [
         "2300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u01700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u01700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2300",
+          "DiagramId": "123001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 7500
+        }
+      ]
     },
     "1230002000": {
       "Name": "斩击水牛",
@@ -2466,7 +3716,17 @@
       "SeriesIds": [
         "2300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u02200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u02200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2300",
+          "DiagramId": "123001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 45,
+          "Capital": 12500
+        }
+      ]
     },
     "1230002500": {
       "Name": "奥克多·艾夫",
@@ -2494,35 +3754,85 @@
       "SeriesIds": [
         "2300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u03100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u03100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2300",
+          "DiagramId": "123001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 45,
+          "Capital": 12500
+        }
+      ]
     },
     "1230003200": {
       "Name": "二月",
       "SeriesIds": [
         "2300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u03200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u03200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2300",
+          "DiagramId": "123001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 18500
+        }
+      ]
     },
     "1230003300": {
       "Name": "普利托瓦",
       "SeriesIds": [
         "2300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u03300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u03300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2300",
+          "DiagramId": "123001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 17500
+        }
+      ]
     },
     "1230003400": {
       "Name": "拉斯维特",
       "SeriesIds": [
         "2300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u03400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u03400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2300",
+          "DiagramId": "123001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 23500
+        }
+      ]
     },
     "1230003600": {
       "Name": "古兰帝尼",
       "SeriesIds": [
         "2300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u03600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u03600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2300",
+          "DiagramId": "123001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 18500
+        }
+      ]
     },
     "1230004600": {
       "Name": "新多特雷斯",
@@ -2550,14 +3860,34 @@
       "SeriesIds": [
         "2300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u05000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u05000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2300",
+          "DiagramId": "123001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 7500
+        }
+      ]
     },
     "1230005200": {
       "Name": "多托列斯·飞行型",
       "SeriesIds": [
         "2300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u05200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g2300u05200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "2300",
+          "DiagramId": "123001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 45,
+          "Capital": 12500
+        }
+      ]
     },
     "1300000100": {
       "Name": "突击高达",
@@ -2585,7 +3915,17 @@
       "SeriesIds": [
         "3000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u00900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u00900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3000",
+          "DiagramId": "130002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 11000
+        }
+      ]
     },
     "1300001000": {
       "Name": "暴风高达",
@@ -2628,63 +3968,153 @@
         "3000",
         "3300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u01800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u01800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3000",
+          "DiagramId": "130001",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 11500
+        }
+      ]
     },
     "1300002200": {
       "Name": "基恩",
       "SeriesIds": [
         "3000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u02200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u02200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3000",
+          "DiagramId": "130002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 2000
+        }
+      ]
     },
     "1300002600": {
       "Name": "席古",
       "SeriesIds": [
         "3000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u02600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u02600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3000",
+          "DiagramId": "130002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 8000
+        }
+      ]
     },
     "1300002700": {
       "Name": "盖兹",
       "SeriesIds": [
         "3000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u02700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u02700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3000",
+          "DiagramId": "130002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 11500
+        }
+      ]
     },
     "1300002900": {
       "Name": "佐诺",
       "SeriesIds": [
         "3000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u02900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u02900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3000",
+          "DiagramId": "130002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 10500
+        }
+      ]
     },
     "1300003100": {
       "Name": "迪因",
       "SeriesIds": [
         "3000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u03100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u03100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3000",
+          "DiagramId": "130002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 5000
+        }
+      ]
     },
     "1300003200": {
       "Name": "空中霸者",
       "SeriesIds": [
         "3000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u03200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u03200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3000",
+          "DiagramId": "130001",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 4500
+        }
+      ]
     },
     "1300003600": {
       "Name": "先锋式",
       "SeriesIds": [
         "3000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u03600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u03600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3000",
+          "DiagramId": "130001",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 2000
+        }
+      ]
     },
     "1300004000": {
       "Name": "梅比乌斯 (核弹装备型)",
       "SeriesIds": [
         "3000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u04000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3000u04000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3000",
+          "DiagramId": "130001",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 5000
+        }
+      ]
     },
     "1300004300": {
       "Name": "自由高达 (流星装备)",
@@ -2729,7 +4159,17 @@
         "3040",
         "3000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3040u00700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3040u00700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3000",
+          "DiagramId": "130001",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 8000
+        }
+      ]
     },
     "1304001100": {
       "Name": "光束武器试验型席古",
@@ -2761,7 +4201,17 @@
       "SeriesIds": [
         "3300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u00200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u00200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3300",
+          "DiagramId": "133002",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 14500
+        }
+      ]
     },
     "1330000300": {
       "Name": "威力型脉冲高达",
@@ -2803,7 +4253,17 @@
       "SeriesIds": [
         "3300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u01100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u01100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3300",
+          "DiagramId": "133002",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 14500
+        }
+      ]
     },
     "1330001200": {
       "Name": "强袭口红 (凤型)",
@@ -2824,35 +4284,85 @@
       "SeriesIds": [
         "3300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u01700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u01700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3300",
+          "DiagramId": "133002",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1330001800": {
       "Name": "渣古战士",
       "SeriesIds": [
         "3300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u01800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u01800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3300",
+          "DiagramId": "133002",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1330002000": {
       "Name": "盖兹R",
       "SeriesIds": [
         "3300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u02000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u02000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3300",
+          "DiagramId": "133002",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 8500
+        }
+      ]
     },
     "1330002100": {
       "Name": "大魔骑兵",
       "SeriesIds": [
         "3300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u02100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u02100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3300",
+          "DiagramId": "133001",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 50,
+          "Capital": 20000
+        }
+      ]
     },
     "1330002200": {
       "Name": "巴比",
       "SeriesIds": [
         "3300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u02200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u02200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3300",
+          "DiagramId": "133002",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 8500
+        }
+      ]
     },
     "1330002400": {
       "Name": "艾格萨斯",
@@ -2873,7 +4383,17 @@
       "SeriesIds": [
         "3300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u03000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u03000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3300",
+          "DiagramId": "133002",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 8500
+        }
+      ]
     },
     "1330003300": {
       "Name": "瞬发型渣古战士",
@@ -2894,21 +4414,51 @@
       "SeriesIds": [
         "3300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u03500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u03500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3300",
+          "DiagramId": "133002",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 14500
+        }
+      ]
     },
     "1330004600": {
       "Name": "短剑L (双联装无后坐力炮装备)",
       "SeriesIds": [
         "3300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u04600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u04600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3300",
+          "DiagramId": "133002",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 8500
+        }
+      ]
     },
     "1330004800": {
       "Name": "威达 (喷射型攻击装备)",
       "SeriesIds": [
         "3300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u04800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3300u04800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3300",
+          "DiagramId": "133002",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 19500
+        }
+      ]
     },
     "1330005100": {
       "Name": "老虎烈焰型",
@@ -2965,28 +4515,68 @@
       "SeriesIds": [
         "3700"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u01300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u01300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3700",
+          "DiagramId": "137001",
+          "Tab": 1,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1370001400": {
       "Name": "座天使高达一型",
       "SeriesIds": [
         "3700"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u01400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u01400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3700",
+          "DiagramId": "137002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 24500
+        }
+      ]
     },
     "1370001500": {
       "Name": "座天使高达二型",
       "SeriesIds": [
         "3700"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u01500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u01500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3700",
+          "DiagramId": "137002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 30500
+        }
+      ]
     },
     "1370001600": {
       "Name": "座天使高达三型",
       "SeriesIds": [
         "3700"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u01600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u01600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3700",
+          "DiagramId": "137002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 30500
+        }
+      ]
     },
     "1370001900": {
       "Name": "GN装甲 Type-E",
@@ -3000,7 +4590,17 @@
       "SeriesIds": [
         "3700"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u02600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u02600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3700",
+          "DiagramId": "137002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 12500
+        }
+      ]
     },
     "1370002900": {
       "Name": "铁人式长距离射击型",
@@ -3014,7 +4614,17 @@
       "SeriesIds": [
         "3700"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u03100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u03100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3700",
+          "DiagramId": "137002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1370004600": {
       "Name": "亚格利沙",
@@ -3042,14 +4652,34 @@
       "SeriesIds": [
         "3700"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u05100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u05100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3700",
+          "DiagramId": "137002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 18500
+        }
+      ]
     },
     "1370005200": {
       "Name": "联合实战式",
       "SeriesIds": [
         "3700"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u05200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u05200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3700",
+          "DiagramId": "137002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1370005600": {
       "Name": "格拉汉姆专用联合旗帜式特装型Ⅱ (GN旗帜式)",
@@ -3063,7 +4693,17 @@
       "SeriesIds": [
         "3700"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u07900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u07900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3700",
+          "DiagramId": "137002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 24500
+        }
+      ]
     },
     "1370008000": {
       "Name": "先驱式脑量子波对应型 (野莓)",
@@ -3077,7 +4717,17 @@
       "SeriesIds": [
         "3700"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u08500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u08500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3700",
+          "DiagramId": "137002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 37500
+        }
+      ]
     },
     "1370010500": {
       "Name": "女武式 (希林格用机)",
@@ -3091,14 +4741,34 @@
       "SeriesIds": [
         "3700"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u10700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u10700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3700",
+          "DiagramId": "137002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 36500
+        }
+      ]
     },
     "1370011000": {
       "Name": "加格",
       "SeriesIds": [
         "3700"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u11000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g3700u11000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "3700",
+          "DiagramId": "137002",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 55,
+          "Capital": 30500
+        }
+      ]
     },
     "1375000100": {
       "Name": "正义女神高达",
@@ -3129,7 +4799,17 @@
       "SeriesIds": [
         "4000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4000u00100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4000u00100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4000",
+          "DiagramId": "140001",
+          "Tab": 1,
+          "TabCount": 4,
+          "Level": 55,
+          "Capital": 27500
+        }
+      ]
     },
     "1400000200": {
       "Name": "高达AGE-1 重击型",
@@ -3157,7 +4837,17 @@
       "SeriesIds": [
         "4000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4000u01800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4000u01800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4000",
+          "DiagramId": "140001",
+          "Tab": 1,
+          "TabCount": 4,
+          "Level": 50,
+          "Capital": 8500
+        }
+      ]
     },
     "1400001900": {
       "Name": "杰诺亚斯专用型",
@@ -3178,7 +4868,17 @@
       "SeriesIds": [
         "4000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4000u03200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4000u03200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4000",
+          "DiagramId": "140001",
+          "Tab": 1,
+          "TabCount": 4,
+          "Level": 50,
+          "Capital": 13500
+        }
+      ]
     },
     "1400003300": {
       "Name": "夏多鲁M",
@@ -3192,21 +4892,51 @@
       "SeriesIds": [
         "4000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4000u03400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4000u03400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4000",
+          "DiagramId": "140002",
+          "Tab": 2,
+          "TabCount": 4,
+          "Level": 50,
+          "Capital": 4000
+        }
+      ]
     },
     "1400004200": {
       "Name": "暴徒",
       "SeriesIds": [
         "4000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4000u04200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4000u04200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4000",
+          "DiagramId": "140001",
+          "Tab": 1,
+          "TabCount": 4,
+          "Level": 50,
+          "Capital": 4000
+        }
+      ]
     },
     "1400004800": {
       "Name": "G-EXES",
       "SeriesIds": [
         "4000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4000u04800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4000u04800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4000",
+          "DiagramId": "140001",
+          "Tab": 1,
+          "TabCount": 4,
+          "Level": 55,
+          "Capital": 23000
+        }
+      ]
     },
     "1400006400": {
       "Name": "高达AGE-2 双炮",
@@ -3220,7 +4950,17 @@
       "SeriesIds": [
         "4000"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4000u06700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4000u06700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4000",
+          "DiagramId": "140001",
+          "Tab": 1,
+          "TabCount": 4,
+          "Level": 55,
+          "Capital": 26500
+        }
+      ]
     },
     "1400007400": {
       "Name": "阿黛尔加农型",
@@ -3255,7 +4995,17 @@
       "SeriesIds": [
         "4300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u00400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u00400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4300",
+          "DiagramId": "143001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 17500
+        }
+      ]
     },
     "1430000500": {
       "Name": "高达·古辛 重锻型",
@@ -3269,7 +5019,17 @@
       "SeriesIds": [
         "4300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u00800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u00800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4300",
+          "DiagramId": "143001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 29500
+        }
+      ]
     },
     "1430000900": {
       "Name": "百里",
@@ -3290,14 +5050,34 @@
       "SeriesIds": [
         "4300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u01300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u01300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4300",
+          "DiagramId": "143001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 12500
+        }
+      ]
     },
     "1430001500": {
       "Name": "格雷兹 (决斗式样)",
       "SeriesIds": [
         "4300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u01500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u01500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4300",
+          "DiagramId": "143001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 8500
+        }
+      ]
     },
     "1430002000": {
       "Name": "格雷兹改贰 (流星号)",
@@ -3332,21 +5112,51 @@
       "SeriesIds": [
         "4300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u02900.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u02900.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4300",
+          "DiagramId": "143001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 7500
+        }
+      ]
     },
     "1430003000": {
       "Name": "铁华团机动工兵",
       "SeriesIds": [
         "4300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u03000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u03000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4300",
+          "DiagramId": "143001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1430004600": {
       "Name": "辟邪",
       "SeriesIds": [
         "4300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u04600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u04600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4300",
+          "DiagramId": "143001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 23500
+        }
+      ]
     },
     "1430004700": {
       "Name": "高达·维达尔",
@@ -3360,14 +5170,34 @@
       "SeriesIds": [
         "4300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u05100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u05100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4300",
+          "DiagramId": "143001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 12500
+        }
+      ]
     },
     "1430005200": {
       "Name": "雷金雷兹",
       "SeriesIds": [
         "4300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u05200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u05200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4300",
+          "DiagramId": "143001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 14500
+        }
+      ]
     },
     "1430005500": {
       "Name": "转生式荷姆薇洁",
@@ -3381,14 +5211,34 @@
       "SeriesIds": [
         "4300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u06500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u06500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4300",
+          "DiagramId": "143001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 3500
+        }
+      ]
     },
     "1430006600": {
       "Name": "行刑式凯莱尔",
       "SeriesIds": [
         "4300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u06600.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u06600.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4300",
+          "DiagramId": "143001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 8500
+        }
+      ]
     },
     "1430007200": {
       "Name": "高达·巴耶力",
@@ -3402,7 +5252,17 @@
       "SeriesIds": [
         "4300"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u07700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g4300u07700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "4300",
+          "DiagramId": "143001",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 50,
+          "Capital": 20500
+        }
+      ]
     },
     "1431000700": {
       "Name": "拉布鲁斯",
@@ -3426,7 +5286,17 @@
         "5000",
         "5010"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5000u00300.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5000u00300.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "5010",
+          "DiagramId": "150101",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1500000400": {
       "Name": "魔女审判者",
@@ -3434,14 +5304,34 @@
         "5000",
         "5010"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5000u00400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5000u00400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "5010",
+          "DiagramId": "150101",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1501000100": {
       "Name": "风灵高达",
       "SeriesIds": [
         "5010"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u00150.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u00150.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "5010",
+          "DiagramId": "150101",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 13500
+        }
+      ]
     },
     "1501000200": {
       "Name": "风灵高达(米拉苏尔公司制飞行组件装备)",
@@ -3462,14 +5352,34 @@
       "SeriesIds": [
         "5010"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u00400.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u00400.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "5010",
+          "DiagramId": "150101",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 9500
+        }
+      ]
     },
     "1501000500": {
       "Name": "恶魔审判者",
       "SeriesIds": [
         "5010"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u00500.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u00500.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "5010",
+          "DiagramId": "150101",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 19500
+        }
+      ]
     },
     "1501000600": {
       "Name": "学院训练机 雀雀专用机",
@@ -3483,35 +5393,85 @@
       "SeriesIds": [
         "5010"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u00700.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u00700.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "5010",
+          "DiagramId": "150101",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1501000800": {
       "Name": "传令骑兵",
       "SeriesIds": [
         "5010"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u00800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u00800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "5010",
+          "DiagramId": "150101",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1501001000": {
       "Name": "学院训练机",
       "SeriesIds": [
         "5010"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u01000.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u01000.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "5010",
+          "DiagramId": "150101",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 3500
+        }
+      ]
     },
     "1501001100": {
       "Name": "学院警卫机",
       "SeriesIds": [
         "5010"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u01100.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u01100.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "5010",
+          "DiagramId": "150101",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 8500
+        }
+      ]
     },
     "1501001200": {
       "Name": "达利尔巴尔德",
       "SeriesIds": [
         "5010"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u01200.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g5010u01200.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "5010",
+          "DiagramId": "150101",
+          "Tab": 1,
+          "TabCount": 2,
+          "Level": 40,
+          "Capital": 14500
+        }
+      ]
     },
     "1501001300": {
       "Name": "五号审判者",
@@ -3563,7 +5523,17 @@
         "800",
         "810"
       ],
-      "Roadmap": "resources/templates/develop/dev_unit/ogk_g8500u01800.png"
+      "Roadmap": "resources/templates/develop/dev_unit/ogk_g8500u01800.png",
+      "DeliveryRoutes": [
+        {
+          "SeriesId": "810",
+          "DiagramId": "108102",
+          "Tab": 2,
+          "TabCount": 3,
+          "Level": 20,
+          "Capital": 11000
+        }
+      ]
     }
   },
   "Offers": {

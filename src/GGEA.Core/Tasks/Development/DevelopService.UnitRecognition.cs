@@ -8,7 +8,7 @@ namespace GGEA.App.Tasks;
 public sealed partial class DevelopService
 {
     /// <summary>
-    /// 进入开发页 → 点击第一个路线图 → 查找并点击目标机体。
+    /// 进入开发页，按作品和分图查找机体。手工配置入口仍使用其指定模板。
     /// </summary>
     /// <param name="serial">设备序列号。</param>
     /// <param name="mainLayout">主界面布局（用于开发入口 navDevelop）。</param>
@@ -52,34 +52,48 @@ public sealed partial class DevelopService
         await _automation.TapAsync(serial, navDevelop.CenterX, navDevelop.CenterY, ct);
         await Task.Delay(stepDelayMs, ct);
 
-        // 2. 确认开发页并点击第一个路线图
-        var roadmapWait = new WaitOptions
+        // 2. 内置配置识别目标作品卡；自定义入口沿用配置的模板与布局。
+        var builtin = string.Equals(ConfigService.ResolvePath(roadmapFirstTemplatePath),
+            ConfigService.ResolvePath("resources/templates/develop/dev_0079.png"), GGEA.App.IO.FileSystemPaths.Comparison);
+        var known = builtin ? DevelopmentRequestIndex.RouteForTemplate(msTemplatePath) : null;
+        var seriesId = known?.SeriesId ?? "10";
+        if (builtin)
         {
-            TimeoutMs = GameTiming.ShortRecognitionTimeoutMs,
-            PollIntervalMs = GameTiming.RecognitionIntervalMs,
-            Threshold = 0.85,
-            Roi = firstRoadmap.Roi,
-        };
-        var roadmapFound = await _automation.WaitForImageAsync(
-            serial,
-            roadmapFirstTemplatePath,
-            roadmapWait,
-            ct,
-            matchTarget: (screen, token) => MatchFirstRoadmapAsync(screen, roadmapFirstTemplatePath, roadmapWait, token));
-        if (roadmapFound is null)
-        {
-            // 入口偶发停留在未完整载入的中间页面；恢复点击会直接进入路线图页，
-            // 因此随后必须用路线图标题确认页面，而不能再次等待入口卡片模板。
-            _log.Warn(
-                $"未检测到开发路线图，点击 ({RoadmapRecoveryTapX},{RoadmapRecoveryTapY}) 后检测路线图标题");
-            await _automation.TapAsync(serial, RoadmapRecoveryTapX, RoadmapRecoveryTapY, ct);
-            await Task.Delay(stepDelayMs, ct);
+            var navigator = new DevelopmentSeriesNavigator(_automation, _log);
+            if (!await navigator.OpenAsync(serial, seriesId, ct)) return null;
+            if (string.IsNullOrWhiteSpace(developTitleTemplatePath))
+                developTitleTemplatePath = ConfigService.ResolvePath("resources/templates/develop/title_develop.png");
         }
         else
         {
-            _log.Info($"点击第一个路线图: ({firstRoadmap.CenterX}, {firstRoadmap.CenterY})");
-            await _automation.TapAsync(serial, firstRoadmap.CenterX, firstRoadmap.CenterY, ct);
-            await Task.Delay(stepDelayMs, ct);
+            var roadmapWait = new WaitOptions
+            {
+                TimeoutMs = GameTiming.ShortRecognitionTimeoutMs,
+                PollIntervalMs = GameTiming.RecognitionIntervalMs,
+                Threshold = 0.85,
+                Roi = firstRoadmap.Roi,
+            };
+            var roadmapFound = await _automation.WaitForImageAsync(
+                serial,
+                roadmapFirstTemplatePath,
+                roadmapWait,
+                ct,
+                matchTarget: (screen, token) => MatchFirstRoadmapAsync(screen, roadmapFirstTemplatePath, roadmapWait, token));
+            if (roadmapFound is null)
+            {
+                // 入口偶发停留在未完整载入的中间页面；恢复点击会直接进入路线图页，
+                // 因此随后必须用路线图标题确认页面，而不能再次等待入口卡片模板。
+                _log.Warn(
+                    $"未检测到开发路线图，点击 ({RoadmapRecoveryTapX},{RoadmapRecoveryTapY}) 后检测路线图标题");
+                await _automation.TapAsync(serial, RoadmapRecoveryTapX, RoadmapRecoveryTapY, ct);
+                await Task.Delay(stepDelayMs, ct);
+            }
+            else
+            {
+                _log.Info($"点击第一个路线图: ({firstRoadmap.CenterX}, {firstRoadmap.CenterY})");
+                await _automation.TapAsync(serial, firstRoadmap.CenterX, firstRoadmap.CenterY, ct);
+                await Task.Delay(stepDelayMs, ct);
+            }
         }
 
         // 3. 识别路线图页左上角标题，确认已进入开发路线图（标题模板为空时跳过）
@@ -96,7 +110,23 @@ public sealed partial class DevelopService
             return null;
         }
 
-        var match = await FindOnRoadmapAsync(serial, msTemplatePath, msLargeTemplatePath,
+        TemplateMatchResult? match = null;
+        if (builtin)
+        {
+            var map = DevelopmentMaps.Get(seriesId);
+            var tabs = new DevelopmentTabNavigator(_automation);
+            var normal = map.Diagrams.Where(g => !g.Ultimate && (known is null || g.Id == known.DiagramId));
+            foreach (var diagram in normal)
+            {
+                if (map.Diagrams.Length > 1 && !await tabs.SelectAsync(serial, diagram, developTitleTemplatePath, ct))
+                    continue;
+                match = await SearchAsync();
+                if (match is not null) break;
+            }
+        }
+        else match = await SearchAsync();
+
+        Task<TemplateMatchResult?> SearchAsync() => FindOnRoadmapAsync(serial, msTemplatePath, msLargeTemplatePath,
             maxDragsPerDirection, dragDurationMs, threshold, developTitleTemplatePath, titleThreshold, ct);
         if (match is not null)
         {

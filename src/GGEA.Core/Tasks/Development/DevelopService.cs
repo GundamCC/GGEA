@@ -241,7 +241,11 @@ public sealed partial class DevelopService : IDevelopService
     }
 
     /// <summary>从已选定数量的开发详情页继续两层确认与立绘跳过；停在路线图，不返回主界面。</summary>
-    public async Task<DevelopResult> ConfirmAsync(string serial, DevelopRequest request, CancellationToken ct = default)
+    public Task<DevelopResult> ConfirmAsync(string serial, DevelopRequest request, CancellationToken ct = default) =>
+        ConfirmAsync(serial, request, null, ct);
+
+    internal async Task<DevelopResult> ConfirmAsync(string serial, DevelopRequest request, Func<bool>? reserve,
+        CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
         ct.ThrowIfCancellationRequested();
@@ -274,6 +278,7 @@ public sealed partial class DevelopService : IDevelopService
             return DevelopResult.Failed;
         }
 
+        if (reserve is not null && !reserve()) return DevelopResult.Unavailable;
         await _automation.TapAsync(serial, executeMatch.CenterX, executeMatch.CenterY, ct);
         _log.Info($"已点击执行开发: ({executeMatch.CenterX},{executeMatch.CenterY})");
         if (networkSettleDelayMs <= 5000) await Task.Delay(Math.Max(0, networkSettleDelayMs), ct);

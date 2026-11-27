@@ -71,24 +71,40 @@ public sealed class PersonalBaseService
     public Task<CharacterRequestResult> RunCharacterRequestsAsync(string serial, UiLayout mainLayout, OnnxTextRecognizer? ocr, CancellationToken ct = default, DeliveryProtection? protection = null, DevelopRequest? development = null) =>
         Task.Run(async () =>
         {
-            var service = new CharacterRequestService(_automation, _log, ocr, protection, development);
-            var navBase = mainLayout.Require("navBase", "主界面布局缺少 navBase 锚点");
-            await _automation.TapAsync(serial, navBase.CenterX, navBase.CenterY, ct);
-            await Task.Delay(GameTiming.RecognitionIntervalMs, ct);
-            var entry = await _battleshipLocator.FindCharacterRequestsWithPanAsync(serial, ct: ct);
-            if (entry is not null)
+            var service = new CharacterRequestService(_automation, _log, ocr, protection, development)
             {
-                await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
-                var confirmed = await _battleshipLocator.FindCharacterRequestsWithPanAsync(serial, maxDrags: 0, ct: ct);
-                if (confirmed is not null && Math.Abs(confirmed.CenterX - entry.CenterX) <= 3 &&
-                    Math.Abs(confirmed.CenterY - entry.CenterY) <= 3)
+                RestockFromList = development is null || ocr is null ? null : async (device, target, reserve, token) =>
                 {
-                    await _automation.TapAsync(serial, confirmed.CenterX, confirmed.CenterY, ct);
-                    return await service.RunFromListAsync(serial, ct);
+                    var production = new DeliveryDevelopmentService(_automation, _log, ocr);
+                    var made = await production.TryProduceAsync(device, target, development, reserve, token);
+                    await OpenRequestsAsync(device, mainLayout, token);
+                    return made;
                 }
-            }
-            throw new InvalidOperationException(L.Text("未能确认个人基地的角色要求入口。"));
+            };
+            await OpenRequestsAsync(serial, mainLayout, ct);
+            return await service.RunFromListAsync(serial, ct);
         }, ct);
+
+    // 开发作品列表和主界面都带底部导航，从已核对的页面重新进入个人基地。
+    private async Task OpenRequestsAsync(string serial, UiLayout mainLayout, CancellationToken ct)
+    {
+        var navBase = mainLayout.Require("navBase", "主界面布局缺少 navBase 锚点");
+        await _automation.TapAsync(serial, navBase.CenterX, navBase.CenterY, ct);
+        await Task.Delay(GameTiming.RecognitionIntervalMs, ct);
+        var entry = await _battleshipLocator.FindCharacterRequestsWithPanAsync(serial, ct: ct);
+        if (entry is not null)
+        {
+            await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
+            var confirmed = await _battleshipLocator.FindCharacterRequestsWithPanAsync(serial, maxDrags: 0, ct: ct);
+            if (confirmed is not null && Math.Abs(confirmed.CenterX - entry.CenterX) <= 3 &&
+                Math.Abs(confirmed.CenterY - entry.CenterY) <= 3)
+            {
+                await _automation.TapAsync(serial, confirmed.CenterX, confirmed.CenterY, ct);
+                return;
+            }
+        }
+        throw new InvalidOperationException(L.Text("未能确认个人基地的角色要求入口。"));
+    }
 
     /// <summary>
     /// 收获战舰（完成每日任务“于战舰巡航中获得20AP”）。

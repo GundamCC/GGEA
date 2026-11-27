@@ -371,10 +371,12 @@ public sealed class RoadmapUnitTests
 
     /// <summary>不同未知尺寸和起点均完整逐行扫描；归位撞边也检索目标，一次拖动只截一帧。</summary>
     [Theory]
-    [InlineData(1, 1, 0, 0)]
-    [InlineData(3, 2, 1, 1)]
-    [InlineData(2, 3, 1, 2)]
-    public async Task UnknownCanvas_ScansEveryCellOnceAfterHoming(int columns, int rows, int startX, int startY)
+    [InlineData(1, 1, 0, 0, false)]
+    [InlineData(3, 2, 1, 1, false)]
+    [InlineData(2, 3, 1, 2, false)]
+    [InlineData(8, 3, 6, 1, false)]
+    [InlineData(3, 4, 1, 2, true)]
+    public async Task UnknownCanvas_CoversEveryCellAndChangesRowAtTheEdge(int columns, int rows, int startX, int startY, bool columnsFirst)
     {
         using var temp = new TempDirectory();
         var unit = Path.Combine(temp.Path, "unit.png");
@@ -398,24 +400,34 @@ public sealed class RoadmapUnitTests
         {
             var (x, y) = Position();
             var pixels = TestImageFactory.CreateBgra(1920, 1080, 20);
-            TestImageFactory.PasteBlock(pixels, 1920, 190, 170, 1200 - x * 250, 690 - y * 150, 100);
+            TestImageFactory.PasteBlock(pixels, 1920, 190, 170, 1480 - x * 150, 690 - y * 125, 100);
             TestImageFactory.PasteBlock(pixels, 1920, 40, 30, 230, 30, 200);
             return ImageCodec.EncodePng(pixels, 1920, 1080);
         };
         var log = new ScanLog(() => positions.Add(Position()));
         var service = new DevelopService(new AutomationService(fake, new TemplateMatcher(), log), log);
-        Assert.Null(await service.FindOnRoadmapAsync("test", unit, unit, 4, 100, titleTemplatePath: title));
-        var expected = new List<(int X, int Y)> { (startX, startY) };
-        for (var y = startY - 1; y >= 0; y--) expected.Add((startX, y));
-        for (var x = startX - 1; x >= 0; x--) expected.Add((x, 0));
-        // 横向归位后首段必须纵向走；只有纵向归位时才从第一行横向展开。
-        var scan = startX > 0
-            ? Enumerable.Range(0, columns).SelectMany(x => Enumerable.Range(0, rows)
-                .Select(y => (x, x % 2 == 0 ? y : rows - 1 - y)))
-            : Enumerable.Range(0, rows).SelectMany(y => Enumerable.Range(0, columns)
-                .Select(x => (y % 2 == 0 ? x : columns - 1 - x, y)));
-        expected.AddRange(scan.Skip(1));
-        Assert.Equal(expected, positions);
+        Assert.Null(await service.FindOnRoadmapAsync("test", unit, unit, columns + rows + 1, 100, titleTemplatePath: title, preferLeftEdge: columnsFirst));
+        var all = from y in Enumerable.Range(0, rows) from x in Enumerable.Range(0, columns) select (x, y);
+        Assert.True(all.ToHashSet().SetEquals(positions));
+        if (columnsFirst)
+        {
+            positions = positions.Select(p => (p.Y, p.X)).ToList();
+            (columns, rows) = (rows, columns);
+            startX = startY;
+        }
+        if (rows > 1)
+        {
+            int top = positions.FindIndex(v => v.Y == 0);
+            int next = positions.FindIndex(top + 1, v => v.Y == 1);
+            Assert.True(next > top);
+            Assert.Equal((columns - 1, 0), positions[next - 1]);
+            Assert.Equal((columns - 1, 1), positions[next]);
+            // 从靠右的中点出发，首行只允许一次反向探边，换行前不能绕到最左端。
+            Assert.All(positions.GetRange(top, next - top), v => Assert.True(v.X >= startX - 1));
+            int lastStrip = positions.FindIndex(next, v => v.Y == rows - 1);
+            var lastXs = positions.Skip(lastStrip).TakeWhile(v => v.Y == rows - 1).Select(v => v.X).ToArray();
+            Assert.Equal(rows % 2 == 1 ? lastXs.Order() : lastXs.OrderDescending(), lastXs);
+        }
         Assert.Equal(fake.Swipes.Count + 1, fake.ScreenshotCount);
         Assert.Empty(fake.Taps);
         Assert.Empty(fake.PinchInDurations);

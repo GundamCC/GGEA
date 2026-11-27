@@ -7,7 +7,11 @@ using OpenCvSharp;
 
 namespace GGEA.App.Tasks;
 
-internal sealed record DeliveryOffer(string UnitId, string Unit, int MinimumLevel);
+internal sealed record DeliveryOffer(string UnitId, string Unit, int MinimumLevel)
+{
+    internal string RoleId { get; init; } = "";
+    internal int Number { get; init; }
+}
 internal sealed record StrengthOffer(string Id, string Series, int Amount);
 internal sealed record StrengthRequest(string RoleId, string Name, StrengthOffer Offer, int Progress);
 
@@ -63,7 +67,7 @@ internal sealed class CharacterRequestCatalog(OnnxTextRecognizer ocr)
         if (role is null || !Deliveries.Value.TryGetValue(role.Id, out var requests)) return null;
         var suffix = UpgradeNumbers.Read(ocr, frame, new(title.X + title.Width + 1, title.Y - 2, 27, 38), true, ct, out _);
         return int.TryParse(suffix, NumberStyles.None, CultureInfo.InvariantCulture, out var number) &&
-            requests.TryGetValue(number, out var offer) ? offer : null;
+            requests.TryGetValue(number, out var offer) ? offer with { RoleId = role.Id, Number = number } : null;
     }
 
     private static Role? Identify(ScreenImage frame, CancellationToken ct)

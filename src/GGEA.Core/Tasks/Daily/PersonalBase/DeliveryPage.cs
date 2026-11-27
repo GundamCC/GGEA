@@ -18,7 +18,7 @@ internal sealed class DeliveryPage(OnnxTextRecognizer ocr, DeliveryProtection pr
     private readonly TemplateImages _cancel = new(Root + "button_cancel_delivery.png");
 
     internal sealed record Card(int X, int ArtY, int Level);
-    internal sealed record View(int Count, int ThumbTop, int ThumbEnd, Card? Candidate, Roi? Badge, Roi? Submit, Roi Cancel)
+    internal sealed record View(int Count, int ThumbTop, int ThumbEnd, Card? Candidate, Roi? Badge, Roi? Submit, Roi Cancel, bool UnreadableLevel = false)
     {
         public bool AtBottom => ThumbEnd == -1 || ThumbEnd >= 846;
         public bool AtTop => ThumbTop == -1 || ThumbTop <= 503;
@@ -34,7 +34,7 @@ internal sealed class DeliveryPage(OnnxTextRecognizer ocr, DeliveryProtection pr
         if (cancel is null || amount != "1" || pair is not ("0/1" or "1/1")) return null;
         var first = -1;
         var last = -1;
-        var track = false;
+
         for (int y = 501; y <= 848; y++)
         {
             int i = (y * frame.Width + 1440) * 4;
@@ -44,16 +44,20 @@ internal sealed class DeliveryPage(OnnxTextRecognizer ocr, DeliveryProtection pr
                 if (first == -1) first = y;
                 last = y;
             }
-            else if (pixels[i + 1] < 170) track = true;
+
         }
-        if (track && first == -1) return null;
-        if (pair == "0/1") return new(0, first, last, FindCard(frame, ct), null, null, cancel.Region);
+        // 没有滚动条的短列表或空列表也有 0/1 计数。调用方在授权补开发前另行确认内容确实不能滚动。
+        if (pair == "0/1")
+        {
+            var candidate = FindCard(frame, ct, out var headerReady, out var unreadableLevel);
+            return headerReady ? new(0, first, last, candidate, null, null, cancel.Region, unreadableLevel) : null;
+        }
         var badge = _badge.Match(_matcher, frame, .96, new(495, 501, 929, 345), ct);
         var submit = _submit.Match(_matcher, frame, .95, new(1096, 960, 111, 69), ct);
         return new(1, first, last, null, badge?.Region, submit?.Region, cancel.Region);
     }
 
-    private Card? FindCard(ScreenImage frame, CancellationToken ct)
+    private Card? FindCard(ScreenImage frame, CancellationToken ct, out bool headerReady, out bool unreadableLevel)
     {
         using var screen = Mat.FromPixelData(frame.Height, frame.Width, MatType.CV_8UC4, frame.Bgra);
         using var gray = new Mat();
@@ -62,7 +66,9 @@ internal sealed class DeliveryPage(OnnxTextRecognizer ocr, DeliveryProtection pr
         using var target = new Mat();
         Cv2.Resize(header, target, new Size(88, 65));
         Cv2.MeanStdDev(target, out var mean, out var deviation);
-        if (deviation.Val0 < 15) return null;
+        headerReady = deviation.Val0 >= 15;
+        unreadableLevel = false;
+        if (!headerReady) return null;
 
         var cards = new List<Card>();
         for (int x = 580; x <= 1340; x += 190)
@@ -87,7 +93,12 @@ internal sealed class DeliveryPage(OnnxTextRecognizer ocr, DeliveryProtection pr
                 var label = UpgradeNumbers.Read(ocr, frame, new(x - 39, y + 78, 78, 37), false, ct, out _);
                 if (label is null || !label.StartsWith("LV", StringComparison.Ordinal) ||
                     !int.TryParse(label.AsSpan(2), NumberStyles.None, CultureInfo.InvariantCulture, out var level) ||
-                    level is < 1 or > 100 || level < minimumLevel || (protection.ProtectHighLevel && level >= 60)) continue;
+                    level is < 1 or > 100)
+                {
+                    unreadableLevel = true;
+                    continue;
+                }
+                if (level < minimumLevel || (protection.ProtectHighLevel && level >= 60)) continue;
                 cards.Add(new(x, y, level));
             }
         }

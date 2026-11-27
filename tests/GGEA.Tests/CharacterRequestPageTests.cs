@@ -6,7 +6,7 @@ using System.IO;
 
 namespace GGEA.Tests;
 
-public class CharacterRequestPageTests
+public partial class CharacterRequestPageTests
 {
     // 第三栏锁块来自 MuMu 的原始列表截图，独立于生产代码放大的历史 BOSS 模板。
     [Theory]

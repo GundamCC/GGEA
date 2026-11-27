@@ -219,7 +219,7 @@ public class DevelopServiceTests
         using var temp = new TempDirectory();
         var files = CreateTemplateFiles(temp);
 
-        // 先在左上角分别用两次手势确认顶部/左侧，正式向右扫描（手指左拖）后出现机体。
+        // 先确认顶边，再短距离探测首行起点。向右扫描（手指左拖）后出现机体。
         var fakeAdb = new FakeAdbService(ImageCodec.EncodePng(noMs, 1920, 1080));
         fakeAdb.ScreenshotProvider = () => ImageCodec.EncodePng(
             fakeAdb.Swipes.Any(s => s.X1 > s.X2) ? withMs : noMs, 1920, 1080);
@@ -244,7 +244,7 @@ public class DevelopServiceTests
         Assert.Equal(750, match!.CenterX);
         Assert.Equal(450, match.CenterY);
         Assert.Empty(fakeAdb.PinchInDurations);
-        Assert.Equal(new[] { (0, 250), (0, 250), (490, 0), (490, 0), (-490, 0) },
+        Assert.Equal(new[] { (0, 250), (0, 250), (163, 0), (163, 0), (-490, 0) },
             fakeAdb.Swipes.Select(s => (s.X2 - s.X1, s.Y2 - s.Y1)));
     }
 
@@ -278,8 +278,8 @@ public class DevelopServiceTests
 
         Assert.Null(match);
         Assert.Empty(fakeAdb.PinchInDurations);
-        // 每个方向均换起点复核一次：下、右（归位）、左（扫描）、上（下一行）。
-        Assert.Equal(new[] { (0, 250), (0, 250), (490, 0), (490, 0), (-490, 0), (-490, 0), (0, -250), (0, -250) },
+        // 每个方向均换起点复核一次：下（对齐顶边）、右（短探边）、左（扫描）、上（下一行）。
+        Assert.Equal(new[] { (0, 250), (0, 250), (163, 0), (163, 0), (-490, 0), (-490, 0), (0, -250), (0, -250) },
             fakeAdb.Swipes.Select(s => (s.X2 - s.X1, s.Y2 - s.Y1)));
         Assert.Equal(new[] { (714, 977), (629, 339) }, fakeAdb.Taps);
     }
@@ -573,7 +573,7 @@ public class DevelopServiceTests
         Assert.NotNull(match);
         Assert.Equal(971, match!.CenterX);
         Assert.Equal(474, match.CenterY);
-        // 顶部和左侧分别两次手势确认边界，加一次正式扫描，最终点击大图机体。
+        // 顶部对齐和短探边各两次手势，加一次正式扫描，最终点击大图机体。
         Assert.Empty(fakeAdb.PinchInDurations);
         Assert.Equal(5, fakeAdb.Swipes.Count);
         Assert.Equal(new[] { (714, 977), (629, 339), (971, 474) }, fakeAdb.Taps);

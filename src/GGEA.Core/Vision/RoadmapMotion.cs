@@ -10,6 +10,33 @@ internal static class RoadmapMotion
     private const int Patch = 20;
     private static readonly Rect Canvas = new(360, 100, 1560, 980);
 
+    // 补查首排时，用至少三块位移一致的纹理核对已检视区域。固定标题、进度条和小地图不参与。
+    internal static bool OverlapsScannedView(byte[] first, byte[] current, int dx, int dy)
+    {
+        if (first.AsSpan().SequenceEqual(current)) return true;
+        using var a = ReadCanvas(first);
+        using var b = ReadCanvas(current);
+        using var scores = new Mat();
+        var offsets = new List<Point>();
+        foreach (var y in new[] { 100, 219, 330 })
+        foreach (var x in new[] { 90, 265, 424, 600 })
+        {
+            using var patch = a[new Rect(x, y, 58, 48)];
+            Cv2.MeanStdDev(patch, out Scalar _, out Scalar variance);
+            if (Math.Max(variance.Val0, Math.Max(variance.Val1, variance.Val2)) < 22) continue;
+            int left = Math.Max(0, x - (dx == 0 ? 5 : 160)), top = Math.Max(0, y - (dy == 0 ? 5 : 85));
+            using var around = b[new Rect(left, top, Math.Min(b.Width - left, (x-left)*2+patch.Width),
+                Math.Min(b.Height - top, (y-top)*2+patch.Height))];
+            Cv2.MatchTemplate(around, patch, scores, TemplateMatchModes.CCoeffNormed);
+            Cv2.MinMaxLoc(scores, out _, out var similarity, out _, out var at);
+            if (similarity < .985) continue;
+            var offset = new Point(left + at.X - x, top + at.Y - y);
+            offsets.Add(offset);
+            if (offsets.Count(o => Math.Abs(o.X-offset.X) <= 3 && Math.Abs(o.Y-offset.Y) <= 3) >= 3) return true;
+        }
+        return false;
+    }
+
     internal static int Measure(byte[] before, byte[] after, int dx, int dy)
         => Measure(before, after, dx, dy, out _);
 
