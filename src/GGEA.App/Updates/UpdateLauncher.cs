@@ -10,7 +10,29 @@ namespace GGEA.App.Updates;
 /// <summary>检查当前安装是否适合更新，并把安装所有权交给独立的自包含进程。</summary>
 public static class UpdateLauncher
 {
-    public static Version CurrentVersion => typeof(App).Assembly.GetName().Version!;
+    private static UpdateManifest? _activeTemplates;
+    public static Version CurrentVersion => _activeTemplates is null
+        ? typeof(App).Assembly.GetName().Version! : Version.Parse(_activeTemplates.Version);
+
+    /// <summary>调用方持有业务租约。通过完整自检后再更新当前窗口的有效版本。</summary>
+    public static async Task<bool> TryApplyTemplatesAsync(RunningInstallation installation, string root, string package,
+        string version, CancellationToken token)
+    {
+        if (!File.Exists(UpdateFiles.SafePath(root, "build-info.json"))) return false;
+        var next = UpdateManifest.Read(package);
+        if (!UpdateInstaller.CanApplyTemplates(UpdateManifest.Read(root), next)) return false;
+        try { await Task.Run(() => UpdateManifest.Read(root).Verify(root, preserveUserFiles: true, cancellationToken: token), token); }
+        catch (InvalidDataException) { return false; } // 修复损坏文件由独立安装器执行。
+        if (InstallationUnavailableReason(root) is { } reason) throw new InvalidOperationException(reason);
+        token.ThrowIfCancellationRequested();
+        await installation.StartUpdateAsync(() => Task.Run(() =>
+        {
+            token.ThrowIfCancellationRequested();
+            UpdateInstaller.Install(root, package, version, UpdateInstaller.VerifyExecutable, liveTemplates: true);
+        }), continueRunning: true);
+        _activeTemplates = next;
+        return true;
+    }
 
     /// <summary>开发目录允许检查，但不允许在线覆盖源码构建产物。</summary>
     public static string? InstallationUnavailableReason(string root)
@@ -32,7 +54,7 @@ public static class UpdateLauncher
             var manifest = UpdateManifest.Read(root);
             var commit = typeof(App).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
                 .SingleOrDefault(a => a.Key == "GgeaReleaseCommit")?.Value;
-            if (manifest.Version != CurrentVersion.ToString(4) || manifest.Commit != commit)
+            if (manifest.Version != CurrentVersion.ToString(4) || manifest.Commit != (_activeTemplates?.Commit ?? commit))
                 return L.Text("当前程序与发布清单不一致，请重新下载正式完整包。");
             if (!manifest.Files.TryGetValue("GGEA.Updater.exe", out var hash) ||
                 UpdateFiles.Hash(UpdateFiles.SafePath(root, "GGEA.Updater.exe")) != hash.ToLowerInvariant())

@@ -10,8 +10,8 @@ namespace GGEA.App.UI;
 public partial class MainWindow
 {
     // 从程序集元数据读取完整四段显示版本，避免修订号被截断而与项目配置不一致。
-    private static readonly string AppVersion =
-        typeof(MainWindow).Assembly.GetName().Version?.ToString(4) ?? L.Text("未知");
+    private static string AppVersion =>
+        Updates.UpdateLauncher.CurrentVersion.ToString(4);
 
     // 底部版权声明固定归属作者，年份随运行时间自动更新，无需每年手动修改界面资源。
     private static readonly string AppCopyright = $"© {DateTime.Now.Year} GundamC";

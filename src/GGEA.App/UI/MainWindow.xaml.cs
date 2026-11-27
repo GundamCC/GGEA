@@ -61,7 +61,7 @@ public partial class MainWindow : Window
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
         await RunWindowTaskAsync(() => Window_LoadedCoreAsync(sender, e));
-        await RunWindowTaskAsync(CheckStartupUpdateAsync);
+        await RunWindowTaskAsync(MonitorUpdatesAsync);
     }
 
     /// <summary>可等待的事件业务，确保关闭窗口包含其异常处理和 finally 收尾。</summary>

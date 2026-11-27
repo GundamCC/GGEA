@@ -51,7 +51,7 @@ internal static class Program
             using (UpdateFiles.AcquireLock(target))
             {
                 if (request.RecoverOnly) UpdateInstaller.Recover(target);
-                else UpdateInstaller.Install(target, request.PackageDirectory!, request.Version!, VerifyExecutable);
+                else UpdateInstaller.Install(target, request.PackageDirectory!, request.Version!, UpdateInstaller.VerifyExecutable);
             }
             Log(target, request.RecoverOnly ? "旧版恢复完成。" : $"更新至 {request.Version} 完成。");
             // 成功后再启动主程序；重启失败不假报安装失败，也不重复覆盖已验证的新版。
@@ -79,22 +79,6 @@ internal static class Program
             return null;
         }
         catch (ArgumentException) { return null; }
-    }
-
-    /// <summary>复用程序既有离线发布自检，不启动窗口、ADB、游戏或任务；超时只终止自检子进程。</summary>
-    private static void VerifyExecutable(string directory)
-    {
-        var start = new ProcessStartInfo(UpdateFiles.SafePath(directory, "GGEA.exe"))
-        { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = directory };
-        start.ArgumentList.Add("--verify-release");
-        using var process = Process.Start(start) ?? throw new IOException("无法启动新版自检。");
-        if (!process.WaitForExit(120000))
-        {
-            process.Kill(entireProcessTree: true);
-            process.WaitForExit();
-            throw new IOException("新版自检超时。");
-        }
-        if (process.ExitCode != 0) throw new IOException("新版启动自检失败，更新不能继续。");
     }
 
     /// <summary>日志失败不能掩盖原安装错误。</summary>

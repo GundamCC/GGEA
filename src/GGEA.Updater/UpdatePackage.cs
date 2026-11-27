@@ -7,6 +7,8 @@ namespace GGEA.Updater;
 /// <summary>读取现有正式发布清单，不另建版本来源或依赖可变的文件名猜测安装身份。</summary>
 public sealed record UpdateManifest(string Version, string Commit, IReadOnlyDictionary<string, string> Files)
 {
+    public string? TemplateEngine { get; init; }
+
     /// <summary>本地普通包没有正式清单；只读取版本，不猜测旧文件归属，升级时保留未知文件。</summary>
     public static UpdateManifest ReadInstallation(string root)
     {
@@ -45,7 +47,9 @@ public sealed record UpdateManifest(string Version, string Commit, IReadOnlyDict
                 throw new InvalidDataException("发布文件摘要或路径集合无效。");
         }
         if (!files.ContainsKey("GGEA.exe")) throw new InvalidDataException("发布包缺少主程序。");
-        return new UpdateManifest(version, commit, files);
+        return new UpdateManifest(version, commit, files) {
+            TemplateEngine = item.TryGetProperty("templateEngine", out var engine) ? engine.GetString() : null
+        };
     }
 
     /// <summary>下载后验证完整默认包；安装后仅跳过明确属于用户的可变数据。</summary>

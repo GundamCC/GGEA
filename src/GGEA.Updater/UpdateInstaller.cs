@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace GGEA.Updater;
 
 /// <summary>一项文件操作的原始状态；恢复不依赖安装过程走到了第几个文件。</summary>
@@ -9,8 +11,39 @@ public sealed record UpdateJournal(string BackupDirectory, string OldVersion, st
 /// <summary>完整包事务安装：只管理清单中的文件，未知文件和用户数据始终保留。</summary>
 public static class UpdateInstaller
 {
+    /// <summary>复用程序既有离线发布自检，不启动窗口、ADB、游戏或任务；超时只终止自检子进程。</summary>
+    public static void VerifyExecutable(string directory)
+    {
+        var start = new ProcessStartInfo(UpdateFiles.SafePath(directory, "GGEA.exe"))
+        { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = directory };
+        start.ArgumentList.Add("--verify-release");
+        using var process = Process.Start(start) ?? throw new IOException("无法启动新版自检。");
+        if (!process.WaitForExit(120000))
+        {
+            process.Kill(entireProcessTree: true);
+            process.WaitForExit();
+            throw new IOException("新版自检超时。");
+        }
+        if (process.ExitCode != 0) throw new IOException("新版启动自检失败，更新不能继续。");
+    }
+
+    // 源码与依赖身份相同仍须核对发布文件集合。除两个带版本信息的映像外，只接纳可即时重读的模板和说明。
+    public static bool CanApplyTemplates(UpdateManifest old, UpdateManifest next)
+    {
+        if (old.TemplateEngine is not { Length: 64 } engine || engine != next.TemplateEngine) return false;
+        foreach (var name in old.Files.Keys.Union(next.Files.Keys, StringComparer.OrdinalIgnoreCase))
+        {
+            if (old.Files.TryGetValue(name, out var before) && next.Files.TryGetValue(name, out var after) && before == after) continue;
+            if (name is "GGEA.dll" or "GGEA.exe" or "使用说明.txt" or "RELEASE.txt") continue;
+            if (!name.StartsWith("resources/", StringComparison.OrdinalIgnoreCase) ||
+                !name.Contains("/templates/", StringComparison.OrdinalIgnoreCase) ||
+                !name.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) return false;
+        }
+        return true;
+    }
+
     /// <summary>调用方必须持有安装锁并确保主进程退出。自检委托用于真实 EXE 自检及故障回归。</summary>
-    public static string Install(string target, string package, string expectedVersion, Action<string> verifyExecutable)
+    public static string Install(string target, string package, string expectedVersion, Action<string> verifyExecutable, bool liveTemplates = false)
     {
         UpdateFiles.RejectLinks(target);
         UpdateFiles.RejectLinks(package);
@@ -22,6 +55,7 @@ public static class UpdateInstaller
         var next = UpdateManifest.Read(package);
         if (next.Version != expectedVersion || UpdateFiles.ParseVersion(next.Version) <= UpdateFiles.ParseVersion(old.Version))
             throw new InvalidDataException("更新包版本不匹配或不是更新版本。");
+        if (liveTemplates && !CanApplyTemplates(old, next)) throw new InvalidDataException("此版本需要切换程序。");
         next.Verify(package);
         verifyExecutable(package);
 
@@ -50,7 +84,10 @@ public static class UpdateInstaller
             var source = UpdateFiles.SafePath(target, relative);
             if (Directory.Exists(source)) throw new IOException($"目标文件被同名目录占用：{relative}");
             if (!File.Exists(source)) { journal.Files.Add(new(relative, false, null)); continue; }
-            using (new FileStream(source, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
+            if (!liveTemplates || relative is not ("GGEA.dll" or "GGEA.exe"))
+            {
+                using var probe = new FileStream(source, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            }
             var saved = UpdateFiles.SafePath(backup, relative);
             Directory.CreateDirectory(Path.GetDirectoryName(saved)!);
             File.Copy(source, saved, false);
@@ -69,7 +106,10 @@ public static class UpdateInstaller
             {
                 var destination = UpdateFiles.SafePath(target, relative);
                 Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                UpdateFiles.CopyAtomically(UpdateFiles.SafePath(package, relative), destination, target);
+                // Windows 可保留旧映像映射到另一个文件名。当前进程继续运行等价代码，新启动的进程读取新版。
+                var retired = liveTemplates && relative is ("GGEA.exe" or "GGEA.dll")
+                    ? UpdateFiles.SafePath(backup, relative + ".mapped") : null;
+                UpdateFiles.CopyAtomically(UpdateFiles.SafePath(package, relative), destination, target, retired);
             }
             foreach (var relative in removals) File.Delete(UpdateFiles.SafePath(target, relative));
             next.Verify(target, preserveUserFiles: true);

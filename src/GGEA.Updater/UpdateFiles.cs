@@ -103,7 +103,7 @@ public static class UpdateFiles
     }
 
     /// <summary>同卷暂存并刷盘后替换单个文件，避免断电留下被截断的 EXE；整套版本仍由事务记录恢复。</summary>
-    public static void CopyAtomically(string source, string destination, string installation)
+    public static void CopyAtomically(string source, string destination, string installation, string? retiredImage = null)
     {
         RejectLinks(source);
         RejectLinks(destination);
@@ -117,7 +117,10 @@ public static class UpdateFiles
                 output.Flush(true);
             }
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            File.Move(temporary, destination, true);
+            if (retiredImage is not null && File.Exists(destination))
+                File.Replace(temporary, destination, retiredImage);
+            else
+                File.Move(temporary, destination, true);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }

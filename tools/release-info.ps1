@@ -105,7 +105,27 @@ function Get-ReleaseVersion([string]$SourceRoot) {
 # 清单最后生成；文件集合、资源版本和 EXE 文件/产品版本必须同时一致。
 function Write-ReleaseInfo([string]$Directory, [string]$Version, [string]$Commit, [string]$Runtime) {
     $files = Get-ReleaseInventory $Directory
+    # 固定快照中的编译输入全部相同，才允许新版声明当前进程可直接采用模板变更。
+    $sourceRoot = Split-Path -Parent $PSScriptRoot
+    $snapshotPath = Join-Path $sourceRoot '.release-source.json'
+    $engine = $null
+    if (Test-Path -LiteralPath $snapshotPath) {
+        $snapshot = Get-Content -LiteralPath $snapshotPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $inputs = @{}
+        foreach ($entry in $snapshot.files.PSObject.Properties) {
+            $name = $entry.Name
+            if ($name -notmatch '^src/' -and $name -notmatch '(^|/)(global.json|NuGet.config|.*\.(props|targets|sln|csproj)|packages.lock.json)$' -and
+                $name -notin @('tools/publish.ps1', 'tools/release-info.ps1')) { continue }
+            $inputs[$name] = $entry.Value
+        }
+        $project = 'src/GGEA.App/GGEA.App.csproj'
+        $source = [IO.File]::ReadAllText((Join-Path $sourceRoot $project))
+        $inputs[$project] = $source.Replace("<Version>$Version</Version>", '<Version/>')
+        $inputs['sdk'] = [string](& dotnet --version)
+        $engine = Get-ContentIdentity $inputs ''
+    }
     [ordered]@{
+        templateEngine = $engine
         schemaVersion = 1; version = $Version; channel = 'Release'; commit = $Commit
         configuration = 'Release'; runtime = $Runtime; selfContained = $true; singleFile = $true
         builtAtUtc = [DateTime]::UtcNow.ToString('o'); sdk = [string](& dotnet --version)

@@ -9,6 +9,21 @@ namespace GGEA.Tests;
 public sealed partial class OnlineUpdateTests
 {
     [Theory]
+    [InlineData("resources/common/templates/logo/new.png", true, true)]
+    [InlineData("resources/common/templates/logo/new.png", false, false)]
+    [InlineData("resources/common/ocr/model.onnx", true, false)]
+    [InlineData("GGEA.Core.dll", true, false)]
+    public void OnlyCompatibleTemplatesCanBeAppliedToRunningWindow(string file, bool sameEngine, bool expected)
+    {
+        var engine = new string('a', 64);
+        var baseline = new GGEA.Updater.UpdateManifest("1.4.23.0", "", new Dictionary<string, string>())
+            { TemplateEngine = engine };
+        var target = baseline with { Files = new Dictionary<string, string> { [file] = "changed" },
+            TemplateEngine = sameEngine ? engine : new string('b', 64) };
+        Assert.Equal(expected, GGEA.Updater.UpdateInstaller.CanApplyTemplates(baseline, target));
+    }
+
+    [Theory]
     [InlineData(0, -1)]
     [InlineData(-3, 2)]
     [InlineData(4, -1)]

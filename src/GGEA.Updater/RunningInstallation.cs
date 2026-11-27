@@ -22,7 +22,7 @@ public sealed class RunningInstallation(string root) : IDisposable
         catch (IOException ex) when ((ex.HResult & 0xffff) == 32) { return false; }
     }
 
-    public async Task StartUpdateAsync(Func<Task> startUpdater)
+    public async Task StartUpdateAsync(Func<Task> startUpdater, bool continueRunning = false)
     {
         // 串行化从共享到独占的切换；两个窗口同时请求更新时，失败方仍持有运行保护。
         using var transition = UpdateFiles.OpenLock(root, "handoff.lock", exclusive: true);
@@ -31,6 +31,11 @@ public sealed class RunningInstallation(string root) : IDisposable
         {
             _lease = UpdateFiles.OpenLock(root, "installation.lock", exclusive: true);
             await startUpdater().ConfigureAwait(false);
+            if (continueRunning)
+            {
+                _lease.Dispose();
+                _lease = UpdateFiles.OpenLock(root, "installation.lock", exclusive: false);
+            }
             // 更新器确认就绪之后，本进程持有独占锁直到退出。
         }
         catch

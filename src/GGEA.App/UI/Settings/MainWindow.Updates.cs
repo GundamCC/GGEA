@@ -13,18 +13,41 @@ public partial class MainWindow
     /// <summary>更新交接后禁止新业务；关闭仍通过窗口任务收尾和插件释放流程。</summary>
     private bool _updatePending;
 
-    private bool _startupUpdateChecked;
+    // 每次检查独立持有客户端，窗口关闭时仍由任务生命周期取消。测试可注入受控的发布源响应。
+    internal Func<Action<UpdateSourceStatus>, OnlineUpdateClient> OpenUpdateClient { get; set; } =
+        report => new OnlineUpdateClient(AppContext.BaseDirectory, report);
+
+    private async Task MonitorUpdatesAsync()
+    {
+        await CheckStartupUpdateAsync();
+        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(30));
+        while (await timer.WaitForNextTickAsync(_windowTasks.Token))
+            if (_config.AutomaticUpdates && !_updatePending) await CheckStartupUpdateAsync();
+    }
+
+    internal void RefreshLiveTemplates()
+    {
+        _startupUpdate = null;
+        RefreshUpdateBadge();
+        _automation?.Dispose();
+        _textOcr?.Dispose();
+        _textOcr = null;
+        ConfigService.ApplyResourceLanguage(_config);
+        InitializeTaskServices(_logger!);
+        RefreshTemplateList();
+        UpdateFooterText();
+        _logger?.Info(L.Format($"已应用 v{UpdateLauncher.CurrentVersion} 识别资源。"));
+    }
     private bool _startupUpdateAcknowledged;
     private UpdateRelease? _startupUpdate;
     private TaskCompletionSource? _waitingForIdle;
     private CancellationTokenSource? _automaticDownload;
 
-    /// <summary>每次启动仅检查一次，不持有设备执行权；关闭时由窗口任务生命周期取消并等待。</summary>
+    /// <summary>每轮检查独立完成，不持有设备执行权；关闭时由窗口任务生命周期取消并等待。</summary>
     private async Task CheckStartupUpdateAsync()
     {
-        if (_startupUpdateChecked || _logger is null || _windowTasks.IsStopping) return;
-        _startupUpdateChecked = true;
-        using var client = new OnlineUpdateClient(AppContext.BaseDirectory, status =>
+        if (_logger is null || _windowTasks.IsStopping) return;
+        using var client = OpenUpdateClient(status =>
         {
             if (status.IsWarning) _logger.Warn(status.Message);
             else _logger.Info(status.Message);
@@ -55,6 +78,11 @@ public partial class MainWindow
                     using var lease = TryBeginHostOperation(false);
                     if (lease is not null)
                     {
+                        if (await ((App)Application.Current).TryApplyTemplatesAsync(package, update.Version.ToString(4), pending.Token))
+                        {
+                            RefreshLiveTemplates();
+                            break;
+                        }
                         await ((App)Application.Current).StartUpdateAsync(package, update.Version.ToString(4), false, pending.Token);
                         package = null; // 已交给独立更新器。
                         CloseForUpdate();
