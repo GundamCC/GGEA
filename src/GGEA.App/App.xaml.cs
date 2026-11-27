@@ -40,6 +40,10 @@ public partial class App : Application
 
     private Updater.RunningInstallation? _installation;
 
+    internal string? UpdateDownloadUnavailableReason() => _installation is null
+        ? L.Text("当前目录不支持在线安装。")
+        : _installation.CanStartDownload() ? null : L.Text("请先关闭同一目录中的其他 GGEA 窗口，再重试更新。");
+
     /// <summary>在当前安装的独占保护下向更新器交接，失败时恢复当前窗口的共享运行状态。</summary>
     internal async Task StartUpdateAsync(string? package, string? version, bool recover, CancellationToken ct)
     {

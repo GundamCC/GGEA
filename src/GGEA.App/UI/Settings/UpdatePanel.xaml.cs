@@ -107,6 +107,11 @@ public partial class UpdatePanel : UserControl
         timer.Start();
         try
         {
+            if (((App)Application.Current).UpdateDownloadUnavailableReason() is { } reason)
+            {
+                UpdateStatusText.Text = reason;
+                return;
+            }
             await _downloadSession.RunAsync(token => client.DownloadAsync(_availableUpdate, new Progress<double>(), token, traffic),
                 StartPreparedUpdateAsync, _autoInstallUpdates, cancellation.Token);
             if (!_updateClosed && !UpdateRequested)

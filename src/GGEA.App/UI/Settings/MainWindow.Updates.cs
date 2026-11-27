@@ -36,6 +36,11 @@ public partial class MainWindow
             _logger.Info(L.Format($"发现新版本 v{_startupUpdate.Version}，可在设置中下载更新。"));
             RefreshUpdateBadge();
             if (!_config.AutomaticUpdates || UpdateLauncher.InstallationUnavailableReason(AppContext.BaseDirectory) is not null) return;
+            if (((App)Application.Current).UpdateDownloadUnavailableReason() is { } reason)
+            {
+                _logger.Info(reason);
+                return;
+            }
             var update = _startupUpdate;
             using var pending = CancellationTokenSource.CreateLinkedTokenSource(_windowTasks.Token);
             _automaticDownload = pending;

@@ -35,9 +35,10 @@ public sealed class UpdatePackageDownloader
     public async Task<string> DownloadAsync(UpdateRelease update, string installation, IProgress<double> progress, CancellationToken cancellationToken)
     {
         var hasManifest = File.Exists(UpdateFiles.SafePath(installation, "build-info.json"));
-        if (!hasManifest || update.Index is null)
-            _http.Trace(hasManifest ? "跳过按需下载：来源未提供可用索引。" : "跳过增量下载：本机缺少版本清单。");
-        if (update.Index is { } index && hasManifest)
+        // 按需重建只信任目标索引中的文件和块摘要；只有旧版差异 ZIP 需要正式基线清单。
+        if (update.Index is null)
+            _http.Trace("跳过按需下载：来源未提供可用索引。");
+        if (update.Index is { } index)
         {
             try
             {

@@ -11,6 +11,7 @@ namespace GGEA.Tests;
 public sealed partial class OnlineUpdateTests
 {
     [Theory]
+    [InlineData("local-blocks")]
     [InlineData("updater-blocks")]
     [InlineData("blocks")]
     [InlineData("block-unavailable")]
@@ -26,9 +27,15 @@ public sealed partial class OnlineUpdateTests
         var old = Path.Combine(temp.Path, "old");
         var next = Path.Combine(temp.Path, "next");
         CreateDeltaFixtures(old, next);
+        var localBuild = scenario == "local-blocks";
+        if (localBuild)
+        {
+            File.Delete(Path.Combine(old, "build-info.json"));
+            File.WriteAllText(Path.Combine(old, "local-build-info.json"), """{"version":"1.1.9.1"}""");
+        }
         var updater = scenario == "updater-blocks";
         var fileName = updater ? "GGEA.Updater.exe" : "GGEA.exe";
-        var useBlocks = updater || scenario.StartsWith("block", StringComparison.Ordinal);
+        var useBlocks = localBuild || updater || scenario.StartsWith("block", StringComparison.Ordinal);
         if (useBlocks)
         {
             var program = new byte[1024 * 1024];
@@ -99,7 +106,7 @@ public sealed partial class OnlineUpdateTests
                 Assert.True(blockBytes > 0);
                 Assert.Contains(log, message => message.Contains("回退整文件") && message.Contains("下载中断"));
             }
-            if (scenario == "blocks" || updater) Assert.InRange(blockBytes, 1, blocks.Length / 2);
+            if (localBuild || scenario == "blocks" || updater) Assert.InRange(blockBytes, 1, blocks.Length / 2);
             if (scenario == "range") Assert.InRange(rangeBytes, 1, bytes.Length - 1);
         }
         Assert.Equal(scenario == "unsupported" ? 1 : 0, fullRequests);

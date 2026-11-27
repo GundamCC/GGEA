@@ -257,9 +257,12 @@ public sealed partial class OnlineUpdateTests
             Task Handoff() { handedOff = true; return Task.CompletedTask; }
             using (var second = new RunningInstallation(temp.Path))
             {
+                Assert.False(first.CanStartDownload());
+                Assert.False(second.CanStartDownload());
                 await Assert.ThrowsAsync<IOException>(() => first.StartUpdateAsync(Handoff));
                 Assert.False(handedOff);
             }
+            Assert.True(first.CanStartDownload());
             Assert.Throws<IOException>(() => UpdateFiles.AcquireLock(temp.Path));
             await Assert.ThrowsAsync<OperationCanceledException>(() =>
                 first.StartUpdateAsync(() => Task.FromException(new OperationCanceledException())));
