@@ -76,10 +76,42 @@ internal sealed class EventStagesService(AutomationService automation, string se
         return true;
     }
 
+    internal enum Destination { Stages, Boss, Supply, Story }
+
+    /// <summary>先在已知路径上接续；只有不在活动路径时才交给通用主界面导航。</summary>
+    internal async Task NavigateAsync(Destination destination, Func<CancellationToken, Task> openMenuFromElsewhere, CancellationToken ct)
+    {
+        var boss = E("boss", Header, .90);
+        var supply = E("medal_supply_title", Header, .90);
+        var receipt = E("medal_reset_complete_title", new(817,175,310,115), .90);
+        var pageTitle = RecognitionRegions.Resolve(RecognitionRegion.PageTitle, 1920, 1080);
+        var menu = new Target("stage/title_stage", pageTitle, .85);
+        var list = new Target("stage/event/title_event", pageTitle, .85);
+        var seen = await Observe(null, [receipt, Mission, Story, Stage, boss, supply, list, menu], ct, 3500);
+        var page = seen?.Target;
+        if (page == Story || (destination == Destination.Stages && page == Stage) ||
+            (destination == Destination.Boss && page == boss) ||
+            (destination == Destination.Supply && (page == supply || page == receipt))) return;
+        if (page == Mission || page == Stage || page == boss || page == supply)
+        {
+            await Click(page, Back, ct);
+            await Require(null, ct, Story);
+            return;
+        }
+        if (page == list) { await OpenFromListAsync(ct); return; }
+        if (page != menu) await openMenuFromElsewhere(ct);
+        await OpenFromMenuAsync(ct);
+    }
+
     internal async Task OpenFromMenuAsync(CancellationToken ct)
     {
-        var selected = new FierceEnemyAssaultRecognizer(ConfigService.ResolvePath($"resources/templates/logo/{Activity.Screenshot}.png"));
         await FierceEnemyAssaultService.OpenEventListAsync(automation, serial, ct);
+        await OpenFromListAsync(ct);
+    }
+
+    private async Task OpenFromListAsync(CancellationToken ct)
+    {
+        var selected = new FierceEnemyAssaultRecognizer(ConfigService.ResolvePath($"resources/templates/logo/{Activity.Screenshot}.png"));
         var options = new WaitOptions { Region = RecognitionRegion.PageTitle, Threshold = .85,
             TimeoutMs = GameTiming.RecognitionTimeoutMs, AllowGlobalContinuation = false };
         if (!await FierceEnemyAssaultService.WaitEventListAsync(automation, serial,

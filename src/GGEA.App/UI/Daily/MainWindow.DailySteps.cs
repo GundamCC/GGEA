@@ -29,7 +29,8 @@ public partial class MainWindow
             ct.ThrowIfCancellationRequested();
 
             // 每个任务前都重新确认主界面，避免在上一任务的子页面直接操作下一任务。
-            if (!await EnsureMainScreenAsync(serial, ct, allowInitialAnnouncement))
+            bool allowAnnouncement = allowInitialAnnouncement;
+            if (task.Kind != DailyTaskKind.LimitedEvent && !await EnsureMainScreenAsync(serial, ct, allowAnnouncement))
             {
                 AccountStatusText.Text = L.Text("未能确认主界面，任务中止");
                 if (await AbortTaskChainIfConnectionErrorAsync(serial, L.Text("每日"), ct))
@@ -157,7 +158,7 @@ public partial class MainWindow
                 case DailyTaskKind.LimitedEvent:
                     try
                     {
-                        await RunLimitedDailyTaskAsync(serial, task.LimitedEventSelection!, ct);
+                        await RunLimitedDailyTaskAsync(serial, task.LimitedEventSelection!, ct, allowAnnouncement);
                         taskSucceeded = true;
                     }
                     catch (MedalRecognitionException ex)

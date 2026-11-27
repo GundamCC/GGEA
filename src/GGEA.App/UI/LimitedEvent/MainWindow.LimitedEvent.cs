@@ -13,7 +13,7 @@ public partial class MainWindow
 
     private Button? _limitedButton;
 
-    /// <summary>手动进入事件后才接管设备，关闭窗口或点击中止均释放本次设备占用。</summary>
+    /// <summary>从非战斗画面识别活动入口，关闭窗口或点击中止均释放本次设备占用。</summary>
     private async void LimitedStart_Click(object sender, RoutedEventArgs e) =>
         await RunWindowTaskAsync(() => RunLimitedEventAsync((Button)sender));
 
@@ -41,6 +41,9 @@ public partial class MainWindow
         {
             if (!await EnsureDeviceCompatibilityAsync(serial, owner.Token))
                 throw new InvalidOperationException(L.Text("设备画面不兼容。"));
+            var destination = button == LimitedStart ? EventStagesService.Destination.Boss :
+                button == MedalStart ? EventStagesService.Destination.Supply : EventStagesService.Destination.Stages;
+            await NavigateLimitedAsync(serial, SelectedActivity, destination, owner.Token);
             if (button == EventProgress)
                 LimitedStatus.Text = await RunEventProgressAsync(serial, owner.Token);
             else if (button == EventDaily)
@@ -73,6 +76,17 @@ public partial class MainWindow
             UpdateBusyState();
         }
     }
+
+    private Task NavigateLimitedAsync(string serial, LimitedEventDefinition activity, EventStagesService.Destination destination,
+        CancellationToken ct, bool allowAnnouncement = true)
+        => new EventStagesService(_automation!, serial, activity).NavigateAsync(destination, async token =>
+        {
+            if (!await EnsureMainScreenAsync(serial, token, allowAnnouncement))
+                throw new InvalidOperationException(L.Text("未能确认主界面，任务中止"));
+            var menu = await new StageMenuEntryService(_automation!, _logger!).OpenFromHomeAsync(serial, _mainLayout,
+                _config.StagePageSettleMs, token);
+            if (!menu.Success) throw new InvalidOperationException(menu.Message);
+        }, ct);
 
     private async Task<string> RunEventStagesDailyAsync(string serial, CancellationToken ct, bool claimRewards = true, LimitedEventDefinition? activity = null)
     {

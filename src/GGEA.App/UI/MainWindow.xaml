@@ -215,18 +215,17 @@
                             <TabItem x:Name="LimitedEventTab" Header="{loc:Text Source='限时活动'}">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                 <StackPanel Margin="0,8,0,0">
-                                    <TextBlock Text="{loc:Text Source='可从故事事件启动，也可在 BOSS 战斗或奖章机体补给界面启动对应任务。'}" Style="{StaticResource HintText}"/>
+                                    <TextBlock Text="{loc:Text Source='请在非战斗界面使用。'}" Style="{StaticResource HintText}"/>
                                     <Grid Margin="0,10,0,0">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="76"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="{loc:Text Source='当前活动'}" Style="{StaticResource HintText}" VerticalAlignment="Center"/>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                        <TextBlock Text="{loc:Text Source='当前活动'}" Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                         <ComboBox x:Name="LimitedActivity" Grid.Column="1" HorizontalAlignment="Left" MinWidth="260" MaxWidth="400" Style="{StaticResource ComboBoxDark}" DisplayMemberPath="Work"/>
-                                    </Grid>
-                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                        <TextBlock Text="{loc:Text Source='略过BOSS难度'}" Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <ComboBox x:Name="LimitedDifficulty" Style="{StaticResource ComboBoxDark}" Width="130" SelectedIndex="0">
+                                        <TextBlock Grid.Row="1" Text="{loc:Text Source='略过BOSS难度'}" Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="0,10,10,0"/>
+                                        <ComboBox x:Name="LimitedDifficulty" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" Margin="0,10,0,0" Style="{StaticResource ComboBoxDark}" Width="130" SelectedIndex="0">
                                             <ComboBoxItem Content="EXPERT"/><ComboBoxItem Content="HARD"/><ComboBoxItem Content="NORMAL"/>
                                         </ComboBox>
-                                    </StackPanel>
+                                    </Grid>
                                     <Grid Margin="0,12,0,0">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="76"/><ColumnDefinition/></Grid.ColumnDefinitions>
                                         <TextBlock Text="{loc:Text Source='立即执行'}" Foreground="{DynamicResource Brush.Text}" FontWeight="SemiBold" VerticalAlignment="Center"/>

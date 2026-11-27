@@ -65,6 +65,24 @@ public class EventStagesDailyTests
         Assert.Equal(steps.Count,index);
     }
 
+    [Theory]
+    [InlineData("limited-event-list", 2)]
+    [InlineData("limited-daily-story_return", 0)]
+    [InlineData("medal-replay-supply", 0)]
+    [InlineData("medal-replay-reset-live", 0)]
+    public async Task NavigateFromKnownPageAvoidsHome(string fixture, int taps)
+    {
+        byte[] Frame(string name) => File.ReadAllBytes(ConfigService.ResolvePath($"Fixtures/Navigation/{name}.png"));
+        var current = Frame(fixture);
+        var story = Frame("limited-daily-story_return");
+        var device = new FakeAdbService(current);
+        device.ScreenshotProvider = () => device.Taps.Count == 2 ? story : current;
+        using var automation = new AutomationService(device, new TemplateMatcher(), new TestLog());
+        await new EventStagesService(automation, "test").NavigateAsync(EventStagesService.Destination.Supply,
+            _ => throw new InvalidOperationException("不应返回主界面"), default);
+        Assert.Equal(taps, device.Taps.Count);
+    }
+
     [Fact]
     public async Task EventListUsesSharedEntryAndVerifiesSelectedPoster()
     {

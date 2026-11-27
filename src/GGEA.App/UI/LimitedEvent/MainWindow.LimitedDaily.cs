@@ -73,15 +73,14 @@ public partial class MainWindow
         UpdateBusyState();
     }
 
-    private async Task RunLimitedDailyTaskAsync(string serial, LimitedEventDailySettings choice, CancellationToken ct)
+    private async Task RunLimitedDailyTaskAsync(string serial, LimitedEventDailySettings choice, CancellationToken ct, bool allowAnnouncement)
     {
         var activity = choice.ActivityId is int id ? _limitedActivities.FirstOrDefault(e => e.Id == id) : _limitedActivities.FirstOrDefault();
         if (activity is null) throw new InvalidOperationException(L.Text("所选限时活动已不在配置中，请重新添加每日任务。"));
         var stages = new EventStagesService(_automation!, serial, activity);
-        var menu = await new StageMenuEntryService(_automation!, _logger!).OpenFromHomeAsync(serial, _mainLayout,
-            _config.StagePageSettleMs, ct);
-        if (!menu.Success) throw new InvalidOperationException(menu.Message);
-        await stages.OpenFromMenuAsync(ct);
+        var destination = choice.Stages ? EventStagesService.Destination.Stages : choice.ClaimRewards ? EventStagesService.Destination.Story :
+            choice.Boss ? EventStagesService.Destination.Boss : EventStagesService.Destination.Supply;
+        await NavigateLimitedAsync(serial, activity, destination, ct, allowAnnouncement);
         if (choice.Stages)
         {
             AccountStatusText.Text = L.Text("每日10次关卡");
