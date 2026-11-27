@@ -68,7 +68,7 @@ public partial class MainWindow
         if (choice.Stages)
         {
             AccountStatusText.Text = L.Text("每日10次关卡");
-            await RunEventStagesDailyAsync(serial, ct, choice.ClaimRewards);
+            LimitedStatus.Text = await RunEventStagesDailyAsync(serial, ct, choice.ClaimRewards);
         }
         else if (choice.ClaimRewards)
         {

@@ -80,8 +80,10 @@ public class EventStagesDailyTests
         Assert.InRange(device.Taps[2].X, 1660, 1690);
     }
 
-    [Fact]
-    public async Task FullDailyReplayChecksProgressAfterEverySettlement()
+    [Theory]
+    [InlineData(9)]
+    [InlineData(10)]
+    public async Task FullDailyReplayChecksMissionAfterSingleNormalSkip(int finalCount)
     {
         var steps = new List<(string Frame, int X, int Y)>();
         void Mission(string count) { steps.Add(("story_return",1246,880)); steps.Add((count,122,48)); }
@@ -96,15 +98,16 @@ public class EventStagesDailyTests
             Enter();
             steps.Add(("hard3done",30 + i*190, i == 2 ? 458 : 394));
             Execute(i == 1 ? "nativehard1" : $"hard{i}", "skip1");
+            if (i == 3) break;
             steps.Add(($"hard{i}done",122,48));
             Mission($"progress{i*3}");
         }
-        Enter();
         steps.Add(("hard3done",220,394));
         steps.Add(("hard1done",30,458));
         Execute("normal_done","normal_skip");
-        steps.Add(("normal_done",122,48));
-        Mission("progress10");
+        // 结算后仅能确认关卡页，不要求仍选中普通末关。
+        steps.Add(("hard3done",122,48));
+        Mission($"progress{finalCount}");
 
         byte[] Frame(string key)
         {
@@ -139,8 +142,9 @@ public class EventStagesDailyTests
             PostSkipConfirmation=new SelectStageTitleRecognizer(EventStagesService.PathFor("stage_title")).Recognize,
             EventQuantityLayout=true, RecoverUnchangedExecutionDialog=true, SkipDialogWaitMs=0, SettleAfterOkMs=0
         });
-        await new EventStagesService(automation,"test").DailyAsync(settlement,
+        var message = await new EventStagesService(automation,"test").DailyAsync(settlement,
             new UiLayoutService(log).Load(ConfigService.ResolvePath("resources/ui_layout/stage.json")), navigation, default, false);
+        if (finalCount < 10) Assert.Contains("9/10", message);
         Assert.Equal(steps.Count,index);
     }
 

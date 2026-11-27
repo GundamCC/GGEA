@@ -81,7 +81,7 @@ public sealed class AutoProgressRunner
                 var known = node.State is WorkStageNodeState.Incomplete or WorkStageNodeState.Completed or WorkStageNodeState.Cleared &&
                     position is not null && node.Number is int value &&
                     WorkStageSequencePlanner.TryGetPosition(work.NormalCount, work.SideStories, work.HardCount,
-                        node.Kind, value, out var expected) && expected == position;
+                        node.Kind, value, out var expected, work.InferFinalBoss) && expected == position;
                 // 上一场已确认是最终 HARD 且完成结算，编号观察丢失不要求再次出击来证明完成。
                 if (!known && confirmingCompletion)
                 {

@@ -74,7 +74,7 @@ public sealed class StageProgressReader(AutomationService automation, IStageNode
                     Math.Abs(first.NumberRegion.CenterX - next.NumberRegion.CenterX) <= 8 &&
                     Math.Abs(first.NumberRegion.CenterY - next.NumberRegion.CenterY) <= 12 &&
                     WorkStageSequencePlanner.TryGetPosition(work.NormalCount, work.SideStories, work.HardCount,
-                        next.Position.Kind, next.Position.Number, out var expected) && expected == next.Position)
+                        next.Position.Kind, next.Position.Number, out var expected, work.InferFinalBoss) && expected == next.Position)
                 {
                     ct.ThrowIfCancellationRequested();
                     var reason = requireConfirmation ? $"结算后仍选中 {current.Kind} {current.Number}" : $"当前 {current.Kind} {current.Number} 已通过";

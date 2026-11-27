@@ -199,7 +199,7 @@ internal sealed class EventStagesService(AutomationService automation, string se
     }
 
     private sealed record MissionProgress(int Count);
-    private async Task<int> ReadMissionProgressAsync(CancellationToken ct)
+    private async Task<int?> ReadMissionProgressAsync(CancellationToken ct)
     {
         var result = await StableObservation.WaitAsync<MissionProgress>(async () =>
         {
@@ -208,12 +208,12 @@ internal sealed class EventStagesService(AutomationService automation, string se
             if (await Match(frame, TenDone, ct) is not null) return new(10);
             return ReadTenStepBar(frame) is int value ? new(value) : null;
         }, (a,b) => a == b, GameTiming.RecognitionTimeoutMs, ct);
-        if (result is null) throw new InvalidOperationException("未能确认每日十次使命进度，已保留 AP。");
+        if (result is null) return null;
         automation.Log.Info($"限时活动每日使命进度 {result.Count}/10。");
         return result.Count;
     }
 
-    internal static HardStageEntry CreateWork() => new() { Work = "事件关卡", NormalCount = 7, HardCount = 4 };
+    internal static HardStageEntry CreateWork() => new() { Work = "事件关卡", InferFinalBoss = false, NormalCount = 7, HardCount = 4 };
 
     internal static UiLayout CreateTrackLayout(UiLayout layout)
     {
@@ -230,14 +230,15 @@ internal sealed class EventStagesService(AutomationService automation, string se
         return new UiLayout { ScreenWidth = layout.ScreenWidth, ScreenHeight = layout.ScreenHeight, Anchors = anchors.Values.ToList() };
     }
 
-    internal async Task<bool> DailyAsync(StageSkipService settlement, UiLayout layout, StageService navigation,
+    internal async Task<string> DailyAsync(StageSkipService settlement, UiLayout layout, StageService navigation,
         CancellationToken ct, bool claimRewards = true)
     {
         var work = CreateWork();
         var eventLayout = CreateTrackLayout(layout);
         var start = await Require(null, ct, Story, Stage);
         if (start.Target == Stage) await OpenMission(ct); else await OpenMissionFromStory(ct);
-        int progress = await ReadMissionProgressAsync(ct);
+        int progress = await ReadMissionProgressAsync(ct) ?? throw new InvalidOperationException("未能确认每日十次使命进度，已保留 AP。");
+        bool onStage = false;
         for (int hard = 1; progress < 10 && hard <= 3; hard++)
         {
             await Click(Mission, Back, ct);
@@ -253,40 +254,59 @@ internal sealed class EventStagesService(AutomationService automation, string se
                 var confirmed = await navigation.ConfirmCurrentHardStageAsync(serial, eventLayout, work, hard, ct);
                 if (!confirmed.Success) throw new InvalidOperationException(confirmed.Message);
             }
+            // 即使本次 HARD 拿满三次也未达标时，直接在轨道上补普通关，避免往返使命页。
+            if (hard == 3 && progress + 3 < 10)
+            {
+                onStage = true;
+                break;
+            }
             await OpenMission(ct);
-            int updated = await ReadMissionProgressAsync(ct);
-            if (result.Success && updated <= progress) throw new InvalidOperationException("事件使命进度未增加，已保留 AP。");
+            int updated = await ReadMissionProgressAsync(ct) ?? throw new InvalidOperationException("未能确认每日十次使命进度，已保留 AP。");
+            if (result.Success && updated <= progress) automation.Log.Warn($"事件使命进度仍为 {updated}/10，本关不再重复略过。");
             if (!maximum && updated > progress && updated < 10) hard--;
             progress = updated;
         }
         if (progress < 10)
         {
-            if (progress != 9) throw new InvalidOperationException($"每日使命为 {progress}/10，当前 HARD 次数不足。");
-            await Click(Mission, Back, ct);
-            await EnterAsync(false, ct);
+            if (!onStage)
+            {
+                await Click(Mission, Back, ct);
+                await EnterAsync(false, ct);
+            }
             var first = await navigation.SelectHardStageAsync(serial, eventLayout, [work], work.Id, 1, ct);
             if (!first.Success) throw new InvalidOperationException(first.Message);
             await navigation.SelectBeforeHardAsync(serial, eventLayout, work, ct);
             var result = await SkipSelected(false);
             if (result.IsApInsufficient) return await FinishWithoutAp();
-            if (!result.Success) throw new InvalidOperationException(result.Message);
-            await navigation.ConfirmBeforeHardAsync(serial, work, ct);
+            if (!result.Success && !result.IsUnavailable) throw new InvalidOperationException(result.Message);
+            // 公共结算已确认返回关卡页；此时以使命计数为准，避免等待普通节点的黄色光效。
             await OpenMission(ct);
-            if (await ReadMissionProgressAsync(ct) != 10) throw new InvalidOperationException("未确认每日使命完成。");
+            var finalCount = await ReadMissionProgressAsync(ct);
+            if (finalCount is null)
+            {
+                var message = GGEA.App.Localization.L.Text("本轮略过已结束，未能确认最终使命进度。");
+                automation.Log.Warn(message);
+                await FinishMissionAsync(claimRewards, ct);
+                return message;
+            }
+            progress = finalCount.Value;
         }
         await FinishMissionAsync(claimRewards, ct);
-        return true;
+        if (progress == 10) return GGEA.App.Localization.L.Text("事件每日关卡及使命领取完成。");
+        var warning = GGEA.App.Localization.L.Format($"限时活动每日关卡为 {progress}/10，本轮略过已结束。");
+        automation.Log.Warn(warning);
+        return warning;
 
         Task<StageSkipResult> SkipSelected(bool maximum) => settlement.SkipCurrentAsync(serial, eventLayout, ct,
             token => ConfigureQuantity(maximum, token),
             async token => (await Require(Stage, token, Limit, Skip)).Target == Skip);
 
-        async Task<bool> FinishWithoutAp()
+        async Task<string> FinishWithoutAp()
         {
             // 公共结算已关闭回复与确认弹窗，返回故事事件后仍可执行领取、BOSS 和补给。
             await OpenMission(ct);
             await FinishMissionAsync(claimRewards, ct);
-            return false;
+            return GGEA.App.Localization.L.Text("AP 不足，当前略过任务结束");
         }
     }
 

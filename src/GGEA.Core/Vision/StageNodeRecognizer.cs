@@ -192,11 +192,11 @@ public sealed class StageNodeRecognizer : IStageNodeRecognizer, IStageNextNodeRe
         var labelTop = region.Y + region.Height;
         var kind = RecognizeKind(screen, Clip(new Roi(marker.CenterX - 140, labelTop, 280,
             Math.Max(1, digits.Y - labelTop)), screen.Width, screen.Height), marker.CenterX, templates, ct);
-        if (kind == WorkStageKind.Normal && value == work.NormalCount) kind = WorkStageKind.Boss;
+        if (work.InferFinalBoss && kind == WorkStageKind.Normal && value == work.NormalCount) kind = WorkStageKind.Boss;
         var state = RecognizeState(screen, Clip(new Roi(marker.CenterX - 110, digits.Y + digits.Height + 8,
             220, _layout.Nodes.Y + _layout.Nodes.Height - digits.Y - digits.Height - 8), screen.Width, screen.Height), kind, templates);
         if (state != WorkStageNodeState.Incomplete || !WorkStageSequencePlanner.TryGetPosition(
-            work.NormalCount, work.SideStories, work.HardCount, kind, value, out var position) || position is null)
+            work.NormalCount, work.SideStories, work.HardCount, kind, value, out var position, work.InferFinalBoss) || position is null)
             return null;
         return new(digits.CenterX, digits.CenterY, position, region, digits);
     }
@@ -225,8 +225,8 @@ public sealed class StageNodeRecognizer : IStageNodeRecognizer, IStageNextNodeRe
         var labelRoi = CreateLabelRoi(selected.Value.CenterX,
             numberResult.Region?.Y ?? roi.Y + 100, screen);
         var kind = RecognizeKind(screen, labelRoi, selected.Value.CenterX, templates, ct);
-        // 未贴 BOSS 标签的最后 NORMAL 关仍按 BOSS 处理，保证配置序列只有一个入口。
-        if (kind == WorkStageKind.Normal && number == work.NormalCount)
+        // 主线保留末关推定规则，故事事件按实际标签识别。
+        if (work.InferFinalBoss && kind == WorkStageKind.Normal && number == work.NormalCount)
         {
             kind = WorkStageKind.Boss;
         }
@@ -241,7 +241,7 @@ public sealed class StageNodeRecognizer : IStageNodeRecognizer, IStageNextNodeRe
                 work.HardCount,
                 kind,
                 stageNumber,
-                out position))
+                out position, work.InferFinalBoss))
         {
             _log.Warn($"关卡编号与作品配置不一致：{work.Work} {kind} {stageNumber}");
         }

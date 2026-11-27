@@ -26,6 +26,10 @@ public sealed class HardStageEntry
     [JsonPropertyName("work")]
     public string Work { get; set; } = "";
 
+    /// <summary>主线按编号推定末关 BOSS；故事事件使用画面上的实际类型。</summary>
+    [JsonIgnore]
+    public bool InferFinalBoss { get; init; } = true;
+
     [JsonPropertyName("normalCount")]
     public int NormalCount { get; set; }
 

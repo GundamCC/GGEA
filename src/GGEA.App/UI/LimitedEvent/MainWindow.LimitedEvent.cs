@@ -45,8 +45,7 @@ public partial class MainWindow
                 LimitedStatus.Text = await RunEventProgressAsync(serial, owner.Token);
             else if (button == EventDaily)
             {
-                LimitedStatus.Text = await RunEventStagesDailyAsync(serial, owner.Token)
-                    ? L.Text("事件每日关卡及使命领取完成。") : L.Text("AP 不足，当前略过任务结束");
+                LimitedStatus.Text = await RunEventStagesDailyAsync(serial, owner.Token);
             }
             else if (button == MedalStart)
             {
@@ -75,7 +74,7 @@ public partial class MainWindow
         }
     }
 
-    private async Task<bool> RunEventStagesDailyAsync(string serial, CancellationToken ct, bool claimRewards = true)
+    private async Task<string> RunEventStagesDailyAsync(string serial, CancellationToken ct, bool claimRewards = true)
     {
         var title = new SelectStageTitleRecognizer(EventStagesService.PathFor("stage_title"));
         var settlement = CreateStageSkipService(false, title.Recognize, eventQuantityLayout: true);
