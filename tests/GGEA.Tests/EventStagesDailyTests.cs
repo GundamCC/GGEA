@@ -81,10 +81,11 @@ public class EventStagesDailyTests
     }
 
     [Theory]
-    [InlineData(6)]
-    [InlineData(9)]
-    [InlineData(10)]
-    public async Task FullDailyReplayChecksMissionAfterSingleNormalSkip(int finalCount)
+    [InlineData(0, 6)]
+    [InlineData(0, 9)]
+    [InlineData(0, 10)]
+    [InlineData(9, 10)]
+    public async Task FullDailyReplayChecksMissionAfterAllHardStages(int initialCount, int finalCount)
     {
         var steps = new List<(string Frame, int X, int Y)>();
         void Mission(string count) { steps.Add(("story_return",1246,880)); steps.Add((count,122,48)); }
@@ -93,26 +94,24 @@ public class EventStagesDailyTests
         {
             steps.Add((detail,1674,710)); steps.Add((dialog,1148,994)); steps.Add(("result1",1676,988));
         }
-        Mission("progress0");
+        Mission($"progress{initialCount}");
+        Enter();
+        string selectedPage = "hard3done";
         for (int i = 1; i <= 3; i++)
         {
-            Enter();
-            steps.Add(("hard3done",30 + i*190, i == 2 ? 458 : 394));
-            // HARD 2 的次数已手动用完时，只允许返回检查使命，不允许点击略过。
+            steps.Add((selectedPage,30 + i*190, i == 2 ? 458 : 394));
+            selectedPage = $"hard{i}done";
             if (finalCount == 6 && i == 2)
-            {
-                steps.Add(("hard2limit",122,48));
-                Mission("progress3");
-                continue;
-            }
-            Execute(i == 1 ? "nativehard1" : $"hard{i}", "skip1");
-            if (i == 3) break;
-            steps.Add(($"hard{i}done",122,48));
-            Mission($"progress{i*3}");
+                selectedPage = "hard2limit";
+            else
+                Execute(i == 1 ? "nativehard1" : $"hard{i}", "skip1");
         }
-        steps.Add(("hard3done",220,394));
-        steps.Add(("hard1done",30,458));
-        Execute("normal_done","normal_skip");
+        if (initialCount == 0)
+        {
+            steps.Add(("hard3done",220,394));
+            steps.Add(("hard1done",30,458));
+            Execute("normal_done","normal_skip");
+        }
         // 结算后仅能确认关卡页，不要求仍选中普通末关。
         steps.Add(("hard3done",122,48));
         Mission($"progress{finalCount}");

@@ -238,47 +238,33 @@ internal sealed class EventStagesService(AutomationService automation, string se
         var start = await Require(null, ct, Story, Stage);
         if (start.Target == Stage) await OpenMission(ct); else await OpenMissionFromStory(ct);
         int progress = await ReadMissionProgressAsync(ct) ?? throw new InvalidOperationException("未能确认每日十次使命进度，已保留 AP。");
-        bool onStage = false;
-        for (int hard = 1; progress < 10 && hard <= 3; hard++)
+        if (progress < 10)
         {
             await Click(Mission, Back, ct);
             await EnterAsync(false, ct);
-            var selected = await navigation.SelectHardStageAsync(serial, eventLayout, [work], work.Id, hard, ct);
-            if (!selected.Success) throw new InvalidOperationException(selected.Message);
-            bool maximum = progress <= 7;
-            var result = await SkipSelected(maximum);
-            if (result.IsApInsufficient) return await FinishWithoutAp();
-            if (!result.Success && !result.IsUnavailable) throw new InvalidOperationException(result.Message);
-            if (result.Success)
+            // HARD 的收益独立于十次使命，途中即使已达标也处理完三个关卡。
+            for (int hard = 1; hard <= 3; hard++)
             {
-                var confirmed = await navigation.ConfirmCurrentHardStageAsync(serial, eventLayout, work, hard, ct);
-                if (!confirmed.Success) throw new InvalidOperationException(confirmed.Message);
+                var selected = await navigation.SelectHardStageAsync(serial, eventLayout, [work], work.Id, hard, ct);
+                if (!selected.Success) throw new InvalidOperationException(selected.Message);
+                var result = await SkipSelected(true);
+                if (result.IsApInsufficient) return await FinishWithoutAp();
+                if (!result.Success && !result.IsUnavailable) throw new InvalidOperationException(result.Message);
+                if (result.Success)
+                {
+                    var confirmed = await navigation.ConfirmCurrentHardStageAsync(serial, eventLayout, work, hard, ct);
+                    if (!confirmed.Success) throw new InvalidOperationException(confirmed.Message);
+                }
             }
-            // 即使本次 HARD 拿满三次也未达标时，直接在轨道上补普通关，避免往返使命页。
-            if (hard == 3 && progress + 3 < 10)
+            if (progress == 0)
             {
-                onStage = true;
-                break;
+                var first = await navigation.SelectHardStageAsync(serial, eventLayout, [work], work.Id, 1, ct);
+                if (!first.Success) throw new InvalidOperationException(first.Message);
+                await navigation.SelectBeforeHardAsync(serial, eventLayout, work, ct);
+                var result = await SkipSelected(false);
+                if (result.IsApInsufficient) return await FinishWithoutAp();
+                if (!result.Success && !result.IsUnavailable) throw new InvalidOperationException(result.Message);
             }
-            await OpenMission(ct);
-            int updated = await ReadMissionProgressAsync(ct) ?? throw new InvalidOperationException("未能确认每日十次使命进度，已保留 AP。");
-            if (result.Success && updated <= progress) automation.Log.Warn($"事件使命进度仍为 {updated}/10，本关不再重复略过。");
-            if (!maximum && updated > progress && updated < 10) hard--;
-            progress = updated;
-        }
-        if (progress < 10)
-        {
-            if (!onStage)
-            {
-                await Click(Mission, Back, ct);
-                await EnterAsync(false, ct);
-            }
-            var first = await navigation.SelectHardStageAsync(serial, eventLayout, [work], work.Id, 1, ct);
-            if (!first.Success) throw new InvalidOperationException(first.Message);
-            await navigation.SelectBeforeHardAsync(serial, eventLayout, work, ct);
-            var result = await SkipSelected(false);
-            if (result.IsApInsufficient) return await FinishWithoutAp();
-            if (!result.Success && !result.IsUnavailable) throw new InvalidOperationException(result.Message);
             // 公共结算已确认返回关卡页；此时以使命计数为准，避免等待普通节点的黄色光效。
             await OpenMission(ct);
             var finalCount = await ReadMissionProgressAsync(ct);
