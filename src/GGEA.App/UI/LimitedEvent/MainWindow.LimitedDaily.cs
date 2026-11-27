@@ -94,13 +94,15 @@ public partial class MainWindow
         if (choice.Boss)
         {
             AccountStatusText.Text = L.Text("BOSS 战斗");
-            await new LimitedEventBossService(_automation!, GetTextOcr(), _logger!, serial).RunAsync(choice.Difficulty, ct);
-            if (choice.Medals) await stages.ReturnFromBossAsync(ct);
+            var completed = await new LimitedEventBossService(_automation!, GetTextOcr(), _logger!, serial).RunAsync(choice.Difficulty, ct);
+            if (!completed) _logger!.Info(LimitedStatus.Text = L.Text("BOSS 战斗未解锁，已跳过。"));
+            else if (choice.Medals) await stages.ReturnFromBossAsync(ct);
         }
         if (choice.Medals)
         {
             AccountStatusText.Text = L.Text("奖章机体补给");
-            await new MedalExchangeService(_automation!, GetTextOcr(), _logger!, serial, GetRecognitionEvidence()).RunAsync(ct);
+            var completed = await new MedalExchangeService(_automation!, GetTextOcr(), _logger!, serial, GetRecognitionEvidence()).RunAsync(ct);
+            if (!completed) _logger!.Info(LimitedStatus.Text = L.Text("奖章机体补给未解锁，已跳过。"));
         }
     }
 }

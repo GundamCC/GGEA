@@ -51,14 +51,14 @@ public partial class MainWindow
             else if (button == MedalStart)
             {
                 var service = new MedalExchangeService(_automation, GetTextOcr(), _logger, serial, GetRecognitionEvidence());
-                await Task.Run(() => service.RunAsync(owner.Token), owner.Token);
-                LimitedStatus.Text = L.Text("批量交换按钮已置灰，自动兑换已结束。");
+                var completed = await Task.Run(() => service.RunAsync(owner.Token), owner.Token);
+                LimitedStatus.Text = completed ? L.Text("批量交换按钮已置灰，自动兑换已结束。") : L.Text("奖章机体补给未解锁，已跳过。");
             }
             else
             {
                 var service = new LimitedEventBossService(_automation, GetTextOcr(), _logger, serial);
-                await Task.Run(() => service.RunAsync(difficulty, owner.Token), owner.Token);
-                LimitedStatus.Text = L.Text("BOSS 挑战券不足，已关闭对话框。");
+                var completed = await Task.Run(() => service.RunAsync(difficulty, owner.Token), owner.Token);
+                LimitedStatus.Text = completed ? L.Text("BOSS 挑战券不足，已关闭对话框。") : L.Text("BOSS 战斗未解锁，已跳过。");
             }
             _logger.Info(LimitedStatus.Text);
         }

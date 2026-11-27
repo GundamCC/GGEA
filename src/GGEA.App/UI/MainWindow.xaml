@@ -234,7 +234,7 @@
                                         </UniformGrid>
                                     </Grid>
                                     <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" Margin="0,12,0,0" Padding="0,10,0,0">
-                                        <Grid x:Name="EventDailyOptions" Margin="0,0,6,0">
+                                        <Grid x:Name="EventDailyOptions">
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="76"/><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                                             <TextBlock Grid.RowSpan="2" Text="{loc:Text Source='每日任务'}" Foreground="{DynamicResource Brush.Text}" FontWeight="SemiBold" VerticalAlignment="Center"/>

@@ -50,14 +50,14 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
     private string submission = "尚未提交";
     private string Diagnostics => string.Join("，", readings.Select(p => $"{p.Key}={p.Value}"));
 
-    public async Task RunAsync(CancellationToken ct)
+    public async Task<bool> RunAsync(CancellationToken ct)
     {
         readings.Clear();
         foreach (var key in new[] { "补给余额", "上一兑换结果页余额", "当前按钮报价", "关键报酬", "一般报酬" }) readings[key] = "尚未读取";
         submission = "尚未提交";
         lastFrame = null;
         readingPool = false;
-        try { await ExchangeAsync(ct); }
+        try { return await ExchangeAsync(ct); }
         catch (MedalRecognitionException ex)
         {
             log.Warn(ex.Message);
@@ -110,18 +110,21 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         }
     }
 
-    private async Task ExchangeAsync(CancellationToken ct)
+    private async Task<bool> ExchangeAsync(CancellationToken ct)
     {
         if (!System.IO.File.Exists(ConfigService.ResolvePath($"resources/templates/{Supply.Key}.png")))
             throw new InvalidOperationException(L.Text("当前游戏语言缺少故事事件识别素材。"));
         ocr.Validate();
+        var locked = new Target(LimitedEntryLock.Template, LimitedEntryLock.Supply);
         var entry = await StableObservation.WaitAsync<Target>(async () =>
         {
             var frame = await Capture(ct);
             if (await IsResetReceipt(frame, ct)) return Complete;
             if (await Match(frame, Supply, ct) is not null) return Supply;
-            return await Match(frame, Story, ct) is not null ? Story : null;
+            if (await Match(frame, Story, ct) is null) return null;
+            return await Match(frame, locked, ct) is null ? Story : locked;
         }, (a,b) => a == b, GameTiming.RecognitionTimeoutMs, ct) ?? throw Failure("确认启动页面（故事事件、补给或重置完成）");
+        if (entry == locked) return false;
         if (entry == Complete)
         {
             var underlying = await CloseResetReceipt(ct);
@@ -155,7 +158,7 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             parent = await WaitParent(ct);
             if (parent == Results) await Click(Results, ResultClose, ct);
             var batch = await SubmitFromSupply(balance, pool.Remaining, ct, lastSettledCost);
-            if (batch == 0) return;
+            if (batch == 0) return true;
 
             await OpenStatus(Results, ct, balance);
             var after = await ReadPool(ct);

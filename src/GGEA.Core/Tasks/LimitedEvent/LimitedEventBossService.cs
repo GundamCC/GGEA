@@ -19,7 +19,7 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
     private static readonly Roi RemainingTickets = new(1280, 607, 165, 43);
     private static readonly Roi Quantity = new(1210, 385, 200, 160);
 
-    public async Task RunAsync(FierceEnemyDifficulty difficulty, CancellationToken ct)
+    public async Task<bool> RunAsync(FierceEnemyDifficulty difficulty, CancellationToken ct)
     {
         if (!System.IO.File.Exists(ConfigService.ResolvePath("resources/templates/" + Event + "story.png")))
             throw new InvalidOperationException(L.Text("当前游戏语言缺少故事事件识别素材。"));
@@ -27,8 +27,11 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
         var entry = await WaitStable(async frame =>
         {
             if (await Find(frame, Event + "boss", Title, ct, BossTitleThreshold) is { } boss) return new Observation("boss", boss);
-            return await Find(frame, Event + "story", Title, ct, .90) is { } story ? new Observation("story", story) : null;
+            if (await Find(frame, Event + "story", Title, ct, .90) is not { } story) return null;
+            var locked = await Find(frame, LimitedEntryLock.Template, LimitedEntryLock.Boss, ct, .90);
+            return locked is null ? new Observation("story", story) : new Observation("locked", locked);
         }, ct) ?? throw new InvalidOperationException(L.Text("请进入故事事件或 BOSS 战斗界面。"));
+        if (entry.Kind == "locked") return false;
         if (entry.Kind == "story") await automation.TapAsync(serial, 1650, 314, ct);
         await WaitBoss(ct);
         while (true)
@@ -41,7 +44,7 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
             if (choice.Kind == "cancel")
             {
                 await WaitBoss(ct);
-                return;
+                return true;
             }
             if (choice.Kind == "max")
             {

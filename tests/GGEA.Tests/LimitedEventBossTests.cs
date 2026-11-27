@@ -23,6 +23,34 @@ public sealed class LimitedEventBossTests
         return ImageCodec.EncodePng(pixels, 1920, 1080);
     }
 
+    [Fact]
+    public async Task LockedBossThenSupplyStayOnStoryWithoutSendingInput()
+    {
+        byte[] Load(int n) => File.ReadAllBytes(ConfigService.ResolvePath(
+            $"Fixtures/Navigation/limited-story-locked-{n}.png"));
+        var first = Load(1);
+        var second = Load(2);
+        byte[] HideLock(Roi area)
+        {
+            var frame = ImageCodec.DecodePng(first);
+            for (var y = area.Y; y < area.Y + area.Height; y++)
+                Array.Clear(frame.Bgra, (y * frame.Width + area.X) * 4, area.Width * 4);
+            return ImageCodec.EncodePng(frame.Bgra, frame.Width, frame.Height);
+        }
+        // 每项从仅相邻入口上锁的一帧开始，必须等到自己的锁标连续出现两帧。
+        var frames = new Queue<byte[]>(new[] { HideLock(LimitedEntryLock.Boss), first, second,
+            HideLock(LimitedEntryLock.Supply), first, second });
+        var device = new FakeAdbService(first) { ScreenshotProvider = frames.Dequeue };
+        var log = new TestLog();
+        using var automation = new AutomationService(device, new TemplateMatcher(), log);
+        using var ocr = new OnnxTextRecognizer();
+        Assert.False(await new LimitedEventBossService(automation, ocr, log, "test").RunAsync(FierceEnemyDifficulty.EXPERT, default));
+        Assert.Equal(3, frames.Count);
+        Assert.False(await new MedalExchangeService(automation, ocr, log, "test").RunAsync(default));
+        Assert.Empty(frames);
+        Assert.Empty(device.Taps);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
