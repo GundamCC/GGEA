@@ -3233,6 +3233,16 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/zh-CN/templates/base/character_requests/button_deliver.png",
+      "sha256": "6abf81219eef0d1fdefb96d5f85feaf8b0c04f03f6f08a484851dac6f7ac85d6",
+      "width": 78,
+      "height": 41,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; zh-CN Character Requests, MuMu 1920x1080, crop (1584,837,78,41)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/zh-CN/templates/base/character_requests/button_next_character.png",
       "sha256": "5db6bcd339566552e35534b8f06bf608671443f9414757062a6148898d8f107f",
       "width": 42,
