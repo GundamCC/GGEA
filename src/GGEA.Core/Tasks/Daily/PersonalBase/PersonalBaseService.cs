@@ -65,10 +65,13 @@ public sealed class PersonalBaseService
     }
 
     /// <summary>从已确认的主界面进入个人基地，复核地图入口后交给本轮的角色栏位流程。</summary>
-    public Task<int> AcceptCharacterRequestsAsync(string serial, UiLayout mainLayout, CancellationToken ct = default) =>
+    public async Task<int> AcceptCharacterRequestsAsync(string serial, UiLayout mainLayout, CancellationToken ct = default) =>
+        (await RunCharacterRequestsAsync(serial, mainLayout, null, ct)).Accepted;
+
+    public Task<CharacterRequestResult> RunCharacterRequestsAsync(string serial, UiLayout mainLayout, OnnxTextRecognizer? ocr, CancellationToken ct = default) =>
         Task.Run(async () =>
         {
-            var service = new CharacterRequestService(_automation, _log);
+            var service = new CharacterRequestService(_automation, _log, ocr);
             var navBase = mainLayout.Require("navBase", "主界面布局缺少 navBase 锚点");
             await _automation.TapAsync(serial, navBase.CenterX, navBase.CenterY, ct);
             await Task.Delay(GameTiming.RecognitionIntervalMs, ct);
@@ -81,7 +84,7 @@ public sealed class PersonalBaseService
                     Math.Abs(confirmed.CenterY - entry.CenterY) <= 3)
                 {
                     await _automation.TapAsync(serial, confirmed.CenterX, confirmed.CenterY, ct);
-                    return await service.AcceptFromListAsync(serial, ct);
+                    return await service.RunFromListAsync(serial, ct);
                 }
             }
             throw new InvalidOperationException(L.Text("未能确认个人基地的角色要求入口。"));

@@ -11,6 +11,7 @@ internal sealed class CharacterRequestPage
     private readonly TemplateMatcher _matcher = new();
     private readonly TemplateImages _title = new(Directory + "title_character_requests.png");
     private readonly TemplateImages _rank = new(Directory + "card_request_rank.png");
+    private readonly TemplateImages _refresh = new(Directory + "card_refresh.png");
     private readonly ScreenImage _slotLock = LoadSlotLock();
 
     private static ScreenImage LoadSlotLock()
@@ -28,23 +29,27 @@ internal sealed class CharacterRequestPage
         _title.Match(_matcher, screen, .93, new Roi(200, 5, 305, 95), ct) is not null;
 
     /// <summary>按从左到右的解锁顺序取得本轮上限。缺失、矛盾的证据或转场都留给下一帧。</summary>
-    internal int? ReadSlotCount(ScreenImage screen, CancellationToken ct)
+    internal int? ReadSlotCount(ScreenImage screen, CancellationToken ct) => ReadList(screen, ct)?.Count;
+
+    internal sealed record ListState(int Count, int ActiveMask);
+    internal ListState? ReadList(ScreenImage screen, CancellationToken ct)
     {
         if (!HasTitle(screen, ct)) return null;
         var count = 0;
+        var mask = 0;
         for (var slot = 0; slot < 3; slot++)
         {
             var dx = slot * 535;
             var hasRank = _rank.Match(_matcher, screen, .93, new Roi(191 + dx, 604, 166, 74), ct) is not null;
             var locked = _matcher.Match(screen.Bgra, screen.Width, screen.Height, _slotLock.Bgra,
                 _slotLock.Width, _slotLock.Height, .93, new Roi(382 + dx, 284, 90, 92), ct: ct) is not null;
-            if (hasRank == locked) return null;
-            if (hasRank)
-            {
-                if (count != slot) return null;
-                count++;
-            }
+            var completed = _refresh.Match(_matcher, screen, .93, new Roi(215 + dx, 598, 285, 122), ct) is not null;
+            if ((hasRank ? 1 : 0) + (completed ? 1 : 0) + (locked ? 1 : 0) != 1) return null;
+            if (locked) continue;
+            if (count != slot) return null;
+            count++;
+            if (hasRank) mask |= 1 << slot;
         }
-        return count;
+        return new(count, mask);
     }
 }

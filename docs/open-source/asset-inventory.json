@@ -2173,6 +2173,16 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/common/templates/upgrade/material_minus.png",
+      "sha256": "bd3781d3b42245a768cfa96872d27d8de2d2930ed27c36120623f3d843f20c03",
+      "width": 47,
+      "height": 31,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu zh-CN 1920x1080, crop (801,271,47,31)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/common/templates/upgrade/option/option_dev_unit_off.png",
       "sha256": "9b285047503988bb308479f8d0b18d79ea8ff306ca7b92f56c269d388b509223",
       "width": 231,
@@ -2239,6 +2249,36 @@
       "height": 63,
       "category": "recognition-resource",
       "source": "Game-derived appearance; original capture/source unconfirmed",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/common/templates/upgrade/uexp_0001.png",
+      "sha256": "644a66c5d6c93eb1fb24819422907925e5ee18dceab4ff9d8cc50588bf864979",
+      "width": 93,
+      "height": 98,
+      "category": "recognition-resource",
+      "source": "Game-derived unit enhancement data sprite, master data 2.8.1: uexp_0001",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/common/templates/upgrade/uexp_0002.png",
+      "sha256": "8ed456ca586b3943032edc228987dd42ea010067e3a50dfac94a56c874cc6bb8",
+      "width": 111,
+      "height": 107,
+      "category": "recognition-resource",
+      "source": "Game-derived unit enhancement data sprite, master data 2.8.1: uexp_0002",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/common/templates/upgrade/uexp_0003.png",
+      "sha256": "cab983bab273f707caf059f048d08c5158b0488f0a83abd49b6d023ff9bb4a3b",
+      "width": 160,
+      "height": 160,
+      "category": "recognition-resource",
+      "source": "Game-derived unit enhancement data sprite, master data 2.8.1: uexp_0003",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
@@ -3213,12 +3253,32 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/zh-CN/templates/base/character_requests/button_report.png",
+      "sha256": "50db75a9497684154a2b68f6672380c1d94dc56ae6136bae9bb5504083f70711",
+      "width": 78,
+      "height": 41,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu zh-CN 1920x1080, crop (1584,837,78,41)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/zh-CN/templates/base/character_requests/button_request_info.png",
       "sha256": "523617f878a3d3ad1039fc70322145fa3b04ec60d341738d9e7ad312526e0445",
       "width": 252,
       "height": 67,
       "category": "recognition-resource",
       "source": "Game-derived appearance; zh-CN Character Requests, MuMu 1920x1080, crop (1642,34,252,67)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/character_requests/card_refresh.png",
+      "sha256": "492981fae8040c87c691d14294b7a63e4f318be824e3aba5fe2e768c4909b150",
+      "width": 115,
+      "height": 44,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu zh-CN 1920x1080, crop (272,644,115,44)",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
@@ -3269,6 +3329,26 @@
       "height": 68,
       "category": "recognition-resource",
       "source": "Game-derived appearance; zh-CN Character Requests, MuMu 1920x1080, crop (216,17,271,68)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/character_requests/title_claim_result.png",
+      "sha256": "fd1e151144bd7c6e7fb71ee9c0afc8a599c63beed96dea8a25f4a9c7cf85be53",
+      "width": 186,
+      "height": 66,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu zh-CN 1920x1080, crop (868,60,186,66)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/character_requests/title_report_complete.png",
+      "sha256": "d5c7d3409032306506be69403d64b9b99c4d5a06433677e2c2efc4dd51421426",
+      "width": 290,
+      "height": 91,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu zh-CN 1920x1080, crop (815,338,290,91)",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
@@ -4383,6 +4463,16 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/zh-CN/templates/upgrade/button_apply_lv.png",
+      "sha256": "6b61328000a957b219b7271d8f6e948b1ddf38407aa55ef8224c087f93254306",
+      "width": 132,
+      "height": 52,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu zh-CN 1920x1080, crop (1082,968,132,52)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/zh-CN/templates/upgrade/button_auto_dismantle.png",
       "sha256": "91479e452dd4349281f7bf19c8ea403842583cf4039edad027bbd8f84fcd6a1b",
       "width": 255,
@@ -4453,6 +4543,16 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/zh-CN/templates/upgrade/first_card_lv.png",
+      "sha256": "34d8e62b9c5763fad90499fe93f50faab4aced6efa1d1064de775fb9505c542b",
+      "width": 35,
+      "height": 37,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu zh-CN 1920x1080, crop (399,416,35,37)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/zh-CN/templates/upgrade/option/option_dev_unit_off.png",
       "sha256": "9b285047503988bb308479f8d0b18d79ea8ff306ca7b92f56c269d388b509223",
       "width": 231,
@@ -4483,12 +4583,42 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/zh-CN/templates/upgrade/sort_key_lv.png",
+      "sha256": "8036db96fd804050547af8791e8576423f3cfcd6f6b917fb4253824398ef147b",
+      "width": 104,
+      "height": 37,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu zh-CN 1920x1080, crop (1505,865,104,37)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/zh-CN/templates/upgrade/title_dismantle.png",
       "sha256": "f99b0f966d7ba359c35814c8867e260c112456e163f922dec0939aa2cea4c0a5",
       "width": 129,
       "height": 63,
       "category": "recognition-resource",
       "source": "Game-derived appearance; original capture/source unconfirmed",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/zh-CN/templates/upgrade/title_lv_materials.png",
+      "sha256": "971893b42dff57824a82fdfe0d5dc62acf721719644bd7cb2e866dc3308a755d",
+      "width": 153,
+      "height": 55,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu zh-CN 1920x1080, crop (884,64,153,55)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/zh-CN/templates/upgrade/title_lv_up_complete.png",
+      "sha256": "48ca9b9d7c794427a879dabf86a452f8c797bfa352632f2362db22311f8d3f94",
+      "width": 375,
+      "height": 82,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu zh-CN 1920x1080, crop (775,265,375,82)",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "thumbnail-no-obvious-account-id"
     },

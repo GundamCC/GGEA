@@ -73,9 +73,10 @@ public partial class MainWindow
                 case DailyTaskKind.CharacterRequests:
                     try
                     {
-                        var submitted = await _personalBaseService!.AcceptCharacterRequestsAsync(serial, _mainLayout, ct);
-                        _logger!.Info(L.Format($"本轮已点击 {submitted} 个角色的承接按钮。"));
-                        taskSucceeded = true;
+                        var result = await _personalBaseService!.RunCharacterRequestsAsync(serial, _mainLayout, GetTextOcr(), ct);
+                        _logger!.Info(L.Format($"本轮承接 {result.Accepted} 个角色要求，已报告 {result.Reported} 个强化委托。"));
+                        failedSubtasks.AddRange(result.FailedRoles);
+                        taskSucceeded = result.FailedRoles.Count == 0;
                     }
                     catch (InvalidOperationException ex)
                     {

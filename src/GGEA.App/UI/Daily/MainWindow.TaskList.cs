@@ -34,7 +34,7 @@ public partial class MainWindow
         _dailyTasks.Add(new DailyTaskItem
         {
             Kind = DailyTaskKind.CharacterRequests,
-            Name = L.Text("承接角色要求（个人基地）"),
+            Name = L.Text("角色要求（承接与强化委托）"),
             IsChecked = false,
         });
         _dailyTasks.Add(new DailyTaskItem

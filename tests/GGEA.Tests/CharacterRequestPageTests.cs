@@ -89,6 +89,16 @@ public class CharacterRequestPageTests
             (962, 410), backPoint }, adb.Taps);
     }
 
+    [Fact]
+    public void ReportedSlot_RemainsUnlockedAndOnlyNextRoleIsActive()
+    {
+        var frame = CreateList(true, false, true);
+        for (var y = 604; y < 678; y++)
+            Array.Clear(frame.Bgra, (y * 1920 + 191) * 4, 166 * 4);
+        PasteTemplate(frame, "card_refresh.png", 272, 644);
+        Assert.Equal(new CharacterRequestPage.ListState(2, 2), new CharacterRequestPage().ReadList(frame, default));
+    }
+
     private const string Root = "resources/templates/base/character_requests/";
     private static byte[] Encode(ScreenImage image) => ImageCodec.EncodePng(image.Bgra, image.Width, image.Height);
     private static ScreenImage Empty() => new()
