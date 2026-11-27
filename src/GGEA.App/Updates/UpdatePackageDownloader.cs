@@ -36,6 +36,22 @@ public sealed class UpdatePackageDownloader
     {
         var hasManifest = File.Exists(UpdateFiles.SafePath(installation, "build-info.json"));
         // 按需重建只信任目标索引中的文件和块摘要；只有旧版差异 ZIP 需要正式基线清单。
+        var baseline = UpdateFiles.SafePath(installation, "build-info.json");
+        if (hasManifest && update.BaseIndexes.Count > 0 && new FileInfo(baseline).Length <= 8 * 1024 * 1024)
+        {
+            try
+            {
+                var hash = await Task.Run(() => UpdateFiles.Hash(baseline), cancellationToken);
+                if (update.BaseIndexes.TryGetValue(hash, out var compact))
+                    return await Task.Run(() => RangePackageDownload.PrepareAsync(_http, update, compact, installation, progress, cancellationToken), cancellationToken);
+            }
+            catch (Exception error) when (!cancellationToken.IsCancellationRequested &&
+                error is UpdateBaseUnavailableException or FileNotFoundException or HttpRequestException or OperationCanceledException)
+            {
+                _http.Trace($"正在重新检查本机可复用文件：{error.Message}");
+                progress.Report(0);
+            }
+        }
         if (update.Index is null)
             _http.Trace("跳过按需下载：来源未提供可用索引。");
         if (update.Index is { } index)
@@ -52,6 +68,9 @@ public sealed class UpdatePackageDownloader
                 progress.Report(0);
             }
         }
+        // 从这个协议版本起，临时断线或发布附件不全只能重试增量，不能悄悄拉取整个 ZIP。
+        if (update.IncrementalOnly)
+            throw new HttpRequestException(L.Text("增量更新暂时无法下载，请稍后在此重试。"));
         if (update.Delta is { } delta && hasManifest)
         {
             var differential = update with

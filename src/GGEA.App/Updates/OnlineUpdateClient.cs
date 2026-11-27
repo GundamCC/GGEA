@@ -94,6 +94,8 @@ public sealed class OnlineUpdateClient : IDisposable
                 catch (Exception error) when (IsNetworkFailure(error, cancellationToken))
                 { _report?.Invoke(new(L.Format($"备用源 {source.Name} 下载连接失败，继续尝试下一来源。"), true)); }
             }
+            if (update.IncrementalOnly)
+                throw new HttpRequestException(L.Text("增量更新暂时无法下载，请稍后在此重试。"), ex);
             throw new HttpRequestException(L.Text("下载源无法连接，且没有可用的同版本备用包。请稍后重试或从官方发布页手动下载。"), ex);
         }
         finally { http.Trace($"本次下载响应正文：{traffic.Bytes} B"); }

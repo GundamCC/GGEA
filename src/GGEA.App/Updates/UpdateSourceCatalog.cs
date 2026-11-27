@@ -13,6 +13,8 @@ public sealed record UpdateSourceStatus(string Message, bool IsWarning = false);
 public sealed record UpdateRelease(Version Version, string Notes, string PackageName, Uri PackageUrl,
     long PackageSize, Uri? ChecksumUrl, string? Sha256)
 {
+    internal bool IncrementalOnly => Version >= new Version(1, 4, 23, 0);
+
     // 旧发布说明会在末尾附加包摘要，有时另起一行。两个更新界面只展示说明正文。
     internal string DisplayNotes => Regex.Replace(Notes,
         @"(?im)^[^\r\n]*\bSHA-?256[ \t*`]*[:：][ \t*`]*(?:\r?\n[ \t*`]*)?[0-9a-f]{64}[`* \t]*(?:\r?\n|$)", "").Trim();
@@ -20,6 +22,8 @@ public sealed record UpdateRelease(Version Version, string Notes, string Package
     public string SourceId { get; init; } = "github";
     public string SourceName { get; init; } = "GitHub";
     public IReadOnlyCollection<string> AllowedHosts { get; init; } = UpdateHttpTransport.GitHubHosts;
+    internal IReadOnlyDictionary<string, UpdateRangeIndex> BaseIndexes { get; init; } = new Dictionary<string, UpdateRangeIndex>();
+    internal IReadOnlyList<UpdateCopyPatch> CopyPatches { get; init; } = [];
     public UpdateBlockAsset? UpdaterBlocks { get; init; }
     public UpdateBlockAsset? Blocks { get; init; }
     public UpdateRangeIndex? Index { get; init; }
@@ -28,7 +32,13 @@ public sealed record UpdateRelease(Version Version, string Notes, string Package
 
 public sealed record UpdateBlockAsset(Uri Url, long Size);
 
-public sealed record UpdateRangeIndex(Uri Url, string Sha256, int Size);
+public sealed record UpdateRangeIndex(Uri Url, string Sha256, int Size)
+{
+    internal string? BaseHash { get; init; }
+    internal bool Brotli { get; init; }
+}
+
+internal sealed record UpdateCopyPatch(string TargetHash, string SourceHash, Uri Url, int Size, string Sha256);
 
 /// <summary>可选差异附件绑定检查时的旧版本；完整包始终是发布与镜像回退的必备项。</summary>
 public sealed record UpdateDeltaRelease(string BaseVersion, string PackageName, Uri PackageUrl,
@@ -104,8 +114,19 @@ public sealed record UpdateSourceCatalog(int SchemaVersion, UpdateSource[] Sourc
         if (notes.Length > 12000) notes = notes[..12000] + "\n…";
         return new(version, notes, name, url, size, null, hash.ToLowerInvariant())
         {
-            SourceId = source.Id, SourceName = source.Name, AllowedHosts = source.AllowedHosts
+            SourceId = source.Id, SourceName = source.Name, AllowedHosts = source.AllowedHosts,
+            Index = ReadMirrorIndex(item, source)
         };
+    }
+
+    private static UpdateRangeIndex? ReadMirrorIndex(JsonElement item, UpdateSource source)
+    {
+        if (!item.TryGetProperty("index", out var index)) return null;
+        var size = index.GetProperty("size").GetInt32();
+        var hash = index.GetProperty("sha256").GetString() ?? "";
+        if (size is <= 0 or > 16 * 1024 * 1024 || !IsHash(hash)) throw new InvalidDataException("备用源增量索引无效。");
+        return new(ReadAuthorizedUri(index.GetProperty("url").GetString() ?? "", source.AllowedHosts), hash, size)
+        { Brotli = true };
     }
 
     /// <summary>清单及附件只能使用当前来源明确授权的域名，不扩大其他来源的访问范围。</summary>

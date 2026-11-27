@@ -61,6 +61,7 @@ try {
                 (Get-FileHash -LiteralPath (Join-Path $publishDir 'build-info.json')).Hash) { throw 'Existing release manifest mismatch' }
         }
         & (Join-Path $PSScriptRoot 'package-range-index.ps1') $zip $verified $hash "$zip.index.json"
+        & (Join-Path $PSScriptRoot 'package-small-update.ps1') -Archive $zip -VerifiedDirectory $verified -BaseDirectory $BaseDirectory
         Write-Host "Verified existing ZIP: $zip"
         Write-Host "SHA-256: $hash"
         if ($BaseDirectory) { & (Join-Path $PSScriptRoot 'package-delta.ps1') -BaseDirectory $BaseDirectory -PublishDirectory $verified -OutputDirectory $dist }
@@ -84,6 +85,7 @@ try {
     try { Move-Item -LiteralPath $candidate -Destination $zip }
     catch { Remove-Item -LiteralPath "$zip.sha256" -Force; throw }
     & (Join-Path $PSScriptRoot 'package-range-index.ps1') $zip $verified $hash "$zip.index.json"
+    & (Join-Path $PSScriptRoot 'package-small-update.ps1') -Archive $zip -VerifiedDirectory $verified -BaseDirectory $BaseDirectory
     Write-Host "Verified ZIP: $zip"
     Write-Host "SHA-256: $hash"
     if ($BaseDirectory) { & (Join-Path $PSScriptRoot 'package-delta.ps1') -BaseDirectory $BaseDirectory -PublishDirectory $verified -OutputDirectory $dist }

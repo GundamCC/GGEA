@@ -46,6 +46,7 @@ jobs:
             artifacts/dist/*.zip
             artifacts/dist/*.zip.sha256
             artifacts/dist/*.zip.index.json
+            artifacts/dist/*.br
             artifacts/dist/*.zip.blocks
             artifacts/dist/*.zip.updater.blocks
           if-no-files-found: error

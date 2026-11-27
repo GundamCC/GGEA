@@ -70,6 +70,7 @@ public partial class MainWindow : Window
             bool artifactExists = File.Exists(Path.Combine(dist, stem + ".zip")) &&
                               File.Exists(Path.Combine(dist, stem + ".zip.sha256")) &&
                               File.Exists(Path.Combine(dist, stem + ".zip.index.json")) &&
+                              File.Exists(Path.Combine(dist, stem + ".zip.index.json.br")) &&
                               File.Exists(Path.Combine(dist, stem + ".zip.blocks")) &&
                               File.Exists(Path.Combine(dist, stem + ".zip.updater.blocks"));
             VersionText.Text = $"v{_version}";

@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- 发布快照目录每次不同；统一编译器记录的源码路径，使未改动的程序集可以直接复用。 -->
+    <PathMap>$(MSBuildThisFileDirectory)=/_/</PathMap>
+  </PropertyGroup>
+</Project>
