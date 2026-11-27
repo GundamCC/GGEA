@@ -10,7 +10,7 @@ namespace GGEA.App.Tasks;
 public sealed class DismantleEntryService(AutomationService automation)
 {
     /// <summary>用户提供的强化界面标题素材。</summary>
-    public const string TitleTemplate = "resources/templates/upgrade/title_upgrade.png";
+    public const string TitleTemplate = UpgradeListService.TitleTemplate;
     /// <summary>强化页解体入口与解体页标题。</summary>
     public const string EntryTemplate = "resources/templates/upgrade/button_dismantle_gray.png";
     public const string DismantleTitleTemplate = "resources/templates/upgrade/title_dismantle.png";

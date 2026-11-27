@@ -38,6 +38,7 @@
     <None Update="Fixtures\Rewards\*.png" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\Shop\*.png" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\Base\*.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\Upgrade\*.png" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\Roadmap\*.png" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\Navigation\*.png" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\Develop\*.png" CopyToOutputDirectory="PreserveNewest" />

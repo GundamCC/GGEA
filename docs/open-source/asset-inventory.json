@@ -2203,6 +2203,26 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/common/templates/upgrade/sort_ascending.png",
+      "sha256": "9e47706171e0f96e09e2f4ec619b73576dbc0bc0ff161061fb448e7a401cadfb",
+      "width": 74,
+      "height": 69,
+      "category": "recognition-resource",
+      "source": "Game UI sprite provided by user; upgrade list sort direction",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/common/templates/upgrade/sort_descending.png",
+      "sha256": "aff46330ef3b60693c4e6262193b73786ea99a6377b5a737ce64b9ca1f1d0e46",
+      "width": 74,
+      "height": 69,
+      "category": "recognition-resource",
+      "source": "Game UI sprite provided by user; upgrade list sort direction",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/common/templates/upgrade/title_dismantle.png",
       "sha256": "f99b0f966d7ba359c35814c8867e260c112456e163f922dec0939aa2cea4c0a5",
       "width": 129,
