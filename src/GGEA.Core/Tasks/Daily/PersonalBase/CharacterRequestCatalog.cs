@@ -12,7 +12,7 @@ internal sealed record StrengthOffer(string Id, string Series, int Amount);
 internal sealed record StrengthRequest(string RoleId, string Name, StrengthOffer Offer, int Progress);
 
 /// <summary>立绘、标题固定字样与数字编号共同定位委托；进度分母再与表中数量核对。</summary>
-internal sealed class StrengthRequestCatalog(OnnxTextRecognizer ocr)
+internal sealed class CharacterRequestCatalog(OnnxTextRecognizer ocr)
 {
     private sealed record Role(string Id, string Name, byte[] Portrait, Dictionary<int, StrengthOffer> Requests);
     private static readonly Lazy<Role[]> Roles = new(() => JsonSerializer.Deserialize<Role[]>(File.ReadAllText(
@@ -28,16 +28,33 @@ internal sealed class StrengthRequestCatalog(OnnxTextRecognizer ocr)
         if (!int.TryParse(suffix, NumberStyles.None, CultureInfo.InvariantCulture, out var number) ||
             !role.Requests.TryGetValue(number, out var offer) || offer.Amount is < 1 or > 5) return null;
 
+        var progress = ReadProgress(frame, offer.Amount, ct);
+        return progress.HasValue ? new(role.Id, role.Name, offer, progress.Value) : null;
+    }
+
+    internal DevelopmentOrder? ReadDevelopment(ScreenImage frame, Roi title, CancellationToken ct)
+    {
+        var suffix = UpgradeNumbers.Read(ocr, frame, new(title.X + title.Width + 1, title.Y - 2, 27, 38), true, ct, out _);
+        if (!int.TryParse(suffix, NumberStyles.None, CultureInfo.InvariantCulture, out var number)) return null;
+        var role = Identify(frame, ct);
+        var offer = role is null ? null : DevelopmentRequestIndex.Find(role.Id, number);
+        if (offer is null) return null;
+        var progress = ReadProgress(frame, offer.Amount, ct);
+        return progress.HasValue ? new(offer, progress.Value) : null;
+    }
+
+    private int? ReadProgress(ScreenImage frame, int amount, CancellationToken ct)
+    {
         // 条件会换行，进度紧随其后；只接受分母与当前委托完全相符的一行。
         int? progress = null;
         foreach (var y in new[] { 410, 458, 506 })
         {
             var pair = UpgradeNumbers.Read(ocr, frame, new Roi(1703, y, 61, 32), true, ct, out _);
-            if (!UpgradeNumbers.TryReadPair(pair, out var current, out var total) || total != offer.Amount) continue;
+            if (!UpgradeNumbers.TryReadPair(pair, out var current, out var total) || total != amount) continue;
             if (progress.HasValue) return null;
             progress = current;
         }
-        return progress.HasValue ? new(role.Id, role.Name, offer, progress.Value) : null;
+        return progress;
     }
 
     internal DeliveryOffer? ReadDelivery(ScreenImage frame, Roi title, CancellationToken ct)
@@ -66,7 +83,7 @@ internal sealed class StrengthRequestCatalog(OnnxTextRecognizer ocr)
             ct.ThrowIfCancellationRequested();
             using var patch = Cv2.ImDecode(role.Portrait, ImreadModes.Grayscale);
             double similarity = 0;
-            for (var side = 17; side <= 37; side += 2)
+            for (var side = 17; side <= 37; side++)
             {
                 Cv2.Resize(patch, scaled, new Size(side, side), interpolation: InterpolationFlags.Area);
                 Cv2.MatchTemplate(small, scaled, scores, TemplateMatchModes.CCoeffNormed);

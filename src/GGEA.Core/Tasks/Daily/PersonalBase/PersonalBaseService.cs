@@ -68,10 +68,10 @@ public sealed class PersonalBaseService
     public async Task<int> AcceptCharacterRequestsAsync(string serial, UiLayout mainLayout, CancellationToken ct = default) =>
         (await RunCharacterRequestsAsync(serial, mainLayout, null, ct)).Accepted;
 
-    public Task<CharacterRequestResult> RunCharacterRequestsAsync(string serial, UiLayout mainLayout, OnnxTextRecognizer? ocr, CancellationToken ct = default, DeliveryProtection? protection = null) =>
+    public Task<CharacterRequestResult> RunCharacterRequestsAsync(string serial, UiLayout mainLayout, OnnxTextRecognizer? ocr, CancellationToken ct = default, DeliveryProtection? protection = null, DevelopRequest? development = null) =>
         Task.Run(async () =>
         {
-            var service = new CharacterRequestService(_automation, _log, ocr, protection);
+            var service = new CharacterRequestService(_automation, _log, ocr, protection, development);
             var navBase = mainLayout.Require("navBase", "主界面布局缺少 navBase 锚点");
             await _automation.TapAsync(serial, navBase.CenterX, navBase.CenterY, ct);
             await Task.Delay(GameTiming.RecognitionIntervalMs, ct);

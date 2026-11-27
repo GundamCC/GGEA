@@ -162,14 +162,8 @@ public sealed class ConfigService
     /// <summary>只迁移官方旧按钮路径，不改动用户自定义同名素材。</summary>
     private static string MigrateDevelopButtonPath(string path)
     {
-        if (string.IsNullOrWhiteSpace(path)) return path;
         foreach (var name in new[] { "button_execute.png", "button_execute_develop.png" })
-        {
-            var old = "resources/templates/develop/" + name;
-            if (string.Equals(path.Replace('\\', '/'), old, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(path.Replace('\\', '/'), Path.Combine(AppContext.BaseDirectory, old).Replace('\\', '/'), StringComparison.OrdinalIgnoreCase))
-                return "resources/templates/develop/button/" + name;
-        }
+            path = MigrateBundledTemplate(path, "develop/" + name, "develop/button/" + name);
         return path;
     }
 

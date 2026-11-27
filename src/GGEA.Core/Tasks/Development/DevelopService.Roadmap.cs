@@ -15,7 +15,7 @@ public sealed partial class DevelopService
     public async Task<TemplateMatchResult?> FindOnRoadmapAsync(string serial,
         string msTemplatePath, string msLargeTemplatePath, int maxDragsPerDirection = 0,
         int dragDurationMs = 700, double threshold = 0.86, string titleTemplatePath = "",
-        double titleThreshold = 0.85, CancellationToken ct = default)
+        double titleThreshold = 0.85, CancellationToken ct = default, bool preferLeftEdge = false)
     {
         if (maxDragsPerDirection is < 0 or > 30) throw new ArgumentOutOfRangeException(nameof(maxDragsPerDirection));
         if (!double.IsFinite(threshold) || threshold is < 0 or > 1) throw new ArgumentOutOfRangeException(nameof(threshold));
@@ -180,7 +180,9 @@ public sealed partial class DevelopService
         var lastMoveWasHorizontal = false;
         // 任意起点到角落沿途也属于搜索范围。记住最后实际推进的轴，抵达角落后沿另一轴展开。
         _log.Info("路线图定位左上角：检查页面与位移，疑似边界先识别目标再复核");
-        foreach (var (dx, dy) in new[] { (0, 250), (scanStepX, 0) })
+        // 委托基准机体在起始列，先向右拖画布找左边界，再沿此列搜索。其它任务保留原扫描顺序。
+        var axes = preferLeftEdge ? new[] { (scanStepX, 0), (0, 250) } : new[] { (0, 250), (scanStepX, 0) };
+        foreach (var (dx, dy) in axes)
         {
             var edge = false;
             for (var i = 0; maxDragsPerDirection == 0 || i < maxDragsPerDirection; i++)
@@ -198,7 +200,7 @@ public sealed partial class DevelopService
                 _log.Warn("路线图归位达到拖动上限，未确认边界，停止搜索"); return null;
             }
         }
-        var alongColumns = lastMoveWasHorizontal;
+        var alongColumns = preferLeftEdge || lastMoveWasHorizontal;
         var stripName = alongColumns ? "列" : "行";
         var sweep = alongColumns ? (X: 0, Y: -250) : (X: -scanStepX, Y: 0);
         var advance = alongColumns ? (X: -scanStepX, Y: 0) : (X: 0, Y: -250);

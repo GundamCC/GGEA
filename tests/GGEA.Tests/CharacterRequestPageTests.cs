@@ -172,6 +172,29 @@ public class CharacterRequestPageTests
         Assert.Equal(steps.Select(step => step.Tap), adb.Taps);
     }
 
+    [Theory]
+    [InlineData("development_zero.png", 0)]
+    [InlineData("development_three.png", 3)]
+    public void Development_UsesRoleAndOfferNumberAndVerifiesProgress(string counter, int progress)
+    {
+        var screen = Empty();
+        var fixtures = Path.Combine(AppContext.BaseDirectory, "Fixtures/Base");
+        var title = new Roi(1403, 246, 135, 35);
+        Paste(screen, Path.Combine(fixtures, "development_number6.png"), 1538, 243);
+        Paste(screen, Path.Combine(fixtures, counter), 1703, 410);
+        using var ocr = new OnnxTextRecognizer();
+        var catalog = new CharacterRequestCatalog(ocr);
+        Assert.Null(catalog.ReadDevelopment(screen, title, default));
+        Paste(screen, Path.Combine(fixtures, "develop_shakti_detail.png"), 473, 304);
+        var order = Assert.IsType<DevelopmentOrder>(catalog.ReadDevelopment(screen, title, default));
+        Assert.Equal(("1750", "1175000400", 4000, 3, progress),
+            (order.Offer.SeriesId, order.Offer.UnitId, order.Offer.Capital, order.Offer.Amount, order.Progress));
+        Assert.Equal("1001003800", DevelopmentRequestIndex.Find("1001001801", 6)?.UnitId);
+        Assert.Null(DevelopmentRequestIndex.Find("1001001801", 9));
+        Paste(screen, Path.Combine(fixtures, counter), 1703, 458);
+        Assert.Null(catalog.ReadDevelopment(screen, title, default));
+    }
+
     private const string Root = "resources/templates/base/character_requests/";
     private static byte[] Encode(ScreenImage image) => ImageCodec.EncodePng(image.Bgra, image.Width, image.Height);
     private static ScreenImage Empty() => new()

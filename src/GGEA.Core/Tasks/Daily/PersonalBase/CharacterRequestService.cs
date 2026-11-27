@@ -7,14 +7,14 @@ namespace GGEA.App.Tasks;
 
 public sealed record CharacterRequestResult(int Accepted, int Reported, IReadOnlyList<string> FailedRoles);
 
-/// <summary>按本轮解锁栏位逐人承接。强化委托按角色、编号与进度执行，报告后再处理下一栏。</summary>
-public sealed class CharacterRequestService(AutomationService automation, IGgeaLog log, OnnxTextRecognizer? ocr = null, DeliveryProtection? protection = null)
+/// <summary>按本轮解锁栏位逐人承接。按委托类型核对交付、强化或开发条件，结算后再处理下一栏。</summary>
+public sealed class CharacterRequestService(AutomationService automation, IGgeaLog log, OnnxTextRecognizer? ocr = null, DeliveryProtection? protection = null, DevelopRequest? development = null)
 {
     private const string Root = "resources/templates/base/character_requests/";
     private static readonly Roi ActionLabelArea = new(1540, 800, 170, 110);
     private readonly CharacterRequestPage _page = new();
     private readonly TemplateMatcher _matcher = new();
-    private readonly StrengthRequestCatalog? _catalog = ocr is null ? null : new(ocr);
+    private readonly CharacterRequestCatalog? _catalog = ocr is null ? null : new(ocr);
     private readonly UnitUpgradeService? _upgrade = ocr is null ? null : new(automation, ocr);
     private readonly ScreenImage _acceptLabel = LoadAcceptLabel();
     private readonly TemplateImages _challenge = new(Root + "button_challenge.png");
@@ -30,6 +30,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
     private readonly TemplateImages _info = new(Root + "button_request_info.png");
     private readonly TemplateImages _deliver = new(Root + "button_deliver.png");
     private readonly TemplateImages _deliveryComplete = new(Root + "title_delivery_complete.png");
+    private readonly TemplateImages _developmentTitle = new(Root + "title_development.png");
     private readonly TemplateImages _strengthTitle = new(Root + "title_strengthen_troops.png");
     private readonly TemplateImages _unitTitle = new(Root + "title_deliver_unit.png");
     private readonly TemplateImages _fundingTitle = new(Root + "title_funding.png");
@@ -40,11 +41,12 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
 
     private enum Control { Accept, Challenge, Report, Deliver }
     private enum ArrivalKind { List, Dialogue, Detail, Complete, Reward, WeeklyReward }
-    private enum RequestKind { Unknown, Funding, Strength, UnitDelivery }
+    private enum RequestKind { Unknown, Funding, Strength, UnitDelivery, Development }
     private readonly record struct Title(RequestKind Kind, Roi Region);
     private sealed record Detail(Control Action, Roi Back, Roi Button, Title Title, int? Amount);
     private sealed record Arrival(ArrivalKind Kind, Detail? Detail = null, Roi Button = default);
     private sealed record OfferScreen(Detail Detail, StrengthRequest? Request);
+    private sealed record DevelopmentScreen(Detail Detail, DevelopmentOrder? Order);
     private sealed record UnitOfferScreen(DeliveryOffer? Offer);
 
     private static ScreenImage LoadAcceptLabel()
@@ -85,13 +87,14 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                     var initialKind = detail.Title.Kind;
                     if (arrival.Kind == ArrivalKind.List)
                     {
-                        if (initialKind != RequestKind.Funding) continue;
+                        if (initialKind is not (RequestKind.Funding or RequestKind.Development)) continue;
                         var list = await WaitForListAsync(serial, ct);
                         if ((list.ActiveMask & (1 << slot)) == 0) continue;
                         await automation.TapAsync(serial, 427 + 535 * slot, 410, ct);
                         detail = await WaitAsync(serial, f => ReadDetail(f, ct), ct) ?? throw Unknown();
                     }
                     else detail = arrival.Detail!;
+                    if (initialKind == RequestKind.Development && detail.Title.Kind != initialKind) throw Unknown();
                     if (initialKind == RequestKind.Funding &&
                         (detail.Title.Kind != initialKind || detail.Action != Control.Deliver)) throw Unknown();
                 }
@@ -103,7 +106,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                     var confirmation = await WaitAsync(serial, frame => _funding!.ReadConfirmation(frame, amount, ct), ct)
                         ?? throw FundingUnknown();
                     await TapAsync(serial, confirmation.Button, ct);
-                    await FinishDeliveryAsync(serial, slot, ct);
+                    await FinishReportAsync(serial, slot, ct, delivering: true);
                     reported++;
                     continue;
                 }
@@ -121,7 +124,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                         var service = new UnitDeliveryService(automation, ocr!, protection ?? new(), delivery.MinimumLevel);
                         if (await service.SubmitAsync(serial, ct))
                         {
-                            await FinishDeliveryAsync(serial, slot, ct);
+                            await FinishReportAsync(serial, slot, ct, delivering: true);
                             reported++;
                             continue;
                         }
@@ -131,6 +134,31 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                     }
                     else
                         failures.Add(L.Format($"第 {slot + 1} 栏交付委托未能与表格核对"));
+                }
+                else if (detail.Title.Kind == RequestKind.Development && development is not null)
+                {
+                    var screen = await WaitForDevelopmentAsync(serial, ct);
+                    detail = screen.Detail;
+                    if (screen.Order is not { } order)
+                        failures.Add(L.Format($"第 {slot + 1} 栏开发委托未能与表格核对"));
+                    else
+                    {
+                        if (detail.Action == Control.Challenge && order.Progress < order.Offer.Amount)
+                        {
+                            await TapAsync(serial, detail.Button, ct);
+                            await new DevelopService(automation, log, fixedUnitScales: true)
+                                .DevelopForCharacterAsync(serial, order, development, ocr!, ct);
+                            screen = await WaitForDevelopmentAsync(serial, ct);
+                            if (screen.Order?.Offer != order.Offer) throw Unknown();
+                            detail = screen.Detail;
+                            order = screen.Order;
+                        }
+                        if (detail.Action != Control.Report || order.Progress != order.Offer.Amount) throw Unknown();
+                        await TapAsync(serial, detail.Button, ct);
+                        await FinishReportAsync(serial, slot, ct);
+                        reported++;
+                        continue;
+                    }
                 }
                 else if (detail.Title.Kind == RequestKind.Strength)
                 {
@@ -158,9 +186,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                         if (detail.Action == Control.Report && request.Progress == request.Offer.Amount)
                         {
                             await TapAsync(serial, detail.Button, ct);
-                            await FollowDialogueAsync(serial, reporting: true, ct);
-                            var list = await WaitForListAsync(serial, ct);
-                            if ((list.ActiveMask & (1 << slot)) != 0) throw Unknown();
+                            await FinishReportAsync(serial, slot, ct);
                             reported++;
                             continue;
                         }
@@ -172,6 +198,14 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
             return new CharacterRequestResult(accepted, reported, failures);
         }, ct);
 
+    private async Task<DevelopmentScreen> WaitForDevelopmentAsync(string serial, CancellationToken ct) =>
+        await WaitAsync(serial, frame =>
+        {
+            var detail = ReadDetail(frame, ct);
+            if (detail is not { Title.Kind: RequestKind.Development, Action: Control.Challenge or Control.Report }) return null;
+            return new DevelopmentScreen(detail, _catalog!.ReadDevelopment(frame, detail.Title.Region, ct));
+        }, ct) ?? throw Unknown();
+
     private async Task<OfferScreen> WaitOfferAsync(string serial, CancellationToken ct) =>
         await WaitAsync(serial, frame =>
         {
@@ -180,9 +214,9 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
             return new OfferScreen(detail, _catalog!.Read(frame, detail.Title.Region, ct));
         }, ct) ?? throw Unknown();
 
-    private async Task FinishDeliveryAsync(string serial, int slot, CancellationToken ct)
+    private async Task FinishReportAsync(string serial, int slot, CancellationToken ct, bool delivering = false)
     {
-        await FollowDialogueAsync(serial, reporting: true, ct, delivering: true);
+        await FollowDialogueAsync(serial, reporting: true, ct, delivering);
         var list = await WaitForListAsync(serial, ct);
         if ((list.ActiveMask & (1 << slot)) != 0) throw Unknown();
     }
@@ -270,12 +304,13 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
             new(Control.Accept, back.Region, accept!.Region, title, null);
     }
 
-    // 同帧标题决定后续流程。只有强化和机体交付分支需要访问角色立绘目录。
+    // 同帧标题决定后续流程。调度资金跳过立绘；强化、交付机体和开发按角色查表。
     private Title ReadTitle(ScreenImage frame, CancellationToken ct)
     {
         var area = new Roi(1340, 225, 300, 80);
         if (_fundingTitle.Match(_matcher, frame, .96, area, ct) is { } funds) return new(RequestKind.Funding, funds.Region);
         if (_unitTitle.Match(_matcher, frame, .96, area, ct) is { } unit) return new(RequestKind.UnitDelivery, unit.Region);
+        if (_developmentTitle.Match(_matcher, frame, .96, area, ct) is { } dev) return new(RequestKind.Development, dev.Region);
         if (_strengthTitle.Match(_matcher, frame, .93, area, ct) is { } strength) return new(RequestKind.Strength, strength.Region);
         return default;
     }

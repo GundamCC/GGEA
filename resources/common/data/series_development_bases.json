@@ -1,0 +1,359 @@
+{
+  "10": {
+    "SeriesName": "机动战士高达",
+    "UnitId": "1001003800",
+    "UnitName": "61式战车",
+    "DiagramId": "100101",
+    "NodeId": "100101000002",
+    "Column": 0,
+    "Row": 2,
+    "Capital": 1000,
+    "Materials": {}
+  },
+  "130": {
+    "SeriesName": "机动战士高达 第08MS小队",
+    "UnitId": "1013001500",
+    "UnitName": "量产型钢坦克",
+    "DiagramId": "201301",
+    "NodeId": "201301000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 2000,
+    "Materials": {}
+  },
+  "170": {
+    "SeriesName": "机动战士高达0080  口袋中的战争",
+    "UnitId": "1017000400",
+    "UnitName": "吉姆指挥型",
+    "DiagramId": "201701",
+    "NodeId": "201701000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 2000,
+    "Materials": {}
+  },
+  "220": {
+    "SeriesName": "机动战士高达外传 THE BLUE DESTINY",
+    "UnitId": "1023000100",
+    "UnitName": "吉姆优越型",
+    "DiagramId": "202201",
+    "NodeId": "202201000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 2000,
+    "Materials": {}
+  },
+  "240": {
+    "SeriesName": "机动战士高达外传 殖民卫星坠落之地……",
+    "UnitId": "1024000100",
+    "UnitName": "吉姆(白色野犬队规格)",
+    "DiagramId": "202401",
+    "NodeId": "202401000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 2000,
+    "Materials": {
+      "180000000240": 3
+    }
+  },
+  "320": {
+    "SeriesName": "机动战士高达 雷霆宙域",
+    "UnitId": "1031000600",
+    "UnitName": "铁球 (雷霆宙域版)",
+    "DiagramId": "203201",
+    "NodeId": "203201000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 2000,
+    "Materials": {}
+  },
+  "330": {
+    "SeriesName": "机动战士高达 雷霆宙域 BANDIT FLOWER",
+    "UnitId": "1031001900",
+    "UnitName": "铁球水中型",
+    "DiagramId": "203301",
+    "NodeId": "203301000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 2000,
+    "Materials": {}
+  },
+  "600": {
+    "SeriesName": "机动战士高达0083 星尘作战回忆录",
+    "UnitId": "1060001900",
+    "UnitName": "吉姆改",
+    "DiagramId": "206001",
+    "NodeId": "206001000002",
+    "Column": 0,
+    "Row": 4,
+    "Capital": 2000,
+    "Materials": {}
+  },
+  "810": {
+    "SeriesName": "机动战士Ζ高达 A New Translation",
+    "UnitId": "1080001400",
+    "UnitName": "吉姆Ⅱ (奥古式样)",
+    "DiagramId": "108101",
+    "NodeId": "108101001000",
+    "Column": 1,
+    "Row": 0,
+    "Capital": 2000,
+    "Materials": {}
+  },
+  "950": {
+    "SeriesName": "机动战士高达ZZ",
+    "UnitId": "1095000400",
+    "UnitName": "吉姆Ⅲ",
+    "DiagramId": "109501",
+    "NodeId": "109501000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 3000,
+    "Materials": {}
+  },
+  "1100": {
+    "SeriesName": "机动战士高达 逆袭的夏亚",
+    "UnitId": "1110000300",
+    "UnitName": "杰刚",
+    "DiagramId": "111001",
+    "NodeId": "111001000002",
+    "Column": 0,
+    "Row": 2,
+    "Capital": 4000,
+    "Materials": {}
+  },
+  "1250": {
+    "SeriesName": "机动战士高达  独角兽",
+    "UnitId": "1125001900",
+    "UnitName": "吉姆Ⅱ简易强袭型",
+    "DiagramId": "112501",
+    "NodeId": "112501000002",
+    "Column": 0,
+    "Row": 2,
+    "Capital": 4000,
+    "Materials": {}
+  },
+  "1440": {
+    "SeriesName": "机动战士高达NT",
+    "UnitId": "1144001600",
+    "UnitName": "杰刚D型护卫队规格",
+    "DiagramId": "114401",
+    "NodeId": "114401000008",
+    "Column": 0,
+    "Row": 8,
+    "Capital": 4000,
+    "Materials": {}
+  },
+  "1500": {
+    "SeriesName": "机动战士高达 闪光的哈萨维",
+    "UnitId": "1150000500",
+    "UnitName": "梅萨F型裸装",
+    "DiagramId": "150001",
+    "NodeId": "150001000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 4000,
+    "Materials": {}
+  },
+  "1620": {
+    "SeriesName": "机动战士高达F91",
+    "UnitId": "1162001900",
+    "UnitName": "钢坦克R44",
+    "DiagramId": "116201",
+    "NodeId": "116201000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 4000,
+    "Materials": {}
+  },
+  "1750": {
+    "SeriesName": "机动战士Ｖ高达",
+    "UnitId": "1175000400",
+    "UnitName": "杰姆兹刚",
+    "DiagramId": "175001",
+    "NodeId": "175001000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 4000,
+    "Materials": {}
+  },
+  "2000": {
+    "SeriesName": "机动武斗传G高达",
+    "UnitId": "1200003400",
+    "UnitName": "诺布什",
+    "DiagramId": "120001",
+    "NodeId": "120001000004",
+    "Column": 0,
+    "Row": 4,
+    "Capital": 3500,
+    "Materials": {}
+  },
+  "2100": {
+    "SeriesName": "新机动战记高达W",
+    "UnitId": "1210001300",
+    "UnitName": "里奥",
+    "DiagramId": "121001",
+    "NodeId": "121001000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 3000,
+    "Materials": {}
+  },
+  "2170": {
+    "SeriesName": "新机动战记高达W DUAL STORY G-UNIT",
+    "UnitId": "1217000700",
+    "UnitName": "D模组",
+    "DiagramId": "221701",
+    "NodeId": "221701000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 2000,
+    "Materials": {}
+  },
+  "2190": {
+    "SeriesName": "新机动战记高达W 无尽的华尔兹",
+    "UnitId": "1211000300",
+    "UnitName": "飞翼高达 (EW版)",
+    "DiagramId": "121901",
+    "NodeId": "219001000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 4000,
+    "Materials": {}
+  },
+  "2300": {
+    "SeriesName": "机动新世纪高达X",
+    "UnitId": "1230001200",
+    "UnitName": "多托列斯",
+    "DiagramId": "123001",
+    "NodeId": "123001000012",
+    "Column": 0,
+    "Row": 12,
+    "Capital": 3500,
+    "Materials": {}
+  },
+  "3000": {
+    "SeriesName": "机动战士高达SEED",
+    "UnitId": "1300003600",
+    "UnitName": "先锋式",
+    "DiagramId": "130001",
+    "NodeId": "130001001002",
+    "Column": 1,
+    "Row": 2,
+    "Capital": 2000,
+    "Materials": {}
+  },
+  "3050": {
+    "SeriesName": "机动战士高达 SEED ASTRAY",
+    "UnitId": "1305001000",
+    "UnitName": "工程用基恩",
+    "DiagramId": "230501",
+    "NodeId": "230501000001",
+    "Column": 0,
+    "Row": 1,
+    "Capital": 2000,
+    "Materials": {}
+  },
+  "3080": {
+    "SeriesName": "机动战士高达SEED X ASTRAY",
+    "UnitId": "1308000200",
+    "UnitName": "勇士高达 (盖兹头)",
+    "DiagramId": "230801",
+    "NodeId": "230801000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 2000,
+    "Materials": {
+      "180000003080": 7,
+      "181308000400": 3
+    }
+  },
+  "3300": {
+    "SeriesName": "机动战士高达SEED DESTINY",
+    "UnitId": "1330001800",
+    "UnitName": "渣古战士",
+    "DiagramId": "133002",
+    "NodeId": "133002000002",
+    "Column": 0,
+    "Row": 2,
+    "Capital": 3500,
+    "Materials": {}
+  },
+  "3360": {
+    "SeriesName": "机动战士高达SEED C.E.73 -STARGAZER-",
+    "UnitId": "1336000500",
+    "UnitName": "基恩暴徒式",
+    "DiagramId": "233601",
+    "NodeId": "233601000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 2000,
+    "Materials": {}
+  },
+  "3700": {
+    "SeriesName": "机动战士高达00",
+    "UnitId": "1370001300",
+    "UnitName": "0高达",
+    "DiagramId": "137001",
+    "NodeId": "137001000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 3500,
+    "Materials": {}
+  },
+  "3760": {
+    "SeriesName": "机动战士高达00F",
+    "UnitId": "1375000100",
+    "UnitName": "正义女神高达",
+    "DiagramId": "237601",
+    "NodeId": "237601000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 2000,
+    "Materials": {}
+  },
+  "4000": {
+    "SeriesName": "机动战士高达AGE",
+    "UnitId": "1400004200",
+    "UnitName": "暴徒",
+    "DiagramId": "140001",
+    "NodeId": "140001000006",
+    "Column": 0,
+    "Row": 6,
+    "Capital": 4000,
+    "Materials": {}
+  },
+  "4300": {
+    "SeriesName": "机动战士高达 铁血的奥尔芬斯",
+    "UnitId": "1430003000",
+    "UnitName": "铁华团机动工兵",
+    "DiagramId": "143001",
+    "NodeId": "143001000011",
+    "Column": 0,
+    "Row": 11,
+    "Capital": 3500,
+    "Materials": {}
+  },
+  "4310": {
+    "SeriesName": "机动战士高达 铁血的奥尔芬斯 月钢",
+    "UnitId": "1431000700",
+    "UnitName": "拉布鲁斯",
+    "DiagramId": "243101",
+    "NodeId": "243101000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 2000,
+    "Materials": {}
+  },
+  "5010": {
+    "SeriesName": "机动战士高达 水星的魔女",
+    "UnitId": "1500000300",
+    "UnitName": "魔灵高达 量产试作型",
+    "DiagramId": "150101",
+    "NodeId": "150101000000",
+    "Column": 0,
+    "Row": 0,
+    "Capital": 3500,
+    "Materials": {}
+  }
+}
