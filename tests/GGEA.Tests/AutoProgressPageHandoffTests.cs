@@ -146,6 +146,38 @@ public sealed partial class AutoProgressFlowTests
         Assert.False(title.Recognize(frame, default));
     }
 
+    [Fact]
+    public void HardPreparation_UsesBlueLabelAndTwoFreshFrames()
+    {
+        var area = new Roi(1470, 754, 450, 326);
+        var image = ImageCodec.DecodePng(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory,
+            "Fixtures/Sortie/hard1-preparation-entry-mumu.png")));
+        var path = ConfigService.ResolvePath("resources/templates/stage/sortie/button_sortie_preparations.png");
+        var matcher = new StageEntryButtonRecognizer();
+        var local = new Roi(0, 0, area.Width, area.Height);
+        TemplateMatchResult? Read() => matcher.MatchBlueLabel(image, path, local, .90, default);
+        var gate = new StableStageEntry();
+        Assert.Null(gate.Observe(Read(), "preparation", 2));
+        Assert.True(gate.HasCandidate);
+        var disabled = ImageCodec.DecodePng(ImageCodec.EncodePng(image.Bgra, image.Width, image.Height));
+        for (var i = 0; i < disabled.Bgra.Length; i += 4)
+            disabled.Bgra[i] = disabled.Bgra[i + 1] = disabled.Bgra[i + 2];
+        Assert.Null(gate.Observe(matcher.MatchBlueLabel(disabled, path, local, .90, default), "preparation", 2));
+        Assert.False(gate.HasCandidate);
+        Assert.Null(gate.Observe(Read(), "preparation", 2));
+        // 移除整行剩余次数，第二帧仍须从上行重新定位。
+        for (int y = 893; y < 926; y++)
+            Array.Clear(image.Bgra, ((y - area.Y) * area.Width + 1580 - area.X) * 4, 195 * 4);
+        var hit = gate.Observe(Read(), "preparation", 2);
+        Assert.NotNull(hit);
+        Assert.InRange(hit.CenterX + area.X, 1664, 1688);
+        Assert.InRange(hit.CenterY + area.Y, 850, 910);
+        using var scene = new Scene();
+        var single = ImageCodec.DecodePng(scene.Frame(("button_sortie_preparations", 1494, 834)));
+        Assert.NotNull(matcher.Match(single, path, area, .90, default));
+        Assert.NotNull(matcher.MatchBlueLabel(single, path, area, .90, default));
+    }
+
     /// <summary>与故事共框的出击准备入口不能触发剧情点击；完整选关页会直接交回导航。</summary>
     [Fact]
     public async Task FeedbackPreparationEntry_IsNotStoryOrContinue()

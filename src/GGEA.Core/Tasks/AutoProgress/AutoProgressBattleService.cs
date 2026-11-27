@@ -84,6 +84,7 @@ public sealed class AutoProgressBattleService
         // 强敌的挑战按钮已进入准备页；仍由 PrepareForSortieAsync 复核准备页和编制。
         if (!preparationAlreadyOpened)
         {
+            var hardPreparation = kind == WorkStageKind.Hard && _watchTemplate is not null;
             var stableEntry = new StableStageEntry();
             report(L.Text("正在确认本关入口…"));
             var entry = await _automation.WaitForImageAsync(serial, L.Text("出击准备、出击或观看入口"), wait, ct,
@@ -91,7 +92,9 @@ public sealed class AutoProgressBattleService
                 {
                     directEntry = false;
                     watchEntry = false;
-                    var preparation = await MatchEntryAsync(screen, _preparationTemplate, wait, token);
+                    var preparation = hardPreparation
+                        ? await Task.Run(() => _entryButtons.MatchBlueLabel(screen, _preparationTemplate, EntryRoi, wait.Threshold, token), token)
+                        : await MatchEntryAsync(screen, _preparationTemplate, wait, token);
                     var direct = _directSortieTemplate is null ? null
                         : await MatchEntryAsync(screen, _directSortieTemplate, wait, token);
                     if (preparation is not null && direct is not null)
@@ -102,11 +105,11 @@ public sealed class AutoProgressBattleService
                             Math.Abs(preparation.CenterY - direct.CenterY) > 20 ||
                             Math.Abs(preparation.Confidence - direct.Confidence) < 0.03)
                             return stableEntry.Observe(null, "unknown");
-                        if (preparation.Confidence > direct.Confidence) return stableEntry.Observe(preparation, "preparation");
+                        if (preparation.Confidence > direct.Confidence) return stableEntry.Observe(preparation, "preparation", hardPreparation ? 2 : 3);
                     }
                     directEntry = direct is not null;
                     if ((direct ?? preparation) is { } preferred)
-                        return stableEntry.Observe(preferred, directEntry ? "direct" : "preparation");
+                        return stableEntry.Observe(preferred, directEntry ? "direct" : "preparation", hardPreparation && !directEntry ? 2 : 3);
                     // 两个常规入口均未命中后才检测观看；常规入口歧义也不能改成观看点击。
                     var watch = _watchTemplate is null ? null : await MatchEntryAsync(screen, _watchTemplate, wait, token);
                     watchEntry = watch is not null;

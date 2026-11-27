@@ -1,6 +1,6 @@
 namespace GGEA.App.Vision;
 
-/// <summary>连续三张新截图中的入口类型、位置和尺寸一致才就绪，不以固定等待时间代替画面证据。</summary>
+/// <summary>连续新截图中的入口类型、位置和尺寸一致才就绪，不以固定等待时间代替画面证据。</summary>
 public sealed class StableStageEntry
 {
     private TemplateMatchResult? _anchor;
@@ -11,7 +11,7 @@ public sealed class StableStageEntry
     public bool HasCandidate => _anchor is not null;
 
     /// <summary>只返回本帧重新识别的按钮，不缓存旧坐标授权点击；未知帧立即撤销此前稳定证据。</summary>
-    public TemplateMatchResult? Observe(TemplateMatchResult? match, string kind)
+    public TemplateMatchResult? Observe(TemplateMatchResult? match, string kind, int requiredFrames = 3)
     {
         if (match is null) { _anchor = null; _kind = null; _confirmations = 0; return null; }
         if (_anchor is null || _kind != kind || Math.Abs(match.CenterX - _anchor.CenterX) > 3 ||
@@ -22,6 +22,6 @@ public sealed class StableStageEntry
             return null;
         }
         // 始终与本轮首帧比较，防止每帧微移累计成明显位移；点击只使用最新帧坐标。
-        return ++_confirmations >= 3 ? match : null;
+        return ++_confirmations >= requiredFrames ? match : null;
     }
 }

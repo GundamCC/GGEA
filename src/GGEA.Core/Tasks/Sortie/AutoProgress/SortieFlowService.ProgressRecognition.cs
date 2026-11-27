@@ -18,8 +18,13 @@ public sealed partial class SortieFlowService
         Func<ScreenImage, CancellationToken, bool>? confirmSelectedNode = null)
     {
         foreach (var name in ProgressEntryButtons)
-            if (_progressButtons.Match(screen, ConfigService.ResolvePath($"resources/templates/stage/sortie/{name}.png"),
-                ProgressEntryRoi, StageSortieTemplateThreshold, ct) is not null) return true;
+        {
+            var path = ConfigService.ResolvePath($"resources/templates/stage/sortie/{name}.png");
+            if (_progressButtons.Match(screen, path, ProgressEntryRoi, StageSortieTemplateThreshold, ct) is not null ||
+                name == "button_sortie_preparations" &&
+                _progressButtons.MatchBlueLabel(screen, path, ProgressEntryRoi, StageSortieTemplateThreshold, ct) is not null)
+                return true;
+        }
         return confirmSelectedNode?.Invoke(screen, ct) == true;
     }
     // 观看关卡跳过后的二次确认只在底部 300 像素内查找，不复用入口的 320 像素范围。
