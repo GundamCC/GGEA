@@ -121,7 +121,7 @@ public sealed class AdbService : IAdbService
     {
         var (png, _, _) = await CaptureScreenshotAsync(serial, ct);
         if (ExecutionObserver is { } observer)
-            await observer.OnScreenshotAsync(serial, png, ct);
+            return await observer.OnScreenshotAsync(serial, png, ct);
         return png;
     }
 

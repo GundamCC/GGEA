@@ -6,7 +6,8 @@ namespace GGEA.App.Automation;
 
 /// <summary>会话级异常看门狗：所有设备截图共用计时，不依赖具体流程主动调用或注册阶段。</summary>
 internal sealed class ExecutionStallMonitor(
-    Func<ScreenImage, CancellationToken, Task<bool>> detectError, IGgeaLog log, TimeProvider? time = null)
+    Func<ScreenImage, CancellationToken, Task<bool>> detectError, IGgeaLog log, TimeProvider? time = null,
+    Func<string, byte[], CancellationToken, Task<byte[]>>? handleTutorial = null)
     : IAdbExecutionObserver
 {
     internal static readonly TimeSpan Interval = TimeSpan.FromMinutes(2);
@@ -50,7 +51,7 @@ internal sealed class ExecutionStallMonitor(
     }
 
     /// <summary>正常帧只检查单调时钟；到期复用当前帧诊断，已知错误才抛出，健康长战斗继续等待。</summary>
-    public async Task OnScreenshotAsync(string serial, byte[] png, CancellationToken ct)
+    public async Task<byte[]> OnScreenshotAsync(string serial, byte[] png, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         // 同一会话的并行取图也必须等待诊断收束，不能抢先交付另一张未确认的帧。
@@ -59,11 +60,11 @@ internal sealed class ExecutionStallMonitor(
         {
             long generation;
             double stalledSeconds;
-            bool logCheck;
+            bool logCheck, checkNetwork;
             DeviceState state;
             lock (_sync)
             {
-                if (!_active) return;
+                if (!_active) return png;
                 generation = _generation;
                 var now = _time.GetTimestamp();
                 if (!_devices.TryGetValue(serial, out state!))
@@ -74,28 +75,28 @@ internal sealed class ExecutionStallMonitor(
                     state.BeforeInput = null;
                 }
                 state.LastFrame = png;
-                if ((!state.KnownError && _time.GetElapsedTime(state.LastProgress, now) < Interval) ||
-                    _time.GetElapsedTime(state.LastInspection, now) < Interval)
-                {
-                    // 一旦确认错误，在下一次低频复核解除前不交付画面给后续动作。
-                    if (state.KnownError) throw new ConnectionErrorException();
-                    return;
-                }
                 stalledSeconds = _time.GetElapsedTime(state.LastProgress, now).TotalSeconds;
+                checkNetwork = (state.KnownError || stalledSeconds >= Interval.TotalSeconds) &&
+                    _time.GetElapsedTime(state.LastInspection, now) >= Interval;
+                if (state.KnownError && !checkNetwork) throw new ConnectionErrorException();
                 logCheck = _logRoutineChecks;
-                state.LastInspection = now;
+                if (checkNetwork) state.LastInspection = now;
             }
-            ct.ThrowIfCancellationRequested();
-            if (logCheck) log.Info($"全局异常检测：连续 {stalledSeconds:F0} 秒未观察到输入后的页面推进，检查网络、数据更新及日期更新弹窗。");
-            var found = await detectError(ImageCodec.DecodePng(png), ct);
-            ct.ThrowIfCancellationRequested();
-            lock (_sync)
+            if (checkNetwork)
             {
-                if (!_active || generation != _generation) return;
-                state.KnownError = found;
-                if (found) throw new ConnectionErrorException();
+                ct.ThrowIfCancellationRequested();
+                if (logCheck) log.Info($"全局异常检测：连续 {stalledSeconds:F0} 秒未观察到输入后的页面推进，检查网络、数据更新及日期更新弹窗。");
+                var found = await detectError(ImageCodec.DecodePng(png), ct);
+                ct.ThrowIfCancellationRequested();
+                lock (_sync)
+                {
+                    if (!_active || generation != _generation) return png;
+                    state.KnownError = found;
+                    if (found) throw new ConnectionErrorException();
+                }
+                if (logCheck) log.Info("全局异常检测未发现已知错误，保留当前流程继续等待；未执行恢复点击。");
             }
-            if (logCheck) log.Info("全局异常检测未发现已知错误，保留当前流程继续等待；未执行恢复点击。");
+            return handleTutorial is null ? png : await handleTutorial(serial, png, ct);
         }
         finally { _inspectionGate.Release(); }
     }

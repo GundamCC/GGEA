@@ -60,8 +60,10 @@ public partial class MainWindow
     {
         _executionMonitor?.EndSession();
         var detector = _connectionErrorDetector!;
+        var device = _adb!;
+        var tutorial = new TutorialScreenHandler(device.CaptureNormalizedAsync, device.TapAsync, detector.IsVisible, _logger!);
         _executionMonitor = new ExecutionStallMonitor(
-            (screen, ct) => Task.Run(() => detector.IsVisible(screen, ct), ct), _logger!);
+            (screen, ct) => Task.Run(() => detector.IsVisible(screen, ct), ct), _logger!, handleTutorial: tutorial.HandleAsync);
         _adb!.ExecutionObserver = _executionMonitor;
         // 初始化或设置重建可能发生在已持有的租约中，新服务必须继承当前执行范围。
         if (_executionGate.IsHeld) _executionMonitor.BeginSession();

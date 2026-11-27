@@ -28,10 +28,14 @@ internal sealed class AutomationDevice(AdbService transport) : IAdbService
 
     public async Task<byte[]> ScreenshotAsync(string serial, CancellationToken ct = default)
     {
+        var png = await CaptureNormalizedAsync(serial, ct);
+        return ExecutionObserver is { } observer ? await observer.OnScreenshotAsync(serial, png, ct) : png;
+    }
+
+    internal async Task<byte[]> CaptureNormalizedAsync(string serial, CancellationToken ct)
+    {
         var (target, raw) = await CaptureAsync(serial, ct);
-        var png = await Task.Run(() => target.Resolution.Normalize(raw), ct);
-        if (ExecutionObserver is { } observer) await observer.OnScreenshotAsync(serial, png, ct);
-        return png;
+        return await Task.Run(() => target.Resolution.Normalize(raw), ct);
     }
 
     // 调试页保留非标准原图供诊断；仅四档受支持画面可以生成输入授权。
