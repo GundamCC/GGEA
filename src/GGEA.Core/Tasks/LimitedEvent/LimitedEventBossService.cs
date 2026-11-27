@@ -118,7 +118,7 @@ public sealed class LimitedEventBossService(AutomationService automation, OnnxTe
     }
 
     private Task<TemplateMatchResult?> FindRare(ScreenImage frame, CancellationToken ct) =>
-        Find(frame, Event + "rare", new(977, 122, 392, 755), ct, .94);
+        Find(frame, Event + "rare", new(977, 122, 392, 755), ct, .90);
 
     private Task Scroll(int movement, CancellationToken ct) =>
         HistoryBossProgressService.ScrollListAsync(automation, serial, movement, log, ct);

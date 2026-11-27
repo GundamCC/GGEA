@@ -38,7 +38,7 @@ public sealed class MasterLeagueResultTests
     [InlineData(" battle score ", .99, .98, true)]
     [InlineData("SCORE", .99, .98, false)]
     [InlineData("BATTLE SC0RE", .99, .98, false)]
-    [InlineData("BATTLE SCORE", .94, .93, false)]
+    [InlineData("BATTLE SCORE", .90, .90, false)]
     [InlineData("BATTLE SCORE", .99, .89, false)]
     public void Acceptance_RequiresCompleteReliableText(string text, double average, double minimum, bool expected)
         => Assert.Equal(expected, MasterLeagueResultRecognizer.IsAccepted(new(text, average, minimum)));

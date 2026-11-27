@@ -21,7 +21,7 @@ internal sealed class DownloadCapacityWatch(AutomationService automation, IGgeaL
         // 顶部标题区分故障原因，底部文字独立授权点击；进度和教程插图都不参与识别。
         async Task<TemplateMatchResult?> Match(string name, Roi roi) =>
             await automation.MatchImageAsync(screen, "resources/templates/dialog/" + name + ".png",
-                new WaitOptions { Roi = roi, Threshold = .94, AllowGlobalContinuation = false }, ct);
+                new WaitOptions { Roi = roi, Threshold = .90, AllowGlobalContinuation = false }, ct);
         if (await Match("capacity_title", new(785,42,350,100)) is null) return;
         var button = await Match("return_title", new(835,935,250,120));
         var message = L.Text("设备可用容量不足。请释放模拟器存储空间后重新下载。");

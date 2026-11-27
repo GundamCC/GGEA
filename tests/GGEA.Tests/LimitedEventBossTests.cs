@@ -33,7 +33,7 @@ public sealed class LimitedEventBossTests
         var log = new TestLog();
         using var automation = new AutomationService(device, new TemplateMatcher(), log);
         using var ocr = new OnnxTextRecognizer();
-        await Assert.ThrowsAsync<InvalidOperationException>(() => bossTask
+        await Assert.ThrowsAsync(bossTask ? typeof(InvalidOperationException) : typeof(MedalRecognitionException), () => bossTask
             ? new LimitedEventBossService(automation, ocr, log, "serial").RunAsync(FierceEnemyDifficulty.EXPERT, default)
             : new MedalExchangeService(automation, ocr, log, "serial").RunAsync(default));
         Assert.Empty(device.Taps);

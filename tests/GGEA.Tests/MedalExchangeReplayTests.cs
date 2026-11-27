@@ -263,7 +263,7 @@ public sealed class MedalExchangeReplayTests
         var frame = Scene("supply");
         if (sample != "replay-supply") Paste(frame, Load(Fixtures + sample), 1476, 796);
         using var automation = new AutomationService(new FakeAdbService(Encode(frame)), new TemplateMatcher(), new TestLog());
-        var wait = new WaitOptions { Roi = new(1450, 779, 405, 165), Threshold = .94 };
+        var wait = new WaitOptions { Roi = new(1450, 779, 405, 165), Threshold = .90 };
         var bright = await automation.MatchImageAsync(frame, ConfigService.ResolvePath(Assets + "medal_bulk_enabled.png"), wait);
         var dark = await automation.MatchImageAsync(frame, ConfigService.ResolvePath(Assets + "medal_bulk_disabled.png"), wait);
         Assert.Equal(price == 0, dark is not null);
@@ -285,7 +285,7 @@ public sealed class MedalExchangeReplayTests
         Assert.Null(await automation.MatchImageAsync(frame, ConfigService.ResolvePath("resources/templates/common/close.png"),
             new WaitOptions { Roi = new(1060, 902, 460, 175), Threshold = .89 }));
         Assert.Null(await automation.MatchImageAsync(Scene("status"), ConfigService.ResolvePath(Assets + "medal_reset_enabled.png"),
-            new WaitOptions { Roi = new(1015, 766, 454, 130), Threshold = .94 }));
+            new WaitOptions { Roi = new(1015, 766, 454, 130), Threshold = .90 }));
     }
 
     [Theory]
