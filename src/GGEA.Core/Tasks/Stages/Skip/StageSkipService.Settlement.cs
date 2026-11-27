@@ -14,7 +14,8 @@ public sealed partial class StageSkipService
 
     /// <summary>每次略过独立持有补点预算；观察到离开原弹窗后永久撤销补点资格。</summary>
     private async Task<StageSkipResult> CompleteExecutedSkipCoreAsync(
-        string serial, UiLayout stageLayout, SkipExecutionDialog? originalDialog, CancellationToken ct)
+        string serial, UiLayout stageLayout, SkipExecutionDialog? originalDialog, CancellationToken ct,
+        Func<ScreenImage, CancellationToken, bool>? returned = null)
     {
         var skipCancel = stageLayout.Require("skipDialogCancel", "关卡布局缺少 skipDialogCancel 锚点");
         var resultOk = stageLayout.Require("skipResultOk", "关卡布局缺少 skipResultOk 锚点");
@@ -204,7 +205,7 @@ public sealed partial class StageSkipService
         await _automation.TapAsync(serial, resultOk.CenterX, resultOk.CenterY, ct);
         await GameTiming.DelayIfPositiveAsync(_options.SettleAfterOkMs, ct);
 
-        if (!await ConfirmPostSkipAsync(serial, stageLayout, acquisitionContinueCount, ct))
+        if (!await ConfirmPostSkipAsync(serial, stageLayout, acquisitionContinueCount, ct, returned))
             return StageSkipResult.Fail(string.IsNullOrWhiteSpace(_options.PostSkipPageTemplatePath)
                 ? "未确认升级提示已关闭并返回目标关卡，已停止后续操作"
                 : "未确认返回强化培育关卡，已停止后续操作");

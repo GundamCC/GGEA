@@ -11,7 +11,7 @@ public sealed partial class StageSkipService
     public Task<bool> ConfirmPostSkipAsync(string serial, UiLayout stageLayout, CancellationToken ct = default)
         => ConfirmPostSkipAsync(serial, stageLayout, 0, ct);
 
-    private async Task<bool> ConfirmPostSkipAsync(string serial, UiLayout stageLayout, int acquisitionContinueCount, CancellationToken ct)
+    private async Task<bool> ConfirmPostSkipAsync(string serial, UiLayout stageLayout, int acquisitionContinueCount, CancellationToken ct, Func<ScreenImage, CancellationToken, bool>? returned = null)
     {
         // 结果加载和返回确认分别计时；生产入口保留原 10 秒返回预算，旧调用方的短预算仍兼容。
         var timeoutMs = _options.PostSkipTimeoutMs ?? Math.Min(20000, _options.SkipResultTimeoutMs);
@@ -34,13 +34,14 @@ public sealed partial class StageSkipService
             _log.Warn("略过结果 OK 后未识别到强化培育关卡标题");
             return false;
         }
-        if (string.IsNullOrWhiteSpace(_options.SkipCountLimitTemplatePath) && _options.PostSkipConfirmation is null) return true;
-        var countLimit = _options.PostSkipConfirmation is null ? stageLayout.Require("skipCountLimit", "关卡布局缺少 skipCountLimit 锚点") : null;
+        returned ??= _options.PostSkipConfirmation;
+        if (string.IsNullOrWhiteSpace(_options.SkipCountLimitTemplatePath) && returned is null) return true;
+        var countLimit = returned is null ? stageLayout.Require("skipCountLimit", "关卡布局缺少 skipCountLimit 锚点") : null;
         var detectRank = !string.IsNullOrWhiteSpace(_options.PlayerRankUpTemplatePath) &&
             !string.IsNullOrWhiteSpace(_options.PlayerRankUpNextTemplatePath);
         if (detectRank || _options.ContinueUnitAcquisition)
         {
-            var count = _options.PostSkipConfirmation is null ? LoadPostSkipTemplate(_options.SkipCountLimitTemplatePath) : null;
+            var count = returned is null ? LoadPostSkipTemplate(_options.SkipCountLimitTemplatePath) : null;
             var matcher = new TemplateMatcher();
             var deadline = Environment.TickCount64 + Math.Max(0, timeoutMs);
             var nextRankCheck = Environment.TickCount64 + Math.Max(0, _options.PlayerRankUpCheckDelayMs);
@@ -77,7 +78,7 @@ public sealed partial class StageSkipService
                     }
                     // 高置信度正常按钮直接完成；较弱命中仍保留原阈值，但需等升级检查排除遮罩。
                     var countMatch = count is not null ? Match(count, countLimit!.Roi, _options.SkipCountLimitThreshold) : null;
-                    var complete = _options.PostSkipConfirmation?.Invoke(screen, ct) ?? (countMatch is not null);
+                    var complete = returned?.Invoke(screen, ct) ?? (countMatch is not null);
                     if (!detectRank)
                         return (RankUp: false, Next: (TemplateMatchResult?)null, Complete: complete);
                     if (countMatch is { Confidence: >= 0.98 } && !checkRank)
@@ -134,13 +135,13 @@ public sealed partial class StageSkipService
             return false;
         }
 
-        if (_options.PostSkipConfirmation is not null)
+        if (returned is not null)
         {
             var deadline = Environment.TickCount64 + Math.Max(0, timeoutMs);
             while (Environment.TickCount64 < deadline)
             {
                 var screen = await _automation.CaptureScreenAsync(serial, ct);
-                if (await Task.Run(() => _options.PostSkipConfirmation(screen, ct), ct)) return true;
+                if (await Task.Run(() => returned(screen, ct), ct)) return true;
                 await DelayWithinBudgetAsync(deadline, GameTiming.RecognitionIntervalMs, ct);
             }
             return false;

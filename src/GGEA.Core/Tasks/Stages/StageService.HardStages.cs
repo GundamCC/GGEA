@@ -265,6 +265,9 @@ public sealed partial class StageService
         return StageNavigationResult.Ok($"已选中 HARD {targetHardIndex}");
     }
 
+    internal Task<StageNodeRecognition?> ReadRequestNodeAsync(string serial, HardStageEntry work, CancellationToken ct) =>
+        (_progressReader ?? throw new InvalidOperationException("请求出击需要关卡识别。")).ReadSelectedNodeAsync(serial, work, ct);
+
     internal async Task SelectBeforeHardAsync(string serial, UiLayout layout, HardStageEntry work, CancellationToken ct)
     {
         var start = StageSlotPlanner.GetViewportStart(work.NormalCount, work.HardCount, work.HardCount, work.SideStories);

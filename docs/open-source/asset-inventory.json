@@ -11961,6 +11961,66 @@
       "source": "MuMu zh-CN 1920x1080 UI crop",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/character_requests/title_sortie_request.png",
+      "sha256": "167cf6d4d1ab452a91cf70c2edb4a562b236275560e2b92788700f071a65e3eb",
+      "width": 133,
+      "height": 33,
+      "category": "recognition-resource",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/ApConsumption/sortie_dialog.png",
+      "sha256": "5b5a5c918242d256a83cf66e62647d566f013ce6c10a51339880f553675e5021",
+      "width": 895,
+      "height": 723,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/ApConsumption/sortie_landed.png",
+      "sha256": "cff4bc2f749a3b21754dfc86a9228b80d4a6fbf5d7f63cb52c8d8da1804e4b91",
+      "width": 1843,
+      "height": 746,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/ApConsumption/sortie_remaining_one.png",
+      "sha256": "aee766b35626d72710d0d47438fe5d143ed480a74df5212f356d57e9701671f3",
+      "width": 76,
+      "height": 42,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/ApConsumption/sortie_two.png",
+      "sha256": "30309e978f96f6c2a1fbd80c2660f5526934a89aa0268b9680b076911badf8a3",
+      "width": 895,
+      "height": 723,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Base/sortie_shakti_order.png",
+      "sha256": "0037cd6d0668d84e9c87e020ef8636f7360525bf46bc409ab5bff4af56c35767",
+      "width": 1774,
+      "height": 508,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
     }
   ]
 }

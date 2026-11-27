@@ -87,7 +87,7 @@ public class ApConsumptionServiceTests
                 SettleAfterOkMs = 0,
                 SkipResultTimeoutMs = 0,
             });
-        var service = new ApConsumptionService(stageService, skipService, log);
+        var service = WithFixtureSettlement(stageService, skipService, log);
 
         var plan = new[]
         {
@@ -148,7 +148,7 @@ public class ApConsumptionServiceTests
             new AutomationService(adb, new TemplateMatcher(), log),
             log,
             new StageSkipOptions { SkipDialogWaitMs = 0, SettleAfterOkMs = 0, SkipResultTemplatePath = resultPath });
-        var service = new ApConsumptionService(stageService, skipService, log);
+        var service = WithFixtureSettlement(stageService, skipService, log);
 
         var plan = new[]
         {
@@ -220,7 +220,7 @@ public class ApConsumptionServiceTests
                 SettleAfterOkMs = 0,
                 SkipResultTimeoutMs = 0,
             });
-        var service = new ApConsumptionService(stageService, skipService, log);
+        var service = WithFixtureSettlement(stageService, skipService, log);
         var chain = new ApConsumptionTaskChain(
             "serial",
             new[]
@@ -289,7 +289,7 @@ public class ApConsumptionServiceTests
                 SkipCountLimitTemplatePath = countLimitPath,
                 SkipCountLimitThreshold = 0.9,
             });
-        var service = new ApConsumptionService(stageService, skipService, log);
+        var service = WithFixtureSettlement(stageService, skipService, log);
         var plan = new[]
         {
             new ApConsumptionWorkItem
@@ -359,7 +359,7 @@ public class ApConsumptionServiceTests
             new AutomationService(adb, new TemplateMatcher(), log),
             log,
             new StageSkipOptions { SkipDialogWaitMs = 0, SettleAfterOkMs = 0, SkipResultTimeoutMs = 0 });
-        var service = new ApConsumptionService(stageService, skipService, log);
+        var service = WithFixtureSettlement(stageService, skipService, log);
 
         var result = await service.ExecuteAsync(
             "serial",
@@ -411,7 +411,7 @@ public class ApConsumptionServiceTests
             new AutomationService(adb, new TemplateMatcher(), log),
             log,
             new StageSkipOptions { SkipDialogWaitMs = 0, SettleAfterOkMs = 0, SkipResultTimeoutMs = 0 });
-        var service = new ApConsumptionService(stageService, skipService, log);
+        var service = WithFixtureSettlement(stageService, skipService, log);
 
         var result = await service.ExecuteAsync(
             "serial",
@@ -454,7 +454,7 @@ public class ApConsumptionServiceTests
                 SettleAfterOkMs = 0,
                 SkipResultTimeoutMs = 0,
             });
-        var service = new ApConsumptionService(stageService, skipService, log);
+        var service = WithFixtureSettlement(stageService, skipService, log);
         var plan = new[]
         {
             new ApConsumptionWorkItem
@@ -520,7 +520,7 @@ public class ApConsumptionServiceTests
                 ApRecoveryPromptTemplatePath = promptPath,
                 ApRecoveryCloseTemplatePath = recoveryPath,
             });
-        var service = new ApConsumptionService(stageService, skipService, log);
+        var service = WithFixtureSettlement(stageService, skipService, log);
         var plan = new[]
         {
             new ApConsumptionWorkItem
@@ -550,6 +550,10 @@ public class ApConsumptionServiceTests
         Assert.DoesNotContain((415, 780), adb.Taps);
         Assert.Equal(2, titleRecognizer.CallCount);
     }
+
+    // 这些导航夹具只画关卡和结算按钮。逐帧数字预算由 StageSkipBudgetTests 使用实际游戏字形验证。
+    private static ApConsumptionService WithFixtureSettlement(StageService stages, StageSkipService skip, TestLog log) =>
+        new(stages, (serial, layout, ct) => skip.SkipCurrentAsync(serial, layout, ct), log);
 
     private static StageService CreateStageService(
         FakeAdbService adb,

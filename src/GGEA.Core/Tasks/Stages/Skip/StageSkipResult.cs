@@ -7,6 +7,9 @@ public sealed record StageSkipResult(
     bool IsUnavailable = false,
     bool IsApInsufficient = false)
 {
+    public int ExecutedCount { get; init; }
+    public int? RemainingAp { get; init; }
+
     public static StageSkipResult Ok(string message) => new(true, message);
     public static StageSkipResult Fail(string message, bool isUnavailable = false)
         => new(false, message, isUnavailable);

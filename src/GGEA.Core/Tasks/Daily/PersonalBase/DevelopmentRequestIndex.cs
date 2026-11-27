@@ -8,6 +8,8 @@ internal sealed record DevelopmentOffer(string Id, string SeriesId, string UnitI
     string Template, int Amount, int Capital);
 internal sealed record DeliveryRoute(string SeriesId, string DiagramId, int Tab, int TabCount, int Level, int Capital);
 internal sealed record DeliveryTarget(string UnitId, string Template, DeliveryRoute Route);
+internal sealed record SortieOffer(string RoleId, string Title, string SeriesId, int Amount);
+internal sealed record SortieOrder(SortieOffer Offer, int Progress);
 internal sealed record DevelopmentOrder(DevelopmentOffer Offer, int Progress);
 
 /// <summary>委托指定的作品与角色所属作品分别存储。只把目标作品下可计入进度的基准单位交给开发流程。</summary>
@@ -63,6 +65,14 @@ internal static class DevelopmentRequestIndex
             Path.GetFileName(unit.Roadmap) == name &&
             string.Equals(ConfigService.ResolvePath(unit.Roadmap), resolved, GGEA.App.IO.FileSystemPaths.Comparison))
             ?.DeliveryRoutes?[0];
+    }
+
+    internal static SortieOffer? FindSortie(string roleId, int number)
+    {
+        var title = FormattableString.Invariant($"请求出击{number}");
+        var offer = Data.Value.Offers.Values.SingleOrDefault(o => o.RoleId == roleId && o.Title == title &&
+            o.Kind == "完成指定系列关卡");
+        return offer is { SeriesId: not null, Amount: > 0 } ? new(roleId, title, offer.SeriesId, offer.Amount) : null;
     }
 
     internal static DevelopmentOffer? Find(string roleId, int number) =>

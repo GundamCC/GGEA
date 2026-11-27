@@ -21,6 +21,7 @@ public sealed partial class AutomationService : IDisposable
     private readonly IAdbService _adb;
     private readonly TemplateMatcher _matcher;
     private readonly ResourceResolver _resources;
+    internal ResourceResolver Resources => _resources;
     private readonly IGgeaLog _log;
     internal IGgeaLog Log => _log;
     /// <summary>会话共享的全局策略；异常入口复用弹窗诊断，所有任务共享继续动作状态。</summary>

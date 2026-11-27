@@ -47,6 +47,17 @@ internal sealed class CharacterRequestCatalog(OnnxTextRecognizer ocr)
         return progress.HasValue ? new(offer, progress.Value) : null;
     }
 
+    internal SortieOrder? ReadSortie(ScreenImage frame, Roi title, CancellationToken ct)
+    {
+        var suffix = UpgradeNumbers.Read(ocr, frame, new(title.X + title.Width + 1, title.Y - 2, 27, 38), true, ct, out _);
+        if (!int.TryParse(suffix, NumberStyles.None, CultureInfo.InvariantCulture, out var number)) return null;
+        var role = Identify(frame, ct);
+        var offer = role is null ? null : DevelopmentRequestIndex.FindSortie(role.Id, number);
+        if (offer is null) return null;
+        var progress = ReadProgress(frame, offer.Amount, ct);
+        return progress.HasValue ? new(offer, progress.Value) : null;
+    }
+
     private int? ReadProgress(ScreenImage frame, int amount, CancellationToken ct)
     {
         // 条件会换行，进度紧随其后；只接受分母与当前委托完全相符的一行。

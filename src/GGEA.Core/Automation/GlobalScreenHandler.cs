@@ -29,6 +29,7 @@ public sealed class GlobalScreenHandler : IDisposable
     private readonly OnnxTextRecognizer? _ownedOcr;
     /// <summary>各专属流程借用的只读文字识别器；点击仍由各自流程决定。</summary>
     public OnnxTapToNextRecognizer TapToNext { get; }
+    internal OnnxTextRecognizer TextOcr { get; }
     private const int CooldownMs = GameTiming.RecognitionIntervalMs;
     // 动作后短间隔读取新帧；重复点击仍受独立的五秒冷却保护。
     private const int SettleDelayMs = GameTiming.ConfirmationIntervalMs;
@@ -57,7 +58,8 @@ public sealed class GlobalScreenHandler : IDisposable
         _connectionErrorDetector = connectionErrorDetector;
         // 旧模板参数保留调用兼容性；OCR 不读取素材。注入模型时仅借用，独立会话自己释放。
         _ownedOcr = textOcr is null ? new OnnxTextRecognizer() : null;
-        TapToNext = new OnnxTapToNextRecognizer(textOcr ?? _ownedOcr!, log);
+        TextOcr = textOcr ?? _ownedOcr!;
+        TapToNext = new OnnxTapToNextRecognizer(TextOcr, log);
         _time = time;
         _skipRecognizer = new SkipButtonRecognizer(skipTemplatePath, new TemplateMatcher(), log);
     }

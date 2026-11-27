@@ -68,11 +68,12 @@ public sealed class PersonalBaseService
     public async Task<int> AcceptCharacterRequestsAsync(string serial, UiLayout mainLayout, CancellationToken ct = default) =>
         (await RunCharacterRequestsAsync(serial, mainLayout, null, ct)).Accepted;
 
-    public Task<CharacterRequestResult> RunCharacterRequestsAsync(string serial, UiLayout mainLayout, OnnxTextRecognizer? ocr, CancellationToken ct = default, DeliveryProtection? protection = null, DevelopRequest? development = null) =>
+    public Task<CharacterRequestResult> RunCharacterRequestsAsync(string serial, UiLayout mainLayout, OnnxTextRecognizer? ocr, CancellationToken ct = default, DeliveryProtection? protection = null, DevelopRequest? development = null, SortieRequestService? sortie = null) =>
         Task.Run(async () =>
         {
             var service = new CharacterRequestService(_automation, _log, ocr, protection, development)
             {
+                Sortie = sortie,
                 RestockFromList = development is null || ocr is null ? null : async (device, target, reserve, token) =>
                 {
                     var production = new DeliveryDevelopmentService(_automation, _log, ocr);

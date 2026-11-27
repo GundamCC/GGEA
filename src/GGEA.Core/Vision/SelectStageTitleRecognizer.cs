@@ -17,7 +17,7 @@ public sealed class SelectStageTitleRecognizer
     public SelectStageTitleRecognizer(string path) : this(ConfigService.Resources.TemplateCandidates(path).ToArray()) { }
 
     /// <summary>次选延迟加载；语言命中不读取通用文件，损坏素材仍按原错误语义停止。</summary>
-    private SelectStageTitleRecognizer(string[] candidates) : this(candidates[0], true)
+    internal SelectStageTitleRecognizer(string[] candidates) : this(candidates[0], true)
     {
         if (candidates.Length > 1) _fallback = new(() => new SelectStageTitleRecognizer(candidates[1], true));
     }

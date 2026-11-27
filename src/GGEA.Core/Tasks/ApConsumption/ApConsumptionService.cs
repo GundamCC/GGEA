@@ -20,16 +20,19 @@ public sealed record ApConsumptionResult(bool Success, bool IsInterrupted, strin
 public sealed class ApConsumptionService
 {
     private readonly StageService _stageService;
-    private readonly StageSkipService _skipService;
+    private readonly Func<string, UiLayout, CancellationToken, Task<StageSkipResult>> _skip;
     private readonly IGgeaLog _log;
 
     public ApConsumptionService(
         StageService stageService,
         StageSkipService skipService,
-        IGgeaLog log)
+        IGgeaLog log) : this(stageService, skipService.SkipDailyHardAsync, log) { }
+
+    internal ApConsumptionService(StageService stageService,
+        Func<string, UiLayout, CancellationToken, Task<StageSkipResult>> skip, IGgeaLog log)
     {
         _stageService = stageService;
-        _skipService = skipService;
+        _skip = skip;
         _log = log;
     }
 
@@ -189,7 +192,7 @@ public sealed class ApConsumptionService
                     break;
                 }
 
-                var skipResult = await _skipService.SkipCurrentAsync(serial, stageLayout, ct);
+                var skipResult = await _skip(serial, stageLayout, ct);
                 if (!skipResult.Success)
                 {
                     if (skipResult.IsApInsufficient)
@@ -224,6 +227,12 @@ public sealed class ApConsumptionService
                 }
 
                 _log.Info($"{item.Work} HARD {target} 略过成功");
+                if (skipResult.RemainingAp == 0)
+                {
+                    if (target == targets[^1]) chain.MarkCurrentCompleted();
+                    chain.CompleteForInsufficientAp(L.Format($"{item.Work} AP不足，消耗AP任务结束"));
+                    break;
+                }
             }
 
             // 选关失败时已记录失败并推进游标；成功完成全部目标时才在此记录成功。
