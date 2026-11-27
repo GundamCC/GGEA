@@ -85,7 +85,8 @@ public partial class UpdatePanel : UserControl
         NotesHeading.Visibility = Visibility.Visible;
         SourceStatusText.Text = L.Format($"当前更新来源：{update.SourceName}。");
         UpdateStatusText.Text = L.Format($"发现新版本 v{update.Version}");
-        UpdateNotesText.Text = string.IsNullOrWhiteSpace(update.Notes) ? L.Text("本次发布未填写更新说明。") : update.Notes;
+        var notes = update.DisplayNotes;
+        UpdateNotesText.Text = notes.Length == 0 ? L.Text("本次发布未填写更新说明。") : notes;
         var reason = UpdateLauncher.InstallationUnavailableReason(AppContext.BaseDirectory);
         if (reason is not null) UpdateStatusText.Text += "\n" + reason;
         else if (!_allowUpdateInstall) UpdateStatusText.Text += L.Text("\n请完成首次设置后，再从设置页安装更新。");

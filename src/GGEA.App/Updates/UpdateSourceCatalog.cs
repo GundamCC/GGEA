@@ -13,6 +13,10 @@ public sealed record UpdateSourceStatus(string Message, bool IsWarning = false);
 public sealed record UpdateRelease(Version Version, string Notes, string PackageName, Uri PackageUrl,
     long PackageSize, Uri? ChecksumUrl, string? Sha256)
 {
+    // 旧发布说明会在末尾附加包摘要，有时另起一行。两个更新界面只展示说明正文。
+    internal string DisplayNotes => Regex.Replace(Notes,
+        @"(?im)^[^\r\n]*\bSHA-?256[ \t*`]*[:：][ \t*`]*(?:\r?\n[ \t*`]*)?[0-9a-f]{64}[`* \t]*(?:\r?\n|$)", "").Trim();
+
     public string SourceId { get; init; } = "github";
     public string SourceName { get; init; } = "GitHub";
     public IReadOnlyCollection<string> AllowedHosts { get; init; } = UpdateHttpTransport.GitHubHosts;

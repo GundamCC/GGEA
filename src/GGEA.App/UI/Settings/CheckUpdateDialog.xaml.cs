@@ -48,7 +48,7 @@ public partial class CheckUpdateDialog : Window
             CheckSucceeded = true;
             Status.Text = Release is null ? L.Text("已是最新版本") : L.Format($"发现新版本 v{Release.Version}");
             Details.Text = Release is null ? $"GGEA v{UpdateLauncher.CurrentVersion.ToString(4)}" :
-                string.Join("\n", new[] { Release.Notes, _installRestriction }.Where(text => !string.IsNullOrWhiteSpace(text)));
+                string.Join("\n", new[] { Release.DisplayNotes, _installRestriction }.Where(text => !string.IsNullOrWhiteSpace(text)));
             _canInstall = Release is not null && _installRestriction is null;
             ActionButton.Content = L.Text(_canInstall ? "立即更新" : "知道了");
             Dismiss.Visibility = _canInstall ? Visibility.Visible : Visibility.Collapsed;

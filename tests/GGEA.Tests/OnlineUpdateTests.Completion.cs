@@ -6,6 +6,18 @@ namespace GGEA.Tests;
 
 public sealed partial class OnlineUpdateTests
 {
+    [Theory]
+    [InlineData("完整包 SHA-256：`{0}`")]
+    [InlineData("SHA256:\r\n{0}")]
+    public void DisplayNotes_OmitsPackageChecksum(string footer)
+    {
+        var hash = new string('a', 64);
+        var release = new UpdateRelease(new Version(1, 4, 22, 4),
+            "修复更新。\r\n\r\n" + string.Format(footer, hash), "pkg.zip", new Uri("https://example.com/pkg.zip"), 100, null, hash);
+        Assert.Equal("修复更新。", release.DisplayNotes);
+        Assert.Equal(hash, release.Sha256);
+    }
+
     /// <summary>旧配置默认自动安装；保存更新选项只修改该字段，保留其他设置和未知扩展。</summary>
     [Fact]
     public void AutoInstallPreference_DefaultsOn_AndPreservesOtherSettings()
