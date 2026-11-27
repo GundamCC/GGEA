@@ -108,6 +108,12 @@ public sealed class ConfigService
             // 删除旧素材后逐项迁移，保留用户自定义路径。
             config.StageTemplateDirectory = MigrateBundledTemplate(config.StageTemplateDirectory,
                 "stage/main_stage", "logo");
+            config.BattleshipTemplate = MigrateBundledTemplate(config.BattleshipTemplate,
+                "base/battleship.png", "base/battleship_cruise/battleship.png");
+            config.RecycleAllTemplate = MigrateBundledTemplate(config.RecycleAllTemplate,
+                "base/button_recycle_all.png", "base/battleship_cruise/button_recycle_all.png");
+            config.RecycleAllDisabledTemplate = MigrateBundledTemplate(config.RecycleAllDisabledTemplate,
+                "base/button_recycle_all_disabled.png", "base/battleship_cruise/button_recycle_all_disabled.png");
             config.HarvestOkTemplate = MigrateOkTemplate(config.HarvestOkTemplate);
             config.ShopResultCloseTemplate = MigrateBundledTemplate(config.ShopResultCloseTemplate,
                 "shop/button_result_close.png", "common/close.png");

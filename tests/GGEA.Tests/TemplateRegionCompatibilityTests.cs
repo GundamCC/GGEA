@@ -20,8 +20,8 @@ public class TemplateRegionCompatibilityTests
             .Load(resources.Resolve($"resources/ui_layout/{name}.json")).Find(anchor)!.Roi;
         var bottom = RecognitionRegions.Resolve(RecognitionRegion.BottomButtons, 1920, 1080);
         var cases = new (string Path, Roi Region)[] {
-            ("base/button_recycle_all.png", Layout("personal_base", "claimAll")),
-            ("base/button_recycle_all_disabled.png", Layout("personal_base", "claimAll")),
+            ("base/battleship_cruise/button_recycle_all.png", Layout("personal_base", "claimAll")),
+            ("base/battleship_cruise/button_recycle_all_disabled.png", Layout("personal_base", "claimAll")),
             ("gift/button_collect_all.png", bottom),
             ("gift/button_collect_all_disabled.png", bottom),
             ("mission/button_claim_all.png", Layout("mission", "claimAll")),

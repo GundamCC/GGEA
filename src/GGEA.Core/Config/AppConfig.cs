@@ -223,11 +223,11 @@ public sealed class AppConfig
 
     /// <summary>全部回收按钮模板（可用状态）。</summary>
     [JsonPropertyName("recycleAllTemplate")]
-    public string RecycleAllTemplate { get; set; } = "resources/templates/base/button_recycle_all.png";
+    public string RecycleAllTemplate { get; set; } = "resources/templates/base/battleship_cruise/button_recycle_all.png";
 
     /// <summary>全部回收按钮模板（暗灰不可用状态）。</summary>
     [JsonPropertyName("recycleAllDisabledTemplate")]
-    public string RecycleAllDisabledTemplate { get; set; } = "resources/templates/base/button_recycle_all_disabled.png";
+    public string RecycleAllDisabledTemplate { get; set; } = "resources/templates/base/battleship_cruise/button_recycle_all_disabled.png";
 
     /// <summary>收获结果弹窗 OK 模板。</summary>
     [JsonPropertyName("harvestOkTemplate")]
@@ -235,7 +235,7 @@ public sealed class AppConfig
 
     /// <summary>战舰巡航按钮模板。</summary>
     [JsonPropertyName("battleshipTemplate")]
-    public string BattleshipTemplate { get; set; } = "resources/templates/base/battleship.png";
+    public string BattleshipTemplate { get; set; } = "resources/templates/base/battleship_cruise/battleship.png";
 
     /// <summary>可选战舰模板遮罩，为空表示不使用。</summary>
     [JsonPropertyName("battleshipMask")]

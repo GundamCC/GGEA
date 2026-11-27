@@ -156,6 +156,28 @@ public class ConfigServiceTests
         Assert.Equal(expected, config.MissionClaimResultOkTemplate);
     }
 
+    [Fact]
+    public void Load_BattleshipCruise_MigratesShippedPathsAndPreservesCustomPaths()
+    {
+        using var temp = new TempDirectory();
+        var path = Path.Combine(temp.Path, "config.json");
+        File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(new
+        {
+            battleshipTemplate = @"resources\templates\base\battleship.png",
+            recycleAllTemplate = Path.Combine(AppContext.BaseDirectory, "resources/ja/templates/base/button_recycle_all.png"),
+            recycleAllDisabledTemplate = "resources/common/templates/base/button_recycle_all_disabled.png",
+        }));
+        var service = new ConfigService(new TestLog());
+        var config = service.Load(path);
+        var defaults = new AppConfig();
+        Assert.Equal(defaults.BattleshipTemplate, config.BattleshipTemplate);
+        Assert.Equal(defaults.RecycleAllTemplate, config.RecycleAllTemplate);
+        Assert.Equal(defaults.RecycleAllDisabledTemplate, config.RecycleAllDisabledTemplate);
+        config.RecycleAllTemplate = "custom/base/button_recycle_all.png";
+        service.Save(config, path);
+        Assert.Equal(config.RecycleAllTemplate, service.Load(path).RecycleAllTemplate);
+    }
+
     /// <summary>短动画设置原样保留；只迁移识别预算，保存重载不改变用户等待。</summary>
     [Fact]
     public void Load_Timing_PreservesShortAnimationAndUpgradesBudget()

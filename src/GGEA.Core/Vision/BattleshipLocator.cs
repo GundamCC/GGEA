@@ -7,9 +7,7 @@ using GGEA.App.Logging;
 namespace GGEA.App.Vision;
 
 /// <summary>
-/// 战舰区域定位器。
-/// 战舰是“蓝色亮边六边形”，个人基地页面可四处拖动；
-/// 使用带遮罩的模板匹配（遮罩只保留蓝色光边），未找到时按四个方向拖动画面重试。
+/// 在可拖动的个人基地地图上定位战舰巡航与角色要求入口。
 /// </summary>
 public sealed class BattleshipLocator
 {
@@ -47,7 +45,7 @@ public sealed class BattleshipLocator
     /// <summary>
     /// 查找战舰区域；未找到时按“左、右、上、下”循环拖动个人基地画面，最多 maxDrags 次。
     /// </summary>
-    public async Task<TemplateMatchResult?> FindWithPanAsync(
+    public Task<TemplateMatchResult?> FindWithPanAsync(
         string serial,
         string templatePath,
         string? maskPath,
@@ -55,6 +53,26 @@ public sealed class BattleshipLocator
         int dragDurationMs = 700,
         double threshold = 0.85,
         CancellationToken ct = default)
+        => FindButtonWithPanAsync(serial, "战舰区域", templatePath, maskPath, maxDrags, dragDurationMs, threshold, ct);
+
+    /// <summary>从个人基地当前视野查找角色要求文字按钮；未适配的游戏语言直接返回。</summary>
+    public Task<TemplateMatchResult?> FindCharacterRequestsWithPanAsync(
+        string serial, int maxDrags = 16, int dragDurationMs = 700,
+        double threshold = 0.85, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        const string template = "resources/templates/base/character_requests/character_requests.png";
+        if (!File.Exists(ConfigService.ResolvePath(template)))
+        {
+            _log.Warn("当前游戏语言缺少角色要求按钮素材");
+            return Task.FromResult<TemplateMatchResult?>(null);
+        }
+        return FindButtonWithPanAsync(serial, "角色要求", template, null, maxDrags, dragDurationMs, threshold, ct);
+    }
+
+    private async Task<TemplateMatchResult?> FindButtonWithPanAsync(
+        string serial, string buttonName, string templatePath, string? maskPath,
+        int maxDrags, int dragDurationMs, double threshold, CancellationToken ct)
     {
         // 大范围拖动：左右各 700px、上下各 500px，并加入四个斜向方向
         var directions = new[]
@@ -70,7 +88,7 @@ public sealed class BattleshipLocator
             var match = await FindAsync(serial, templatePath, maskPath, threshold, ct);
             if (match is not null)
             {
-                _log.Info($"找到战舰区域: ({match.CenterX},{match.CenterY})");
+                _log.Info($"找到{buttonName}: ({match.CenterX},{match.CenterY})");
                 return match;
             }
 
@@ -84,12 +102,12 @@ public sealed class BattleshipLocator
             var sy = 540 - dy / 2;
             var ex = 960 + dx / 2;
             var ey = 540 + dy / 2;
-            _log.Info($"未找到战舰区域，拖动画面 ({attempt + 1}/{maxDrags})…");
+            _log.Info($"未找到{buttonName}，拖动画面 ({attempt + 1}/{maxDrags})…");
             await _adb.DragAsync(serial, sx, sy, ex, ey, dragDurationMs, ct);
             await Task.Delay(GameTiming.RecognitionIntervalMs, ct);
         }
 
-        _log.Warn("多次拖动后仍未找到战舰区域");
+        _log.Warn($"多次拖动后仍未找到{buttonName}");
         return null;
     }
 

@@ -38,7 +38,7 @@ public class PersonalBaseServiceTests
         var roi = layout.Find("claimAll")!.Roi;
         foreach (var name in new[] { "button_recycle_all.png", "button_recycle_all_disabled.png" })
         {
-            var image = ImageCodec.DecodePng(File.ReadAllBytes(Path.Combine(root, "resources/zh-CN/templates/base", name)));
+            var image = ImageCodec.DecodePng(File.ReadAllBytes(Path.Combine(root, "resources/zh-CN/templates/base/battleship_cruise", name)));
             Assert.True(image.Width <= roi.Width && image.Height <= roi.Height);
         }
     }

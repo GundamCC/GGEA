@@ -3,7 +3,7 @@
   "reviewDate": "2026-10-27",
   "files": [
     {
-      "path": "resources/common/templates/base/battleship.png",
+      "path": "resources/common/templates/base/battleship_cruise/battleship.png",
       "sha256": "a17609c4364c1b083f5b8c60749b378a9ec20ce8062cc6327b879b153daae1b5",
       "width": 171,
       "height": 46,
@@ -13,7 +13,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/base/button_recycle_all.png",
+      "path": "resources/common/templates/base/battleship_cruise/button_recycle_all.png",
       "sha256": "c85a308633d51513b2669fde1625e0ce0b7a08ed3d7b74c9d4ce9212e05440f1",
       "width": 353,
       "height": 117,
@@ -23,7 +23,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/base/button_recycle_all_disabled.png",
+      "path": "resources/common/templates/base/battleship_cruise/button_recycle_all_disabled.png",
       "sha256": "fb8326692de3b76787aabbdcf5989e274ab5ee5590ff02332a6a067ea2586217",
       "width": 360,
       "height": 121,
@@ -2223,7 +2223,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/ja/templates/base/battleship.png",
+      "path": "resources/ja/templates/base/battleship_cruise/battleship.png",
       "sha256": "34a22f86f0e22550594658000e011c3d2c1accb5b9819cccfffed30dcd461ac2",
       "width": 171,
       "height": 46,
@@ -2233,7 +2233,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/ja/templates/base/button_recycle_all.png",
+      "path": "resources/ja/templates/base/battleship_cruise/button_recycle_all.png",
       "sha256": "37bec828ef02138cb68a8fb117ab3f0b48e4645432497920f4abf94b303cf4ac",
       "width": 353,
       "height": 117,
@@ -2243,7 +2243,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/ja/templates/base/button_recycle_all_disabled.png",
+      "path": "resources/ja/templates/base/battleship_cruise/button_recycle_all_disabled.png",
       "sha256": "8bd2e9e519c0d783493c3e913bd7036ac4736e3efa8ce0973d0ab4542e825f44",
       "width": 360,
       "height": 121,
@@ -3123,7 +3123,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/zh-CN/templates/base/battleship.png",
+      "path": "resources/zh-CN/templates/base/battleship_cruise/battleship.png",
       "sha256": "a17609c4364c1b083f5b8c60749b378a9ec20ce8062cc6327b879b153daae1b5",
       "width": 171,
       "height": 46,
@@ -3133,7 +3133,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/zh-CN/templates/base/button_recycle_all.png",
+      "path": "resources/zh-CN/templates/base/battleship_cruise/button_recycle_all.png",
       "sha256": "c85a308633d51513b2669fde1625e0ce0b7a08ed3d7b74c9d4ce9212e05440f1",
       "width": 353,
       "height": 117,
@@ -3143,12 +3143,22 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/zh-CN/templates/base/button_recycle_all_disabled.png",
+      "path": "resources/zh-CN/templates/base/battleship_cruise/button_recycle_all_disabled.png",
       "sha256": "fb8326692de3b76787aabbdcf5989e274ab5ee5590ff02332a6a067ea2586217",
       "width": 360,
       "height": 121,
       "category": "recognition-resource",
       "source": "Game-derived appearance; original capture/source unconfirmed",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/character_requests/character_requests.png",
+      "sha256": "6caa9c3054fa332503afad037a77e146c2a0134f8d4bc63a6e5d5188356df3a1",
+      "width": 171,
+      "height": 46,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; zh-CN Personal Base, MuMu 1920x1080, crop (1344,342,171,46)",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
