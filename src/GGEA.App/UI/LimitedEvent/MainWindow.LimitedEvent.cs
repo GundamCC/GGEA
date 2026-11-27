@@ -132,7 +132,8 @@ public partial class MainWindow
             await stages.EnterAsync(false, token);
             return await reader.ReadCurrentWorkForProgressAsync(serial, target, token);
         }
-        var runner = new AutoProgressRunner(Read, Read,
+        var runner = new AutoProgressRunner(Read,
+            (target, token) => reader.ReadCurrentWorkForProgressAsync(serial, target, token, waitForEventUnlock: true),
             (node, token) => battle.RunAsync(serial, settings, node.Kind, report, token,
                 initialFormation: node is { Kind: WorkStageKind.Normal, Number: 1 } ? formation : null),
             (target, node, token) => reader.AdvanceAfterBattleAsync(serial, target, node, token),

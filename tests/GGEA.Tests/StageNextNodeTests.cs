@@ -12,6 +12,25 @@ public sealed class StageNextNodeTests
     private static readonly string Templates = Path.Combine(AppContext.BaseDirectory, "resources/common/templates/stage/node_states");
     private static readonly HardStageEntry Work = new() { Id = 20, Work = "Mobile Suit Victory Gundam", NormalCount = 20, HardCount = 3 };
 
+    [Fact]
+    public async Task EventAfterBattle_WaitsOnPageForHardOneUnlock()
+    {
+        var hard = new StageNodeRecognition(400, 880, WorkStageKind.Hard, 1,
+            WorkStageNodeState.Incomplete, new(WorkStageKind.Hard, 1, 8), "HARD 1");
+        var locked = hard with { State = WorkStageNodeState.Locked };
+        var nodes = new FakeStageNodeRecognizer();
+        nodes.EnqueueResults(locked, locked, null, hard);
+        var adb = new FakeAdbService([]);
+        var log = new TestLog();
+        using var automation = new AutomationService(adb, new TemplateMatcher(), log);
+        var reader = new StageProgressReader(automation, nodes, log, new StageNavigationOptions(),
+            (_, _) => Task.CompletedTask);
+        var work = new HardStageEntry { NormalCount = 7, HardCount = 4 };
+        Assert.Equal(hard, await reader.ReadCurrentWorkForProgressAsync("event", work, default, waitForEventUnlock: true));
+        Assert.Equal(4, nodes.CallCount);
+        Assert.Empty(adb.Taps);
+    }
+
     /// <summary>上一场已结算而编号未变化时，即使状态没有 COMPLETE，也必须两帧定位 NEXT 并复核后才允许下一关。</summary>
     [Theory]
     [InlineData(WorkStageNodeState.Cleared)]

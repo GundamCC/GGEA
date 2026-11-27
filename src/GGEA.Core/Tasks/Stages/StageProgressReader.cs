@@ -11,13 +11,29 @@ public sealed class StageProgressReader(AutomationService automation, IStageNode
 {
     /// <summary>原页读取进度；保留旧已通关选中节点时通过 NEXT 选关，再复核实际选中结果。</summary>
     public async Task<StageNodeRecognition> ReadCurrentWorkForProgressAsync(string serial,
-        HardStageEntry work, CancellationToken ct)
+        HardStageEntry work, CancellationToken ct, bool waitForEventUnlock = false)
     {
         // 本读取器不保存 AP 导航上下文；历史适配器在每张节点截图上额外复核作品身份。
         if (nodes is null) throw new InvalidOperationException("推图节点识别未配置。");
         if (nodes is StageNodeRecognizer recognizer) recognizer.ValidateForProgress();
         // 编号是辅助观察，单次两帧识别失败后交由真实出击入口处理，不能在这里反复等待并终止队列。
         var node = await ReadSelectedNodeAsync(serial, work, ct);
+        if (waitForEventUnlock && node?.State == WorkStageNodeState.Locked)
+        {
+            log.Info($"事件关卡战后首次读到 {node.Kind} {node.Number} 锁定，在当前选关页等待解锁动画并复核。");
+            var until = Environment.TickCount64 + GameTiming.ShortRecognitionTimeoutMs;
+            do
+            {
+                await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
+                // 只读取新帧。复用选中节点的多帧确认，不点击 NEXT 或重新进入作品。
+                node = await nodes.RecognizeSelectedAsync(serial, work, ct);
+                if (node?.Position is not null && node.State is WorkStageNodeState.Incomplete
+                    or WorkStageNodeState.Cleared or WorkStageNodeState.Completed) break;
+            } while (Environment.TickCount64 < until);
+            if (node?.Position is null || node.State == WorkStageNodeState.Unknown)
+                throw new InvalidOperationException("事件关卡战后未能确认解锁后的选中节点，已停止出击。");
+            log.Info($"事件关卡战后复核：{node.Kind} {node.Number}，状态 {node.State}。");
+        }
         if (node is not null && (node.Position is not null || node.HasPassed || node.State == WorkStageNodeState.Locked))
         {
             // 只有确证仍选着已通关节点才需要 NEXT；观察缺失不触发选关操作。
