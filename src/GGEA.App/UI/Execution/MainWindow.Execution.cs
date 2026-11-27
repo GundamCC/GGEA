@@ -107,6 +107,7 @@ public partial class MainWindow
             (!busy || (_autoProgressRunning && _autoProgressCts?.IsCancellationRequested == false));
         FierceEnemyAssaultView.FierceEnemySelectionPanel.IsEnabled = !busy && FierceEnemyAssaultView.FierceEnemyUnitBox.Items.Count > 0;
         FierceEnemyAssaultView.FierceEnemyAssaultStartButton.IsEnabled = !_windowTasks.IsStopping && (!busy || _fierceEnemyAssaultCts?.IsCancellationRequested == false);
+        LimitedActivity.IsEnabled = !busy && _limitedActivities.Length > 0;
         LimitedDifficulty.IsEnabled = !busy;
         foreach (var button in new[] { LimitedStart, MedalStart, EventProgress, EventDaily })
             button.IsEnabled = !_windowTasks.IsStopping && (!busy || _limitedButton == button && _limitedCts?.IsCancellationRequested == false);

@@ -1,5 +1,3 @@
-using System.IO;
-using System.Text.Json;
 using GGEA.App.Automation;
 using GGEA.App.Config;
 using GGEA.App.UI;
@@ -8,7 +6,7 @@ using GGEA.App.Vision;
 namespace GGEA.App.Tasks;
 
 /// <summary>事件专属导航只负责选关、确认次数与领取；消耗 AP 后交给共用 HARD 略过结算流程。</summary>
-internal sealed class EventStagesService(AutomationService automation, string serial)
+internal sealed class EventStagesService(AutomationService automation, string serial, LimitedEventDefinition? activity = null)
 {
     internal const string Directory = "stage/event/limited_time_event/";
     private static readonly Roi Header = new(190, 0, 470, 105), SkipArea = new(1505, 645, 345, 140),
@@ -80,41 +78,21 @@ internal sealed class EventStagesService(AutomationService automation, string se
 
     internal async Task OpenFromMenuAsync(CancellationToken ct)
     {
-        using var config = JsonDocument.Parse(File.ReadAllBytes(ConfigService.ResolvePath("resources/common/limited_time_event.json")));
-        var logos = new List<FierceEnemyAssaultRecognizer>();
-        foreach (var item in config.RootElement.GetProperty("event").EnumerateArray())
-        {
-            var name = item.GetProperty("screenshot").GetString();
-            if (string.IsNullOrWhiteSpace(name) || name.Any(c => !char.IsAsciiLetterOrDigit(c) && c != '_'))
-                throw new InvalidDataException("限时活动配置中的 LOGO 文件名无效。");
-            logos.Add(new FierceEnemyAssaultRecognizer(ConfigService.ResolvePath($"resources/templates/logo/{name}.png")));
-        }
-        if (logos.Count == 0) throw new InvalidDataException("当前没有已配置的限时活动。");
+        var selected = new FierceEnemyAssaultRecognizer(ConfigService.ResolvePath($"resources/templates/logo/{Activity.Screenshot}.png"));
         await FierceEnemyAssaultService.OpenEventListAsync(automation, serial, ct);
         var options = new WaitOptions { Region = RecognitionRegion.PageTitle, Threshold = .85,
             TimeoutMs = GameTiming.RecognitionTimeoutMs, AllowGlobalContinuation = false };
         if (!await FierceEnemyAssaultService.WaitEventListAsync(automation, serial,
             ConfigService.ResolvePath(FierceEnemyAssaultService.TitleTemplate), options, ct))
             throw new InvalidOperationException("未确认事件列表标题。");
-        FierceEnemyAssaultRecognizer? selected = null;
         if (!await FierceEnemyAssaultService.SelectEventBannerAsync(automation, serial,
             ConfigService.ResolvePath(FierceEnemyAssaultService.TitleTemplate), options,
-            (frame, token) => Task.Run(() =>
-            {
-                // 配置顺序决定多个可见活动的优先级。右侧海报必须与选中的同一 LOGO 相符。
-                foreach (var logo in logos)
-                {
-                    var hit = logo.Match(frame, new(0, 105, 398, 871), [(.245,.245), (.25,.25), (.24,.24)], token);
-                    if (hit is null) continue;
-                    selected = logo;
-                    return hit;
-                }
-                return null;
-            }, token), ct))
+            (frame, token) => Task.Run(() => selected.Match(frame, new(0, 105, 398, 871),
+                [(.245,.245), (.25,.25), (.24,.24)], token), token), ct))
             throw new InvalidOperationException("事件列表未确认当前活动横幅。");
         if (!await FierceEnemyAssaultEntryService.EnterSelectedAsync(automation, serial,
             options with { Region = null, Roi = FierceEnemyAssaultEntryService.ButtonRegion },
-            (screen, token) => Task.Run(() => selected!.Match(screen, new(730, 220, 660, 410), [(1,1), (.99,.99), (1.01,1.01)], token) is not null, token), ct))
+            (screen, token) => Task.Run(() => selected.Match(screen, new(730, 220, 660, 410), [(1,1), (.99,.99), (1.01,1.01)], token) is not null, token), ct))
             throw new InvalidOperationException("未确认当前故事事件的前往按钮。");
         await Require(null, ct, Story);
     }
@@ -213,7 +191,7 @@ internal sealed class EventStagesService(AutomationService automation, string se
         return result.Count;
     }
 
-    internal static HardStageEntry CreateWork() => new() { Work = "事件关卡", InferFinalBoss = false, NormalCount = 7, HardCount = 4 };
+    private LimitedEventDefinition Activity => activity ?? LimitedEventDefinition.Load().First();
 
     internal static UiLayout CreateTrackLayout(UiLayout layout)
     {
@@ -233,7 +211,8 @@ internal sealed class EventStagesService(AutomationService automation, string se
     internal async Task<string> DailyAsync(StageSkipService settlement, UiLayout layout, StageService navigation,
         CancellationToken ct, bool claimRewards = true)
     {
-        var work = CreateWork();
+        var current = Activity;
+        var work = current.CreateWork();
         var eventLayout = CreateTrackLayout(layout);
         var start = await Require(null, ct, Story, Stage);
         if (start.Target == Stage) await OpenMission(ct); else await OpenMissionFromStory(ct);
@@ -243,7 +222,7 @@ internal sealed class EventStagesService(AutomationService automation, string se
             await Click(Mission, Back, ct);
             await EnterAsync(false, ct);
             // HARD 的收益独立于十次使命，途中即使已达标也处理完三个关卡。
-            for (int hard = 1; hard <= 3; hard++)
+            for (int hard = 1; hard <= Math.Min(3, current.HardCount); hard++)
             {
                 var selected = await navigation.SelectHardStageAsync(serial, eventLayout, [work], work.Id, hard, ct);
                 if (!selected.Success) throw new InvalidOperationException(selected.Message);

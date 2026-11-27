@@ -74,14 +74,14 @@ public partial class MainWindow
         }
     }
 
-    private async Task<string> RunEventStagesDailyAsync(string serial, CancellationToken ct, bool claimRewards = true)
+    private async Task<string> RunEventStagesDailyAsync(string serial, CancellationToken ct, bool claimRewards = true, LimitedEventDefinition? activity = null)
     {
         var title = new SelectStageTitleRecognizer(EventStagesService.PathFor("stage_title"));
         var settlement = CreateStageSkipService(false, title.Recognize, eventQuantityLayout: true);
         using var nodes = CreateEventNodeRecognizer();
         var titles = new OnnxStageTitleRecognizer(_adb!, _logger!, GetTextOcr(), eventSuffix: true);
         var navigation = _stageService!.ForEndAlignedTrack(nodes, titles);
-        return await new EventStagesService(_automation!, serial).DailyAsync(settlement, _stageLayout, navigation, ct, claimRewards);
+        return await new EventStagesService(_automation!, serial, activity ?? SelectedActivity).DailyAsync(settlement, _stageLayout, navigation, ct, claimRewards);
     }
 
     private StageNodeRecognizer CreateEventNodeRecognizer() =>
@@ -90,9 +90,9 @@ public partial class MainWindow
 
     private async Task<string> RunEventProgressAsync(string serial, CancellationToken ct)
     {
-        var stages = new EventStagesService(_automation!, serial);
+        var stages = new EventStagesService(_automation!, serial, SelectedActivity);
         if (!await stages.EnterAsync(true, ct)) return L.Text("事件关卡攻略度已达 100%。");
-        var work = EventStagesService.CreateWork();
+        var work = SelectedActivity.CreateWork();
         using var nodes = CreateEventNodeRecognizer();
         var reader = _stageService!.CreateProgressReader(nodes);
         var path = EventStagesService.PathFor("stage_title");

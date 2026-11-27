@@ -185,7 +185,7 @@ public class EventStagesDailyTests
         var nav = new StageService(automation, new FakeStageWorkRecognizer(), log,
             new StageNavigationOptions { PageSettleMs = 0 }).ForEndAlignedTrack(nodes, titles);
         var layout = EventStagesService.CreateTrackLayout(new UiLayoutService(log).Load(ConfigService.ResolvePath("resources/ui_layout/stage.json")));
-        var work = EventStagesService.CreateWork();
+        var work = LimitedEventDefinition.Load().First().CreateWork();
         if (stage == "normal7")
         {
             var next = File.ReadAllBytes(ConfigService.ResolvePath("Fixtures/Navigation/limited-native720-normal7-next.png"));

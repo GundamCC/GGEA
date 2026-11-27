@@ -4,7 +4,7 @@ using GGEA.App.Localization;
 namespace GGEA.App.Config;
 
 public sealed record LimitedEventDailySettings(bool Stages, bool Boss, bool Medals, FierceEnemyDifficulty Difficulty,
-    bool IsChecked = true, int Index = 0, bool? MissionRewards = null)
+    bool IsChecked = true, int Index = 0, bool? MissionRewards = null, int? ActivityId = null)
 {
     // 旧配置把领取奖励包含在每日关卡中。
     internal bool ClaimRewards => MissionRewards ?? Stages;

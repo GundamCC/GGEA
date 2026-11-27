@@ -8,8 +8,14 @@ namespace GGEA.App.UI;
 
 public partial class MainWindow
 {
-    private void ShowLimitedDaily(LimitedEventDailySettings choice)
+    private LimitedEventDefinition[] _limitedActivities = [];
+    private LimitedEventDefinition SelectedActivity => LimitedActivity.SelectedItem as LimitedEventDefinition
+        ?? throw new InvalidOperationException(L.Text("当前没有可用的限时活动。"));
+
+    private void ShowLimitedDaily(LimitedEventDailySettings choice, bool selectActivity = true)
     {
+        if (selectActivity)
+            LimitedActivity.SelectedItem = choice.ActivityId is int id ? _limitedActivities.FirstOrDefault(e => e.Id == id) : _limitedActivities.FirstOrDefault();
         IncludeStages.IsChecked = choice.Stages;
         IncludeMissionRewards.IsChecked = choice.ClaimRewards;
         IncludeBoss.IsChecked = choice.Boss;
@@ -20,13 +26,21 @@ public partial class MainWindow
 
     private void RestoreLimitedDaily()
     {
+        try
+        {
+            _limitedActivities = LimitedEventDefinition.Load();
+            LimitedActivity.ItemsSource = _limitedActivities;
+            LimitedActivity.SelectedItem = _limitedActivities.FirstOrDefault();
+            if (_limitedActivities.Length == 0) LimitedStatus.Text = L.Text("当前没有可用的限时活动。");
+        }
+        catch (Exception ex) { LimitedStatus.Text = ex.Message; _logger?.Warn(ex.Message); }
         if (_config.LimitedEventDaily is not { } saved) return;
         try
         {
             var item = saved.CreateItem();
             item.PropertyChanged += DailyTask_StateChanged;
             _dailyTasks.Insert(Math.Clamp(saved.Index, 0, _dailyTasks.Count), item);
-            ShowLimitedDaily(saved);
+            ShowLimitedDaily(saved, selectActivity: false);
             UpdateDailySelectAllState();
         }
         catch (InvalidOperationException ex) { LimitedStatus.Text = ex.Message; }
@@ -35,10 +49,11 @@ public partial class MainWindow
     private void AddLimitedDaily_Click(object sender, RoutedEventArgs e)
     {
         if (_busy || _windowTasks.IsStopping) return;
+        if (LimitedActivity.SelectedItem is not LimitedEventDefinition activity) { LimitedStatus.Text = L.Text("当前没有可用的限时活动。"); return; }
         var existing = _dailyTasks.FirstOrDefault(task => task.Kind == DailyTaskKind.LimitedEvent);
         var choice = new LimitedEventDailySettings(IncludeStages.IsChecked == true, IncludeBoss.IsChecked == true,
             IncludeMedals.IsChecked == true, Enum.Parse<FierceEnemyDifficulty>((string)((ComboBoxItem)LimitedDifficulty.SelectedItem).Content),
-            existing?.IsChecked ?? true, MissionRewards: IncludeMissionRewards.IsChecked == true);
+            existing?.IsChecked ?? true, MissionRewards: IncludeMissionRewards.IsChecked == true, ActivityId: activity.Id);
         if (!choice.Stages && !choice.Boss && !choice.Medals && !choice.ClaimRewards) { LimitedStatus.Text = L.Text("请选择有效的限时活动子任务。"); return; }
         var item = choice.CreateItem();
         item.PropertyChanged += DailyTask_StateChanged;
@@ -60,7 +75,9 @@ public partial class MainWindow
 
     private async Task RunLimitedDailyTaskAsync(string serial, LimitedEventDailySettings choice, CancellationToken ct)
     {
-        var stages = new EventStagesService(_automation!, serial);
+        var activity = choice.ActivityId is int id ? _limitedActivities.FirstOrDefault(e => e.Id == id) : _limitedActivities.FirstOrDefault();
+        if (activity is null) throw new InvalidOperationException(L.Text("所选限时活动已不在配置中，请重新添加每日任务。"));
+        var stages = new EventStagesService(_automation!, serial, activity);
         var menu = await new StageMenuEntryService(_automation!, _logger!).OpenFromHomeAsync(serial, _mainLayout,
             _config.StagePageSettleMs, ct);
         if (!menu.Success) throw new InvalidOperationException(menu.Message);
@@ -68,7 +85,7 @@ public partial class MainWindow
         if (choice.Stages)
         {
             AccountStatusText.Text = L.Text("每日10次关卡");
-            LimitedStatus.Text = await RunEventStagesDailyAsync(serial, ct, choice.ClaimRewards);
+            LimitedStatus.Text = await RunEventStagesDailyAsync(serial, ct, choice.ClaimRewards, activity);
         }
         else if (choice.ClaimRewards)
         {
