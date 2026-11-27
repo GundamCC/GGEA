@@ -34,6 +34,62 @@ public sealed class MedalExchangeReplayTests
         return Encode(frame);
     }
 
+    [Fact]
+    public async Task LdSupplyRecoversMissingBalanceAndSubmitsEightySixOnce()
+    {
+        var scene = Scene("supply");
+        var balance = Load(Fixtures + "balance-ld4775");
+        Paste(scene, Load(Fixtures + "bulk-ld86"), 1450, 779);
+        for (int row = 33; row < 81; row++)
+            Array.Clear(scene.Bgra, (scene.Width * row + 1762) * 4, 147 * 4);
+        var missing = Encode(scene);
+        Paste(scene, balance, 1762, 33);
+        var visible = Encode(scene);
+        var device = new FakeAdbService(visible);
+        int captures = 0;
+        device.ScreenshotProvider = () => ++captures == 2 ? missing : visible;
+        var log = new TestLog();
+        using var automation = new AutomationService(device, new TemplateMatcher(), log);
+        using var ocr = new OnnxTextRecognizer();
+        var service = new MedalExchangeService(automation, ocr, log, "replay");
+        Assert.Equal(4775, await service.ReadBalance(default));
+        Assert.True(captures >= 4);
+        Assert.Equal(86, await service.SubmitFromSupply(4775, 100, default));
+        Assert.Single(device.Taps);
+    }
+
+    [Fact]
+    public async Task UnreadableBalanceSavesLastFrameAndReasonWithoutExchange()
+    {
+        var supply = Scene("supply");
+        for (int y = 33; y < 81; y++)
+            Array.Clear(supply.Bgra, (y * supply.Width + 1762) * 4, 147 * 4);
+        var page = Encode(supply);
+        var settings = Encode(Scene("settings"));
+        var device = new FakeAdbService(page);
+        device.ScreenshotProvider = () => device.Taps.Count == 1 ? settings : page;
+        var log = new TestLog();
+        using var automation = new AutomationService(device, new TemplateMatcher(), log);
+        using var ocr = new OnnxTextRecognizer();
+        var directory = System.IO.Directory.CreateTempSubdirectory("ggea-medal-");
+        try
+        {
+            var service = new MedalExchangeService(automation, ocr, log, "test", new RecognitionEvidence(directory.FullName, log));
+            var ex = await Assert.ThrowsAsync<MedalRecognitionException>(() => service.RunAsync(default));
+            Assert.Contains("初始余额", ex.Message);
+            Assert.Contains("补给余额=未读到数字", ex.Message);
+            Assert.Contains("一般报酬=尚未读取", ex.Message);
+            Assert.Equal(2, device.Taps.Count);
+            using var zip = System.IO.Compression.ZipFile.OpenRead(Assert.Single(directory.GetFiles("*.zip")).FullName);
+            using var saved = zip.GetEntry("frame.png")!.Open();
+            using var bytes = new MemoryStream();
+            saved.CopyTo(bytes);
+            Assert.Equal(supply.Bgra, ImageCodec.DecodePng(bytes.ToArray()).Bgra);
+            Assert.NotNull(zip.GetEntry("diagnostic.json"));
+        }
+        finally { directory.Delete(true); }
+    }
+
     [Theory]
     [InlineData(false, false)]
     [InlineData(true, false)]

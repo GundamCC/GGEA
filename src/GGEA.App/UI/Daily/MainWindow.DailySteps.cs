@@ -160,6 +160,12 @@ public partial class MainWindow
                         await RunLimitedDailyTaskAsync(serial, task.LimitedEventSelection!, ct);
                         taskSucceeded = true;
                     }
+                    catch (MedalRecognitionException ex)
+                    {
+                        AccountStatusText.Text = ex.Message;
+                        failedSubtasks.Add(ex.Message);
+                        // 标记本项失败，沿用队列的网络检查与下一项主界面导航。
+                    }
                     catch (InvalidOperationException ex)
                     {
                         return StopDailyQueue(task, ex.Message, DailyQueueOutcome.Interrupted);

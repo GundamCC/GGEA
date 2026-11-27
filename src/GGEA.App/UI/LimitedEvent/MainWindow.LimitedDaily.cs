@@ -84,7 +84,7 @@ public partial class MainWindow
         if (choice.Medals)
         {
             AccountStatusText.Text = L.Text("奖章机体补给");
-            await new MedalExchangeService(_automation!, GetTextOcr(), _logger!, serial).RunAsync(ct);
+            await new MedalExchangeService(_automation!, GetTextOcr(), _logger!, serial, GetRecognitionEvidence()).RunAsync(ct);
         }
     }
 }

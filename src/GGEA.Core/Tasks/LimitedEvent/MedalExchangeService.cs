@@ -6,13 +6,16 @@ using GGEA.App.Vision;
 
 namespace GGEA.App.Tasks;
 
+/// <summary>仅表示奖章流程的画面未确认，供每日队列单独记录并继续。</summary>
+internal sealed class MedalRecognitionException(string message) : InvalidOperationException(message);
+
 /// <summary>以两类报酬的实读数量推进奖池，每次兑换和重置只提交一次。</summary>
-internal sealed class MedalExchangeService(AutomationService automation, OnnxTextRecognizer ocr, IGgeaLog log, string serial)
+internal sealed class MedalExchangeService(AutomationService automation, OnnxTextRecognizer ocr, IGgeaLog log, string serial, RecognitionEvidence? evidence = null)
 {
     private const int MedalCost = 5;
     private const string Directory = "stage/event/limited_time_event/";
-    private sealed record Target(string Key, Roi Area, double Threshold = .94);
-    private static Target Event(string name, Roi area, double threshold = .94) => new(Directory + name, area, threshold);
+    private sealed record Target(string Key, Roi Area, double Threshold = .90);
+    private static Target Event(string name, Roi area, double threshold = .90) => new(Directory + name, area, threshold);
     private static readonly Roi PageTitle = new(190, 0, 500, 110), ModalTitle = new(700, 30, 520, 105);
     private static readonly Target Story = Event("story", PageTitle, .90), Supply = Event("medal_supply_title", PageTitle, .90),
         Settings = Event("medal_settings_title", ModalTitle), Status = Event("medal_reward_status_title", ModalTitle),
@@ -22,7 +25,7 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         Radio = Event("medal_settings_radio_unselected", new(1545, 166, 128, 111)),
         Off = Event("medal_settings_animation_off", new(1510, 298, 340, 135)),
         On = Event("medal_settings_animation_on", Off.Area),
-        Bulk = Event("medal_bulk_enabled", new(1450, 779, 405, 165)),
+        Bulk = Event("medal_bulk_enabled", new(1450, 779, 405, 165), .90),
         DarkBulk = Event("medal_bulk_disabled", Bulk.Area),
         Results = Event("medal_exchange_results_title", new(40, 90, 280, 125)),
         ResultStatus = Event("medal_results_status_button", new(23, 946, 380, 130)),
@@ -41,7 +44,28 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
     private readonly StageEntryButtonRecognizer buttons = new();
     private readonly MedalPoolReader reader = new(ocr);
 
+    private ScreenImage? lastFrame;
+    private readonly Dictionary<string,string> readings = new();
+    private string submission = "尚未提交";
+    private string Diagnostics => string.Join("，", readings.Select(p => $"{p.Key}={p.Value}"));
+
     public async Task RunAsync(CancellationToken ct)
+    {
+        readings.Clear();
+        foreach (var key in new[] { "补给余额", "结果余额", "本批费用", "关键报酬", "一般报酬" }) readings[key] = "尚未读取";
+        submission = "尚未提交";
+        lastFrame = null;
+        try { await ExchangeAsync(ct); }
+        catch (MedalRecognitionException ex)
+        {
+            log.Warn(ex.Message);
+            if (evidence is not null && lastFrame is { } frame)
+                await evidence.SaveContextAsync("medal-exchange", serial, frame, new { reason = ex.Message, submission, readings });
+            throw;
+        }
+    }
+
+    private async Task ExchangeAsync(CancellationToken ct)
     {
         if (!System.IO.File.Exists(ConfigService.ResolvePath($"resources/templates/{Supply.Key}.png")))
             throw new InvalidOperationException(L.Text("当前游戏语言缺少故事事件识别素材。"));
@@ -52,7 +76,7 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             if (await IsResetReceipt(frame, ct)) return Complete;
             if (await Match(frame, Supply, ct) is not null) return Supply;
             return await Match(frame, Story, ct) is not null ? Story : null;
-        }, (a,b) => a == b, GameTiming.RecognitionTimeoutMs, ct) ?? throw Uncertain();
+        }, (a,b) => a == b, GameTiming.RecognitionTimeoutMs, ct) ?? throw Failure("确认启动页面（故事事件、补给或重置完成）");
         if (entry == Complete)
         {
             var underlying = await CloseResetReceipt(ct);
@@ -65,7 +89,7 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         var balance = await ReadBalance(ct);
         await OpenStatus(Supply, ct);
         var pool = await ReadPool(ct);
-        if (entry == Complete && !pool.IsNew) throw Uncertain();
+        if (entry == Complete && !pool.IsNew) throw Failure("复核重置后新池，两类已获得数应为零");
         var parent = Supply;
 
         while (true)
@@ -74,31 +98,39 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             if (pool.Remaining == 0)
             {
                 // 重置前独立复读两类分数。仅凭可勾选的重置选项不能证明一般报酬领满。
-                if (await ReadPool(ct) != pool) throw Uncertain();
+                if (await ReadPool(ct) != pool) throw Failure($"重置前复核已清空奖池，与前次 {pool} 不一致");
                 parent = await ResetPool(ct);
                 await OpenStatus(parent, ct);
                 pool = await ReadPool(ct);
-                if (!pool.IsNew) throw Uncertain();
+                if (!pool.IsNew) throw Failure("复核重置后新池，两类已获得数应为零");
                 log.Info(L.Text("已确认新奖池，两类报酬均从零开始。"));
             }
             await Click(Status, ModalClose, ct);
             parent = await WaitParent(ct);
             if (parent == Results) await Click(Results, ResultClose, ct);
             var batch = await SubmitFromSupply(balance, pool.Remaining, ct);
-            if (batch == 0) return;
+            if (batch == 0) { log.Info($"奖章兑换：补给页批量按钮已置灰，余额 {balance}。"); return; }
 
             await OpenStatus(Results, ct, balance);
             var after = await ReadPool(ct);
-            var gained = after.GainSince(pool, batch);
+            // 已提交的批次只复读奖池，直到到账数量与本批一致。
+            int? gain = after.TryGainSince(pool, batch);
+            for (int retry = 0; gain is null && retry < 2; retry++)
+            {
+                after = await ReadPool(ct);
+                gain = after.TryGainSince(pool, batch);
+            }
+            var gained = gain ?? throw Failure($"核对本批到账，最多 {batch} 份，兑换前 {pool}，当前 {after}");
             balance -= MedalCost * gained;
-            if (balance < 0) throw Uncertain();
+            if (balance < 0) throw Failure($"核对扣款，推算余额 {balance}");
             log.Info($"奖章机体补给：本批获得 {gained} 份，关键 {after.Key.Obtained}/{after.Key.Total}，一般 {after.General.Obtained}/{after.General.Total}。");
+            submission = $"上一批已核对到账 {gained} 份";
             pool = after;
         }
     }
 
     /// <summary>每轮关闭结果后从补给页重新报价。两帧的余额、按钮状态与费用一致才提交一次。</summary>
-    private async Task<int> SubmitFromSupply(int expectedBalance, int remaining, CancellationToken ct)
+    internal async Task<int> SubmitFromSupply(int expectedBalance, int remaining, CancellationToken ct)
     {
         var deadline = Environment.TickCount64 + GameTiming.RecognitionTimeoutMs;
         int? previous = null;
@@ -107,41 +139,69 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             var frame = await Capture(ct);
             int? count = null;
             TemplateMatchResult? action = null;
-            if (await Match(frame, Supply, ct) is not null && reader.Balance(frame, ct) == expectedBalance)
+            readings["批量按钮"] = "未确认";
+            if (await Match(frame, Supply, ct) is not null && ReadSupplyBalance(frame, ct) == expectedBalance)
             {
                 if (await Match(frame, DarkBulk, ct) is not null)
                 {
+                    readings["批量按钮"] = "置灰";
                     count = 0;
                 }
-                else if (await Match(frame, Bulk, ct) is { } bulk &&
-                    reader.BulkCost(frame, bulk, ct) is int cost && cost <= expectedBalance)
+                else if (await Match(frame, Bulk, ct) is { } bulk)
                 {
-                    count = cost / MedalCost;
-                    action = bulk;
+                    readings["批量按钮"] = $"亮态 {bulk.Confidence:P1}";
+                    if (reader.BulkCost(frame, bulk, ct, text => readings["本批费用"] = text) is int cost && cost <= expectedBalance)
+                    {
+                        count = cost / MedalCost;
+                        action = bulk;
+                    }
                 }
             }
             if (count is int quantity && count == previous)
             {
                 if (quantity == 0) return 0;
                 log.Info($"奖章机体补给：余额 {expectedBalance}，补给页本批 {quantity} 次。");
+                submission = $"已发出本批兑换指令（{quantity} 次，提交前余额 {expectedBalance}）";
                 await Tap(action!, ct);
                 return Math.Min(quantity, remaining);
             }
             previous = count;
             await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
         } while (Environment.TickCount64 < deadline);
-        throw Uncertain();
+        throw Failure($"核对补给页余额、批量按钮与费用，预期余额 {expectedBalance}");
     }
 
     private async Task Configure(CancellationToken ct)
     {
-        var frame = await WaitPage(Settings, ct);
-        if (await Match(frame, Hundred, ct) is null) await Click(Settings, Radio, ct);
-        frame = await WaitPair(Settings, Hundred, ct);
-        if (await Match(frame, Off, ct) is null) await Click(Settings, On, ct);
-        frame = await WaitPair(Settings, Off, ct);
-        if (await Match(frame, Hundred, ct) is null) throw Uncertain();
+        await SetOption(Hundred, Radio);
+        await SetOption(Off, On);
+
+        async Task SetOption(Target desired, Target other)
+        {
+            // 两种状态共享按钮文字和外框，同时比较，避免较低阈值下两者同时命中。
+            async Task<SettingMatch?> Observe()
+            {
+                var frame = await Capture(ct);
+                if (await Match(frame, Settings, ct) is null) return null;
+                var yes = await Match(frame, desired, ct);
+                var no = await Match(frame, other, ct);
+                if (yes is not null && no is not null && Math.Abs(yes.Confidence - no.Confidence) < .01) return null;
+                if (yes is not null && (no is null || yes.Confidence > no.Confidence)) return new(true, yes);
+                return no is null ? null : new(false, no);
+            }
+            var state = await StableObservation.WaitAsync(Observe,
+                (a,b) => a.Desired == b.Desired && Math.Abs(a.Button.CenterX-b.Button.CenterX) <= 4 &&
+                    Math.Abs(a.Button.CenterY-b.Button.CenterY) <= 4, GameTiming.RecognitionTimeoutMs, ct)
+                ?? throw Failure($"辨别交换设定 {desired.Key} / {other.Key}");
+            if (state.Desired) return;
+            await Tap(state.Button, ct);
+            var confirmed = await StableObservation.WaitAsync(async () => await Observe() is { Desired: true } value ? value : null,
+                (a,b) => a.Desired == b.Desired, GameTiming.RecognitionTimeoutMs, ct);
+            if (confirmed is null) throw Failure($"点击后复核交换设定 {desired.Key}");
+        }
     }
+
+    private sealed record SettingMatch(bool Desired, TemplateMatchResult Button);
 
     /// <summary>兑换已提交。只读重识别当前阶段；唯一允许补点的是打开状况的按钮。</summary>
     private async Task OpenStatus(Target parent, CancellationToken ct, int? previousBalance = null)
@@ -186,7 +246,7 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             bool fresh = true;
             if (button is not null && previousBalance is int before)
             {
-                current = visible == Supply ? reader.Balance(frame, ct) : reader.ResultBalance(frame, ct);
+                current = visible == Supply ? ReadSupplyBalance(frame, ct) : reader.ResultBalance(frame, ct, text => readings["结果余额"] = text);
                 fresh = current is int n
                     ? before - n is >= MedalCost and <= 100 * MedalCost && (before - n) % MedalCost == 0
                     : visible == Results;
@@ -206,7 +266,7 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
         } while (Environment.TickCount64 < deadline);
         log.Warn($"奖章兑换：未确认目前获得状况，打开尝试 {attempts}/3，最后读取余额 {lastBalance}。");
-        throw Uncertain();
+        throw Failure($"从 {parent.Key} 打开目前获得状况，按钮点击 {attempts}/3 次");
     }
 
     private async Task<Target> ResetPool(CancellationToken ct)
@@ -214,7 +274,7 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         var frame = await WaitPage(Status, ct);
         if (await Match(frame, Checked, ct) is null) await Click(Status, Unchecked, ct);
         frame = await WaitPair(Status, Checked, ct);
-        await Tap(await Match(frame, Reset, ct) ?? throw Uncertain(), ct);
+        await Tap(await Match(frame, Reset, ct) ?? throw Failure("确认勾选后的重置按钮"), ct);
         return await CloseResetReceipt(ct);
     }
 
@@ -232,7 +292,7 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
                 ConfigService.ResolvePath($"resources/templates/{Ok.Key}.png"), Ok.Area, .90, ct);
         }, (a,b) => Math.Abs(a.CenterX-b.CenterX) <= 4 && Math.Abs(a.CenterY-b.CenterY) <= 4,
             GameTiming.RecognitionTimeoutMs, ct);
-        if (ok is null) throw new InvalidOperationException("奖章兑换：未连续确认重置完成提示与 OK 按钮。");
+        if (ok is null) throw Failure("连续确认重置完成提示与 OK 按钮");
         log.Info($"奖章兑换：已确认重置完成，点击 OK ({ok.CenterX},{ok.CenterY})。");
         await Tap(ok, ct);
         return await WaitParent(ct);
@@ -247,21 +307,32 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             if (await Match(frame, Status, ct) is not null) return null;
             if (await Match(frame, Supply, ct) is not null) return Supply;
             return await Match(frame, Results, ct) is not null ? Results : null;
-        }, (a,b) => a == b, 20000, ct) ?? throw Uncertain();
+        }, (a,b) => a == b, 20000, ct) ?? throw Failure("关闭弹窗后确认补给页或结果页");
     }
 
-    private async Task<int> ReadBalance(CancellationToken ct)
+    internal async Task<int> ReadBalance(CancellationToken ct)
     {
-        var frame = await WaitPair(Supply, SupplyStatus, ct);
-        var balance = reader.Balance(frame, ct);
-        await Task.Delay(250, ct);
-        frame = await WaitPair(Supply, SupplyStatus, ct);
-        if (balance is null || reader.Balance(frame, ct) != balance) throw Uncertain();
-        return balance.Value;
+        var stable = await StableObservation.WaitAsync(async () =>
+        {
+            var frame = await Capture(ct);
+            return await Match(frame, Supply, ct) is not null && await Match(frame, SupplyStatus, ct) is not null &&
+                ReadSupplyBalance(frame, ct) is int balance ? new BalanceReading(balance) : null;
+        }, (a,b) => a == b, GameTiming.RecognitionTimeoutMs, ct);
+        if (stable is null) throw Failure("连续读取补给页初始余额");
+        log.Info($"奖章兑换：确认初始余额 {stable.Value}。");
+        return stable.Value;
     }
 
-    private async Task<MedalPool> ReadPool(CancellationToken ct) =>
-        new(await ReadCategory(Key, true, ct), await ReadCategory(General, false, ct));
+    private sealed record BalanceReading(int Value);
+    private int? ReadSupplyBalance(ScreenImage frame, CancellationToken ct) =>
+        reader.Balance(frame, ct, text => readings["补给余额"] = text);
+
+    private async Task<MedalPool> ReadPool(CancellationToken ct)
+    {
+        var pool = new MedalPool(await ReadCategory(Key, true, ct), await ReadCategory(General, false, ct));
+        log.Info($"奖章兑换：关键报酬 {pool.Key.Obtained}/{pool.Key.Total}，一般报酬 {pool.General.Obtained}/{pool.General.Total}。");
+        return pool;
+    }
 
     private async Task<bool> IsGeneralOnly(ScreenImage frame, CancellationToken ct)
         => await Match(frame, Event("medal_status_top_note", new(480, 141, 225, 89)), ct) is not null &&
@@ -274,32 +345,40 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             var frame = await WaitPage(Status, ct);
             if (await Match(frame, header, ct) is { } label)
             {
-                var first = reader.Count(frame, label.CenterY, ct);
-                await Task.Delay(250, ct);
-                var next = await WaitPage(Status, ct);
-                if (await Match(next, header, ct) is { } again && first is { } count &&
-                    reader.Count(next, again.CenterY, ct) == count) return count;
-                if (i < 2) continue;
-                throw Uncertain();
+                var category = backToTop ? "关键报酬" : "一般报酬";
+                RewardCount? previous = null;
+                var deadline = Environment.TickCount64 + GameTiming.RecognitionTimeoutMs;
+                do
+                {
+                    var count = reader.Count(frame, label.CenterY, ct, text => readings[category] = text);
+                    if (count.HasValue && count == previous) return count.Value;
+                    previous = count;
+                    await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
+                    frame = await WaitPage(Status, ct);
+                    if (await Match(frame, header, ct) is not { } current) break;
+                    label = current;
+                    if (Environment.TickCount64 >= deadline) throw Failure($"连续读取{category}同行数量");
+                } while (true);
+                continue;
             }
             // 后续奖池可能只有一般报酬。顶部注意事项和首个分类同帧成立才确认关键报酬为空。
             if (backToTop && await IsGeneralOnly(frame, ct))
             {
                 await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
-                if (await IsGeneralOnly(await WaitPage(Status, ct), ct)) return new RewardCount(0, 0);
+                if (await IsGeneralOnly(await WaitPage(Status, ct), ct)) { readings["关键报酬"] = "0/0"; return new RewardCount(0, 0); }
             }
             if (i == 23) break;
             int from = backToTop ? 395 : 684, to = backToTop ? 684 : 395;
             await automation.SwipeAsync(serial, 1230, from, 1230, to, 650, ct);
             await Task.Delay(650, ct);
         }
-        throw Uncertain();
+        throw Failure($"在目前获得状况中定位分类 {header.Key}");
     }
 
     private async Task Click(Target page, Target control, CancellationToken ct)
     {
         var frame = await WaitPair(page, control, ct);
-        await Tap(await Match(frame, control, ct) ?? throw Uncertain(), ct);
+        await Tap(await Match(frame, control, ct) ?? throw Failure($"点击 {page.Key} 上的 {control.Key}"), ct);
     }
 
     private sealed record MatchedFrame(ScreenImage Frame, TemplateMatchResult Match);
@@ -318,13 +397,14 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             Math.Abs(a.Match.CenterY-b.Match.CenterY) <= 4, GameTiming.RecognitionTimeoutMs, ct);
         if (stable is not null) return stable.Frame;
         log.Warn($"奖章兑换等待超时：{page.Key} / {control?.Key}，搜索区 {control?.Area ?? page.Area}。");
-        throw Uncertain();
+        throw Failure($"等待 {page.Key} / {control?.Key ?? "标题"}，搜索区 {control?.Area ?? page.Area}");
     }
 
     private async Task<ScreenImage> Capture(CancellationToken ct)
     {
         var frame = await automation.CaptureScreenAsync(serial, ct);
-        if (frame.Width != 1920 || frame.Height != 1080) throw Uncertain();
+        lastFrame = frame;
+        if (frame.Width != 1920 || frame.Height != 1080) throw Failure($"检查归一化截图尺寸，实际 {frame.Width}×{frame.Height}");
         return frame;
     }
 
@@ -334,5 +414,5 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
 
     private Task Tap(TemplateMatchResult match, CancellationToken ct) =>
         automation.TapAsync(serial, match.CenterX, match.CenterY, ct);
-    private static InvalidOperationException Uncertain() => new(L.Text("未能确认奖章余额、报酬数量或界面状态，已停止兑换。"));
+    private MedalRecognitionException Failure(string step) => new($"奖章兑换未完成：{step}。{submission}。{Diagnostics}。");
 }

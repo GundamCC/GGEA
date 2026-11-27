@@ -49,7 +49,7 @@ public partial class MainWindow
             }
             else if (button == MedalStart)
             {
-                var service = new MedalExchangeService(_automation, GetTextOcr(), _logger, serial);
+                var service = new MedalExchangeService(_automation, GetTextOcr(), _logger, serial, GetRecognitionEvidence());
                 await Task.Run(() => service.RunAsync(owner.Token), owner.Token);
                 LimitedStatus.Text = L.Text("批量交换按钮已置灰，自动兑换已结束。");
             }
