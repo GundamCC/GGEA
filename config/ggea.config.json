@@ -74,7 +74,7 @@
   "developTitleThreshold": 0.85,
   "developTitleWaitMs": 15000,
   "developRoadmapDisplaySettingsTitleTemplate": "resources/templates/develop/title_roadmap_display_settings.png",
-  "stageTemplateDirectory": "resources/templates/stage/main_stage",
+  "stageTemplateDirectory": "resources/templates/logo",
   "sortieTemplate": "resources/templates/stage/sortie/sortie.png",
   "sortieTapToNextTemplate": "resources/templates/stage/sortie/tap_to_next.png",
   "sortieTerrainTemplate": "resources/templates/stage/sortie/terrain.png",

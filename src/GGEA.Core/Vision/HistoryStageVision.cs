@@ -65,7 +65,7 @@ public sealed class HistoryStageVision : IHistoryStageVision, IDisposable
             _back = Load("history_back.png");
             foreach (var work in catalog.Works)
             {
-                var variants = ConfigService.Resources.TemplateCandidates(Path.Combine(stageDirectory, "history_stage", work.Screenshot))
+                var variants = ConfigService.Resources.TemplateCandidates(Path.Combine(catalog.LogoDirectory, work.Screenshot))
                     .Select(path => new Lazy<Logo>(() => new Logo(path, _sift))).ToArray();
                 _logos.Add(work.Id, variants);
                 _ = variants[0].Value;

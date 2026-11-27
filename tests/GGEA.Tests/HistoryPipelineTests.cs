@@ -90,8 +90,7 @@ public sealed class HistoryPipelineTests
     [InlineData(HistoryPageKind.Boss)]
     public void ActualPageKinds_KeepIdentityAndNavigationSeparate(HistoryPageKind page)
     {
-        var catalog = HistoryStageCatalog.Load(Path.Combine(AppContext.BaseDirectory, "resources/common/history_stages.json"),
-            Path.Combine(Templates, "history_stage"));
+        var catalog = HistoryStageCatalog.Load(Path.Combine(AppContext.BaseDirectory, "resources/common/history_stages.json"));
         using var vision = new HistoryStageVision(catalog, Templates);
         var screen = page switch
         {
@@ -317,8 +316,7 @@ public sealed class HistoryPipelineTests
     [Fact]
     public void Actual08thOverview_TransparentTitleAllowsLogoAndProgressCheck()
     {
-        var catalog = HistoryStageCatalog.Load(Path.Combine(AppContext.BaseDirectory, "resources/common/history_stages.json"),
-            Path.Combine(Templates, "history_stage"));
+        var catalog = HistoryStageCatalog.Load(Path.Combine(AppContext.BaseDirectory, "resources/common/history_stages.json"));
         using var vision = new HistoryStageVision(catalog, Templates);
         var result = vision.Inspect(Frame(("history-08th-overview.png", 0, 0)), 8, default);
         Assert.True(result.HistoryTitle);

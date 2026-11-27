@@ -106,6 +106,8 @@ public sealed class ConfigService
         if (config is not null)
         {
             // 删除旧素材后逐项迁移，保留用户自定义路径。
+            config.StageTemplateDirectory = MigrateBundledTemplate(config.StageTemplateDirectory,
+                "stage/main_stage", "logo");
             config.HarvestOkTemplate = MigrateOkTemplate(config.HarvestOkTemplate);
             config.ShopResultCloseTemplate = MigrateBundledTemplate(config.ShopResultCloseTemplate,
                 "shop/button_result_close.png", "common/close.png");

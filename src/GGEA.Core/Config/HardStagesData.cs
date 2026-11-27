@@ -15,7 +15,7 @@ public sealed class HardStagesData
 /// 单个作品条目：
 /// id = 作品 ID，work = 作品名，normalCount = 普通关卡数量（最后一关为 BOSS），
 /// sideStories = 支线关卡数量，hardCount = Hard 关卡数量（1~5），
-/// screenshot = 该作品的识别素材文件名，相对于 resources/templates/stage/main_stage；
+/// screenshot = 该作品的识别素材文件名，相对于 resources/templates/logo；
 /// 可登记 PNG 截图或 WebP Logo，实际解码与匹配支持由识别器负责。
 /// </summary>
 public sealed class HardStageEntry

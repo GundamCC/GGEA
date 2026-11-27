@@ -82,6 +82,20 @@ public class ConfigServiceTests
         }
     }
 
+    /// <summary>已有安装的关卡 Logo 默认目录随素材迁移，外部自定义目录继续按原路径读取。</summary>
+    [Theory]
+    [InlineData("resources/templates/stage/main_stage", true)]
+    [InlineData(@"resources\common\templates\stage\main_stage", true)]
+    [InlineData("custom/stage/main_stage", false)]
+    public void Load_WorkLogoDirectory_MigratesBundledPath(string directory, bool migrate)
+    {
+        using var temp = new TempDirectory();
+        var path = Path.Combine(temp.Path, "logo.json");
+        File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(new { stageTemplateDirectory = directory }));
+        var config = new ConfigService(new TestLog()).Load(path);
+        Assert.Equal(migrate ? "resources/templates/logo" : directory, config.StageTemplateDirectory);
+    }
+
     /// <summary>三处关闭素材合并后，官方旧路径自动升级且外部路径保留。</summary>
     [Theory]
     [InlineData("resources/templates/", true)]

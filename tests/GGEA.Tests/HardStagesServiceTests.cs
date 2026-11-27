@@ -65,7 +65,7 @@ public class HardStagesServiceTests
     [Fact]
     public void Load_BundledCatalog_MapsAllWorksToExistingWebpLogos()
     {
-        var resources = Path.Combine(AppContext.BaseDirectory, "resources");
+        var resources = Path.Combine(AppContext.BaseDirectory, "resources", "common");
         var data = new HardStagesService(new TestLog()).Load(Path.Combine(resources, "hard_stages.json"));
         // 素材编号不是作品 ID 顺序：Hathaway、F91、Narrative 尤其不能按文件名排序关联。
         string[] seriesByWorkId =
@@ -81,7 +81,7 @@ public class HardStagesServiceTests
         {
             var work = Assert.Single(data.HardStages, entry => entry.Id == index + 1);
             Assert.Equal($"logo_l_series_{seriesByWorkId[index]}.webp", work.Screenshot);
-            var path = Path.Combine(resources, "templates", "stage", "main_stage", work.Screenshot);
+            var path = Path.Combine(resources, "templates", "logo", work.Screenshot);
             Assert.True(File.Exists(path), $"作品 {work.Id} 的 Logo 未随构建输出分发: {work.Screenshot}");
             var bytes = File.ReadAllBytes(path);
             Assert.True(bytes.Length >= 12);

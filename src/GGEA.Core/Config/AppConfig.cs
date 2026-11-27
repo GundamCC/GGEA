@@ -317,9 +317,11 @@ public sealed class AppConfig
     [JsonPropertyName("developExecuteTemplate")]
     public string DevelopExecuteTemplate { get; set; } = "resources/templates/develop/button/button_execute_develop.png";
 
+    public const string DefaultWorkLogoDirectory = "resources/templates/logo";
+
     /// <summary>主要关卡作品模板目录（相对程序目录）。</summary>
     [JsonPropertyName("stageTemplateDirectory")]
-    public string StageTemplateDirectory { get; set; } = "resources/templates/stage/main_stage";
+    public string StageTemplateDirectory { get; set; } = DefaultWorkLogoDirectory;
 
     /// <summary>出击准备页右下角“出击”按钮模板（自动刷取第一步识别目标）。</summary>
     [JsonPropertyName("sortieTemplate")]

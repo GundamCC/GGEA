@@ -14,8 +14,11 @@ public sealed class HistoryStageCatalog
     [JsonPropertyName("confusableGroups")]
     public List<int[]> ConfusableGroups { get; set; } = [];
 
+    // 识别与目录校验必须使用同一组 Logo，避免校验通过后从另一个目录加载。
+    internal string LogoDirectory { get; private set; } = AppConfig.DefaultWorkLogoDirectory;
+
     /// <summary>任何缺失、重复编号或非法路径均拒绝整个目录，避免部分加载丢掉竞争作品。</summary>
-    public static HistoryStageCatalog Load(string path, string logoDirectory)
+    public static HistoryStageCatalog Load(string path, string logoDirectory = AppConfig.DefaultWorkLogoDirectory)
     {
         var catalog = JsonSerializer.Deserialize<HistoryStageCatalog>(File.ReadAllText(path))
             ?? throw new InvalidDataException("历史关卡配置为空。");
@@ -30,6 +33,7 @@ public sealed class HistoryStageCatalog
                 g.Distinct().Count() != g.Length || g.Any(id => !ids.Contains(id))) ||
             catalog.ConfusableGroups.SelectMany(g => g).GroupBy(id => id).Any(g => g.Count() > 1))
             throw new InvalidDataException("历史作品相似组配置无效，未开始导航。");
+        catalog.LogoDirectory = logoDirectory;
         return catalog;
     }
 

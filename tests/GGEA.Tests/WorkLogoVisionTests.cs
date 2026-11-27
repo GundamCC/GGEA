@@ -96,7 +96,7 @@ public sealed class WorkLogoVisionTests
         var (vision, works, resources) = CreateVision();
         var pixels = TestImageFactory.CreateBgra(1920, 1080, 0);
         var work = works.Single(w => w.Id == displayedWork);
-        PasteRenderedLogo(pixels, ConfigService.ResolvePath(Path.Combine(resources, "templates/stage/main_stage", work.Screenshot)), 160, 140);
+        PasteRenderedLogo(pixels, ConfigService.ResolvePath(Path.Combine(resources, "templates/logo", work.Screenshot)), 160, 140);
         Paste(pixels, Path.Combine(resources, "templates/stage/select.png"), 1494, 831);
         var observation = vision.Inspect(ImageCodec.EncodePng(pixels, 1920, 1080), works.Single(w => w.Id == 14), works);
         Assert.Equal(displayedWork == 14, observation.TargetTitleVisible);
@@ -113,7 +113,7 @@ public sealed class WorkLogoVisionTests
         var (vision, works, resources) = CreateVision();
         var pixels = TestImageFactory.CreateBgra(1920, 1080, 120);
         var work = works.Single(w => w.Id == displayed);
-        PasteRenderedLogo(pixels, ConfigService.ResolvePath(Path.Combine(resources, "templates/stage/main_stage", work.Screenshot)),
+        PasteRenderedLogo(pixels, ConfigService.ResolvePath(Path.Combine(resources, "templates/logo", work.Screenshot)),
             850, 400, .417);
         var result = vision.Inspect(ImageCodec.EncodePng(pixels, 1920, 1080), works.Single(w => w.Id == 15), works);
         Assert.Contains(result.Works, w => w.WorkId == displayed);
@@ -269,7 +269,7 @@ public sealed class WorkLogoVisionTests
         Directory.CreateDirectory(directory);
         try
         {
-            File.Copy(correctWebp ? ConfigService.ResolvePath(Path.Combine(resources, "templates/stage/main_stage", target.Screenshot)) : Fixture("seed_recollection_canvas.png"),
+            File.Copy(correctWebp ? ConfigService.ResolvePath(Path.Combine(resources, "templates/logo", target.Screenshot)) : Fixture("seed_recollection_canvas.png"),
                 Path.Combine(directory, target.Screenshot));
             if (unrelatedCalibration)
                 File.Copy(Fixture("seed_recollection_canvas.png"), Path.Combine(directory, "initial_canvas.png"));
@@ -341,7 +341,7 @@ public sealed class WorkLogoVisionTests
             WorkSelectClosedTemplatePath = ConfigService.ResolvePath(Path.Combine(resources, "templates/stage/select_disabled.png")),
         };
         return (new WorkLogoVision(new FakeAdbService([]), new TemplateMatcher(),
-            ConfigService.ResolvePath(Path.Combine(resources, "templates/stage/main_stage")), ConfigService.ResolvePath(Path.Combine(resources, "templates/stage/main_stage.png")), options), works, resources);
+            ConfigService.ResolvePath(Path.Combine(resources, "templates/logo")), ConfigService.ResolvePath(Path.Combine(resources, "templates/stage/main_stage.png")), options), works, resources);
     }
 
     /// <summary>实机裁剪样本以稳定的相对路径随测试构建分发。</summary>

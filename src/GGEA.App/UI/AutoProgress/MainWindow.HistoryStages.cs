@@ -11,8 +11,7 @@ public partial class MainWindow
 {
     /// <summary>每轮读取历史目录，与主线编号和队列键隔离。</summary>
     private static HistoryStageCatalog LoadHistoryCatalog() => HistoryStageCatalog.Load(
-        ConfigService.ResolvePath("resources/history_stages.json"),
-        ConfigService.ResolvePath("resources/templates/stage/history_stage"));
+        ConfigService.ResolvePath("resources/history_stages.json"));
 
     /// <summary>一轮任务独占 Logo/节点缓存；取消或失败退出后统一释放，不保留跨作品的按钮授权。</summary>
     private async Task<AutoProgressResult> RunHistoryProgressAsync(string serial, HardStageEntry selected,

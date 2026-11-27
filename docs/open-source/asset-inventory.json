@@ -863,7 +863,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/history_stage/logo_l_series_0130.png",
+      "path": "resources/common/templates/logo/logo_l_series_0130.png",
       "sha256": "92af2a8c4c2034b5ea57db44035f34240f769473cbdc058b7bf8c44f0567a7df",
       "width": 700,
       "height": 263,
@@ -873,7 +873,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/history_stage/logo_l_series_0170.png",
+      "path": "resources/common/templates/logo/logo_l_series_0170.png",
       "sha256": "43dd7110a06566868e5368b135c57dbc3604d112f37cb7971e089bfadc01bd28",
       "width": 700,
       "height": 258,
@@ -883,7 +883,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/history_stage/logo_l_series_0210.png",
+      "path": "resources/common/templates/logo/logo_l_series_0210.png",
       "sha256": "1dd5171be6fe4072853442db568fd1928367c8ee95b28143ef9fd3f6d2029839",
       "width": 667,
       "height": 298,
@@ -893,7 +893,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/history_stage/logo_l_series_0220.png",
+      "path": "resources/common/templates/logo/logo_l_series_0220.png",
       "sha256": "400881e533a9643a593dd01be938d02ce0b07e5deb0b84d8bed3eb5fe85f6570",
       "width": 700,
       "height": 296,
@@ -903,7 +903,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/history_stage/logo_l_series_0320.png",
+      "path": "resources/common/templates/logo/logo_l_series_0320.png",
       "sha256": "d57011d4051a9486887a99a263609c4de64726e1f4c73559536174ae434afbdf",
       "width": 661,
       "height": 211,
@@ -913,7 +913,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/history_stage/logo_l_series_0330.png",
+      "path": "resources/common/templates/logo/logo_l_series_0330.png",
       "sha256": "12b590234840c6201f496eb7c9d206498b5dba3b7e1c5ecd6b3db0dbbf6ec870",
       "width": 655,
       "height": 210,
@@ -923,7 +923,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/history_stage/logo_l_series_0600.png",
+      "path": "resources/common/templates/logo/logo_l_series_0600.png",
       "sha256": "fd8950cc964a282b218321f536ce5d6a8125f60f824873b825262ae07077447c",
       "width": 615,
       "height": 292,
@@ -933,7 +933,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/history_stage/logo_l_series_3050.png",
+      "path": "resources/common/templates/logo/logo_l_series_3050.png",
       "sha256": "de5ca06c02626277f130798b28ee106767a4ecb54cf156c152722b60f5cb1018",
       "width": 598,
       "height": 298,
@@ -943,7 +943,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/history_stage/logo_l_series_3080.png",
+      "path": "resources/common/templates/logo/logo_l_series_3080.png",
       "sha256": "3287d463b52b3d035b62232f987f4344434bc58e409c9136bdbcac97d1457fb1",
       "width": 601,
       "height": 298,
@@ -953,7 +953,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/history_stage/logo_l_series_4310.png",
+      "path": "resources/common/templates/logo/logo_l_series_4310.png",
       "sha256": "9697335e5d10e12976906f877e0f8e9970c394c34f02d9e0fb10989c6d2e9bca",
       "width": 550,
       "height": 298,
@@ -983,7 +983,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/initial_canvas.png",
+      "path": "resources/common/templates/logo/initial_canvas.png",
       "sha256": "70a2c5c78703a1e3d2083c3d08c1b6c0c222aea094f4dcee42a4d318f9cd7a28",
       "width": 147,
       "height": 124,
@@ -993,7 +993,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_0010.webp",
+      "path": "resources/common/templates/logo/logo_l_series_0010.webp",
       "sha256": "e9889c786c28505eae23a5121dc8cd5408c3d0c5f450cfac63108edafc262328",
       "width": 353,
       "height": 298,
@@ -1003,7 +1003,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_0810.webp",
+      "path": "resources/common/templates/logo/logo_l_series_0810.webp",
       "sha256": "2afef7ff0352702665ca08003e76ba2f6cd1614198943d829b5f733addb2b51c",
       "width": 632,
       "height": 298,
@@ -1013,7 +1013,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_0950.webp",
+      "path": "resources/common/templates/logo/logo_l_series_0950.webp",
       "sha256": "822e42fc74acc9a6af28b40554c882042e013bb7d2750bec3d446513f2ee0efd",
       "width": 700,
       "height": 298,
@@ -1023,7 +1023,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_1100.webp",
+      "path": "resources/common/templates/logo/logo_l_series_1100.webp",
       "sha256": "14a517b5e642e95148e727deceb9e25034d4c2fbfd15b5d377972ce96c6cbd83",
       "width": 630,
       "height": 298,
@@ -1033,7 +1033,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_1250.webp",
+      "path": "resources/common/templates/logo/logo_l_series_1250.webp",
       "sha256": "fb8954c7a70b155c56a25bed634da49b4856ec92228bebdaf5a3ff778b9e9c63",
       "width": 700,
       "height": 279,
@@ -1043,7 +1043,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_1440.webp",
+      "path": "resources/common/templates/logo/logo_l_series_1440.webp",
       "sha256": "d31fb82b742c28a1e77ffccd0adc75d8625db5d9fb57782b46cbbebd9f0529a4",
       "width": 691,
       "height": 298,
@@ -1053,7 +1053,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_1500.webp",
+      "path": "resources/common/templates/logo/logo_l_series_1500.webp",
       "sha256": "19042497467a6b47a29b044c38ff678973b749fa96543aeaf3d6f6d5ff5e83ad",
       "width": 700,
       "height": 271,
@@ -1063,7 +1063,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_1620.webp",
+      "path": "resources/common/templates/logo/logo_l_series_1620.webp",
       "sha256": "3ab7b07514adcc4a11351c15a48b8cae2caad2b364d935789e2d02d42ab80c0f",
       "width": 533,
       "height": 298,
@@ -1073,7 +1073,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_1750.webp",
+      "path": "resources/common/templates/logo/logo_l_series_1750.webp",
       "sha256": "9ee360f81e533b2dbc1ba36c13ed73efd1529d6f33c1674696da7bc34ac935b8",
       "width": 445,
       "height": 298,
@@ -1083,7 +1083,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_2000.webp",
+      "path": "resources/common/templates/logo/logo_l_series_2000.webp",
       "sha256": "653eee31c9972a7e64a4a2d128ea7033b153946b77bc9516d2c6e1e58f17bb84",
       "width": 700,
       "height": 293,
@@ -1093,7 +1093,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_2100.webp",
+      "path": "resources/common/templates/logo/logo_l_series_2100.webp",
       "sha256": "4553c5625db4ee843e4f991c2d783bf1b32d12a919f1e9255a54a30d921c4fda",
       "width": 624,
       "height": 298,
@@ -1103,7 +1103,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_2190.webp",
+      "path": "resources/common/templates/logo/logo_l_series_2190.webp",
       "sha256": "b54e565eaedd1887f481813e57ccbe5f0ec0b069bdbef15dfb607c67f94293b4",
       "width": 410,
       "height": 293,
@@ -1113,7 +1113,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_2300.webp",
+      "path": "resources/common/templates/logo/logo_l_series_2300.webp",
       "sha256": "fc54e1ccbfafffc10fb091a3cb655926ee51da7425025dfd0f5e0239e540d443",
       "width": 508,
       "height": 298,
@@ -1123,7 +1123,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_3000.webp",
+      "path": "resources/common/templates/logo/logo_l_series_3000.webp",
       "sha256": "eca635f12925ab776548f57eef917669814b43985cf0bd1c56b908e177d902d6",
       "width": 695,
       "height": 298,
@@ -1133,7 +1133,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_3100.webp",
+      "path": "resources/common/templates/logo/logo_l_series_3100.webp",
       "sha256": "d157d88cfd50cc46682e35d986d59bd74b94988320fd8d59d8e6e2450c3e7d9c",
       "width": 700,
       "height": 298,
@@ -1143,7 +1143,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_3300.webp",
+      "path": "resources/common/templates/logo/logo_l_series_3300.webp",
       "sha256": "92c15cd8b18c53ce06df3c88c9b1763f0e28c90c9149860628a78686720f965a",
       "width": 700,
       "height": 294,
@@ -1153,7 +1153,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_3700.webp",
+      "path": "resources/common/templates/logo/logo_l_series_3700.webp",
       "sha256": "e2c50050cf5dc1a4995f1d875a90fb0129e7fe27bbc5391eaabbede004dd5242",
       "width": 700,
       "height": 248,
@@ -1163,7 +1163,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_4000.webp",
+      "path": "resources/common/templates/logo/logo_l_series_4000.webp",
       "sha256": "e1277d66260365fc09e541fb552a40f36fcecaabe74694d9f87cfedf033cd371",
       "width": 700,
       "height": 267,
@@ -1173,7 +1173,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_4300.webp",
+      "path": "resources/common/templates/logo/logo_l_series_4300.webp",
       "sha256": "c5e0b3a883b02ca09e8047264326b80d69052664e19abd2ea42b650cf1ae3cbe",
       "width": 537,
       "height": 298,
@@ -1183,7 +1183,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/logo_l_series_5010.webp",
+      "path": "resources/common/templates/logo/logo_l_series_5010.webp",
       "sha256": "2d59f65a1fa05b8abfea0d4021fa24e8a9bcfb578a38169ed1064f67422409b6",
       "width": 700,
       "height": 280,
@@ -1193,7 +1193,7 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/common/templates/stage/main_stage/mobile_suit_gundam.png",
+      "path": "resources/common/templates/logo/mobile_suit_gundam.png",
       "sha256": "0a9960ba75570e32f1c7f000452d8d0c9e227ed791a2deed442116d169cab352",
       "width": 624,
       "height": 349,

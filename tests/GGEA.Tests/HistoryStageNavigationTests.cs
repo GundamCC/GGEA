@@ -10,7 +10,7 @@ public sealed class HistoryStageNavigationTests
 {
     private static readonly string StageDirectory = Path.Combine(AppContext.BaseDirectory, "resources/common/templates/stage");
     private static HistoryStageCatalog Catalog() => HistoryStageCatalog.Load(
-        Path.Combine(AppContext.BaseDirectory, "resources/common/history_stages.json"), Path.Combine(StageDirectory, "history_stage"));
+        Path.Combine(AppContext.BaseDirectory, "resources/common/history_stages.json"));
 
     /// <summary>两个相似组的实机预览及左下 Logo 均确认正确作品，竞争作品不能借共用主标题通过。</summary>
     [Theory]
@@ -209,11 +209,11 @@ public sealed class HistoryStageNavigationTests
         var file = Path.GetTempFileName();
         try
         {
-            File.WriteAllText(file, "{\"hardStages\":[{\"id\":1,\"work\":\"x\",\"screenshot\":\"../main_stage.png\"}]}");
-            Assert.Throws<InvalidDataException>(() => HistoryStageCatalog.Load(file, Path.Combine(StageDirectory, "history_stage")));
+            File.WriteAllText(file, "{\"hardStages\":[{\"id\":1,\"work\":\"x\",\"screenshot\":\"../stage/main_stage.png\"}]}");
+            Assert.Throws<InvalidDataException>(() => HistoryStageCatalog.Load(file));
             var data = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "resources/common/history_stages.json"));
             File.WriteAllText(file, data.Replace("[1, 9]", "[1, 999]"));
-            Assert.Throws<InvalidDataException>(() => HistoryStageCatalog.Load(file, Path.Combine(StageDirectory, "history_stage")));
+            Assert.Throws<InvalidDataException>(() => HistoryStageCatalog.Load(file));
         }
         finally { File.Delete(file); }
     }

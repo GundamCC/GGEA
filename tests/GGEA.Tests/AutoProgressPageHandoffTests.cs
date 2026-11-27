@@ -16,8 +16,7 @@ public sealed partial class AutoProgressFlowTests
     {
         using var scene = new Scene();
         var directory = ConfigService.ResolvePath("resources/templates/stage");
-        var catalog = HistoryStageCatalog.Load(ConfigService.ResolvePath("resources/history_stages.json"),
-            Path.Combine(directory, "history_stage"));
+        var catalog = HistoryStageCatalog.Load(ConfigService.ResolvePath("resources/history_stages.json"));
         using var vision = new HistoryStageVision(catalog, directory);
         var recognizer = new HistoryBossProgressRecognizer(TapToNextOcrSamples.SharedOcr);
         var pixels = new byte[1920 * 1080 * 4];
