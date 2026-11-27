@@ -7,6 +7,7 @@ using OpenCvSharp;
 
 namespace GGEA.App.Tasks;
 
+internal sealed record DeliveryOffer(string UnitId, string Unit, int MinimumLevel);
 internal sealed record StrengthOffer(string Id, string Series, int Amount);
 internal sealed record StrengthRequest(string RoleId, string Name, StrengthOffer Offer, int Progress);
 
@@ -16,6 +17,10 @@ internal sealed class StrengthRequestCatalog(OnnxTextRecognizer ocr)
     private sealed record Role(string Id, string Name, byte[] Portrait, Dictionary<int, StrengthOffer> Requests);
     private static readonly Lazy<Role[]> Roles = new(() => JsonSerializer.Deserialize<Role[]>(File.ReadAllText(
         ConfigService.ResolvePath("resources/data/strengthen_requests.json"))) ?? throw new InvalidDataException());
+    private static readonly Lazy<Dictionary<string, Dictionary<int, DeliveryOffer>>> Deliveries = new(() =>
+        JsonSerializer.Deserialize<Dictionary<string, Dictionary<int, DeliveryOffer>>>(File.ReadAllText(
+            ConfigService.ResolvePath("resources/data/delivery_requests.json"))) ?? throw new InvalidDataException());
+    private readonly TemplateImages _deliveryTitle = new("resources/templates/base/character_requests/title_deliver_unit.png");
     private readonly TemplateImages _title = new("resources/templates/base/character_requests/title_strengthen_troops.png");
     private readonly TemplateMatcher _matcher = new();
 
@@ -39,6 +44,17 @@ internal sealed class StrengthRequestCatalog(OnnxTextRecognizer ocr)
             progress = current;
         }
         return progress.HasValue ? new(role.Id, role.Name, offer, progress.Value) : null;
+    }
+
+    internal DeliveryOffer? ReadDelivery(ScreenImage frame, CancellationToken ct, out bool deliveryTitle)
+    {
+        var role = Identify(frame, ct);
+        var title = _deliveryTitle.Match(_matcher, frame, .96, new(1340, 225, 300, 80), ct);
+        deliveryTitle = title is not null;
+        if (role is null || title is null || !Deliveries.Value.TryGetValue(role.Id, out var requests)) return null;
+        var suffix = UpgradeNumbers.Read(ocr, frame, new(title.X + title.Width + 1, title.Y - 2, 27, 38), true, ct, out _);
+        return int.TryParse(suffix, NumberStyles.None, CultureInfo.InvariantCulture, out var number) &&
+            requests.TryGetValue(number, out var offer) ? offer : null;
     }
 
     private static Role? Identify(ScreenImage frame, CancellationToken ct)

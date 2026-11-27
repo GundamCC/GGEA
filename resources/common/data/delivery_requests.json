@@ -1,0 +1,1180 @@
+{
+  "1001000101": {
+    "1": {
+      "UnitId": "1001003800",
+      "Unit": "61式战车",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1001000700",
+      "Unit": "铁球",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1001000400",
+      "Unit": "核心战机",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1001000600",
+      "Unit": "吉姆",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1007000100",
+      "Unit": "原型高达",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1001000100",
+      "Unit": "高达",
+      "MinimumLevel": 1
+    }
+  },
+  "1001000401": {
+    "6": {
+      "UnitId": "1001001700",
+      "Unit": "强人",
+      "MinimumLevel": 1
+    }
+  },
+  "1001001801": {
+    "1": {
+      "UnitId": "1001000900",
+      "Unit": "渣古Ⅱ",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1001001300",
+      "Unit": "大魔",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1001001400",
+      "Unit": "里克·大魔",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1001002600",
+      "Unit": "比格罗",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1001001500",
+      "Unit": "格鲁古古",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1001002800",
+      "Unit": "布劳·布罗",
+      "MinimumLevel": 1
+    }
+  },
+  "1080000100": {
+    "1": {
+      "UnitId": "1080001400",
+      "Unit": "吉姆Ⅱ (奥古式样)",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1080001300",
+      "Unit": "尼摩",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1080001100",
+      "Unit": "里克·迪亚斯",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1080000600",
+      "Unit": "高达Mk-Ⅱ (奥古式样)",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1080001000",
+      "Unit": "里克·迪亚斯 (红)",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1080000600",
+      "Unit": "高达Mk-Ⅱ (奥古式样)",
+      "MinimumLevel": 1
+    }
+  },
+  "1080000701": {
+    "6": {
+      "UnitId": "1080003600",
+      "Unit": "加布兰",
+      "MinimumLevel": 1
+    }
+  },
+  "1080002700": {
+    "1": {
+      "UnitId": "1080001600",
+      "Unit": "高渣古 (提坦斯式样)",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1080003600",
+      "Unit": "加布兰",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1080002300",
+      "Unit": "加布斯雷",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1080002100",
+      "Unit": "汗布拉比",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1080002800",
+      "Unit": "梅萨拉",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1850001800",
+      "Unit": "卡碧尼原型机",
+      "MinimumLevel": 1
+    }
+  },
+  "1095000101": {
+    "1": {
+      "UnitId": "1095000400",
+      "Unit": "吉姆Ⅲ",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1083000600",
+      "Unit": "尼摩Ⅲ",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1095003500",
+      "Unit": "多瓦吉",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1095003700",
+      "Unit": "德莱森",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1095001700",
+      "Unit": "疾风迪亚斯",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1095004200",
+      "Unit": "米加炮艇",
+      "MinimumLevel": 1
+    }
+  },
+  "1095000201": {
+    "6": {
+      "UnitId": "1095002000",
+      "Unit": "加姆路·芬",
+      "MinimumLevel": 1
+    }
+  },
+  "1095001800": {
+    "1": {
+      "UnitId": "1095000500",
+      "Unit": "加萨D",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1095004000",
+      "Unit": "卡普尔",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1095004300",
+      "Unit": "渣古Ⅲ",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1095001200",
+      "Unit": "R·查查",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1095003200",
+      "Unit": "精神感应高达Mk-II",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1095002800",
+      "Unit": "量产型卡碧尼",
+      "MinimumLevel": 1
+    }
+  },
+  "1110000101": {
+    "1": {
+      "UnitId": "1110000300",
+      "Unit": "杰刚",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1110000200",
+      "Unit": "灵格斯",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1110000400",
+      "Unit": "灵格斯 (B.W.S)",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1115000100",
+      "Unit": "量产型ν高达（incom装备）",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1115000200",
+      "Unit": "量产型ν高达（飞翼浮游炮装备）",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1115000100",
+      "Unit": "量产型ν高达（incom装备）",
+      "MinimumLevel": 1
+    }
+  },
+  "1110000201": {
+    "1": {
+      "UnitId": "1110000700",
+      "Unit": "基拉·德卡",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1114000900",
+      "Unit": "基拉·德卡改",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1114001000",
+      "Unit": "基拉·德卡（精神感应系统实验型）",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1110000900",
+      "Unit": "乍得·多加 (邱尼·盖斯专用)",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1114000300",
+      "Unit": "精神感应德卡",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1114001000",
+      "Unit": "基拉·德卡（精神感应系统实验型）",
+      "MinimumLevel": 1
+    }
+  },
+  "1110000701": {
+    "6": {
+      "UnitId": "1110000900",
+      "Unit": "乍得·多加 (邱尼·盖斯专用)",
+      "MinimumLevel": 1
+    }
+  },
+  "1125000101": {
+    "1": {
+      "UnitId": "1125001900",
+      "Unit": "吉姆Ⅱ简易强袭型",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1125002500",
+      "Unit": "安克夏",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1125002200",
+      "Unit": "强袭杰刚",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1125000300",
+      "Unit": "里歇尔",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1125002700",
+      "Unit": "拜亚兰改装型",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1125004900",
+      "Unit": "银弹",
+      "MinimumLevel": 1
+    }
+  },
+  "1125000300": {
+    "1": {
+      "UnitId": "1125003000",
+      "Unit": "基拉·德卡（带袖的）",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1125004500",
+      "Unit": "佐寇克（吉翁残党军）",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1125003600",
+      "Unit": "卡尔斯K",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1133001500",
+      "Unit": "KRAKE·祖鲁",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1125006000",
+      "Unit": "暴风卡尔斯",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1125005300",
+      "Unit": "罗森·祖鲁",
+      "MinimumLevel": 1
+    }
+  },
+  "1125002001": {
+    "6": {
+      "UnitId": "1125001600",
+      "Unit": "德尔塔普拉斯",
+      "MinimumLevel": 1
+    }
+  },
+  "1144000101": {
+    "1": {
+      "UnitId": "1144001600",
+      "Unit": "杰刚D型护卫队规格",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1144000900",
+      "Unit": "杰斯塔 (杰札尔队规格B／C装备)",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1144001300",
+      "Unit": "迪杰 (NT版)",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1144000800",
+      "Unit": "杰斯塔 (杰札尔队规格)",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1144001700",
+      "Unit": "NT高达",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1144001800",
+      "Unit": "里歇尔C型 (雷比尔将军号配备机)",
+      "MinimumLevel": 1
+    }
+  },
+  "1144000201": {
+    "1": {
+      "UnitId": "1144001600",
+      "Unit": "杰刚D型护卫队规格",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1144000900",
+      "Unit": "杰斯塔 (杰札尔队规格B／C装备)",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1144001400",
+      "Unit": "古斯塔夫·卡尔 (NT版)",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1144001800",
+      "Unit": "里歇尔C型 (雷比尔将军号配备机)",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1144001700",
+      "Unit": "NT高达",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1144001200",
+      "Unit": "银弹·镇压者",
+      "MinimumLevel": 1
+    }
+  },
+  "1144000600": {
+    "6": {
+      "UnitId": "1144000300",
+      "Unit": "NT高达C装备",
+      "MinimumLevel": 1
+    }
+  },
+  "1150000500": {
+    "6": {
+      "UnitId": "1150000600",
+      "Unit": "梅萨F01型",
+      "MinimumLevel": 1
+    }
+  },
+  "1162000103": {
+    "1": {
+      "UnitId": "1162001900",
+      "Unit": "钢坦克R44",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1162000500",
+      "Unit": "赫比钢",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1162000600",
+      "Unit": "G加农",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1162001400",
+      "Unit": "达基·伊里斯",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1155000100",
+      "Unit": "高达F90",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1155000300",
+      "Unit": "高达F90Ⅱ",
+      "MinimumLevel": 1
+    }
+  },
+  "1162000204": {
+    "6": {
+      "UnitId": "1162000300",
+      "Unit": "比基娜·基纳",
+      "MinimumLevel": 1
+    }
+  },
+  "1162000600": {
+    "1": {
+      "UnitId": "1162002000",
+      "Unit": "艾维鲁·S",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1162000800",
+      "Unit": "德南·佐恩",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1162000900",
+      "Unit": "德南·格",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1162000400",
+      "Unit": "贝尔卡·达拉斯",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1162001400",
+      "Unit": "达基·伊里斯",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1162001200",
+      "Unit": "贝尔卡·基洛斯",
+      "MinimumLevel": 1
+    }
+  },
+  "1175000100": {
+    "1": {
+      "UnitId": "1175000400",
+      "Unit": "杰姆兹刚",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1175000500",
+      "Unit": "杰维林",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1175000300",
+      "Unit": "钢伊吉",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1175002300",
+      "Unit": "钢普拉斯达",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1175000100",
+      "Unit": "V高达",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1175001500",
+      "Unit": "V高达冲击型",
+      "MinimumLevel": 1
+    }
+  },
+  "1175000501": {
+    "1": {
+      "UnitId": "1175000600",
+      "Unit": "索罗",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1175004400",
+      "Unit": "佐利迪亚",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1175000900",
+      "Unit": "葛德拉夫",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1175005300",
+      "Unit": "贾巴克＆双轮",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1175005100",
+      "Unit": "康提奥",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1175004800",
+      "Unit": "里格·夏柯",
+      "MinimumLevel": 1
+    }
+  },
+  "1175003401": {
+    "6": {
+      "UnitId": "1175002300",
+      "Unit": "钢普拉斯达",
+      "MinimumLevel": 1
+    }
+  },
+  "1200000101": {
+    "1": {
+      "UnitId": "1200003400",
+      "Unit": "诺布什",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1200003300",
+      "Unit": "卡星",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1200003700",
+      "Unit": "伐木高达",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1200002500",
+      "Unit": "洗牌同盟·梅花",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1200002700",
+      "Unit": "洗牌同盟·黑桃",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1200003100",
+      "Unit": "洗牌同盟·红心",
+      "MinimumLevel": 1
+    }
+  },
+  "1200000701": {
+    "6": {
+      "UnitId": "1200002400",
+      "Unit": "洗牌同盟·小丑",
+      "MinimumLevel": 1
+    }
+  },
+  "1200001203": {
+    "1": {
+      "UnitId": "1200001700",
+      "Unit": "死亡军团",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1200001900",
+      "Unit": "死亡伯迪",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1200001500",
+      "Unit": "约翰牛高达",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1200001600",
+      "Unit": "尼洛斯高达",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1200001200",
+      "Unit": "九龙高达",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1200004700",
+      "Unit": "诺贝尔高达",
+      "MinimumLevel": 1
+    }
+  },
+  "1210000100": {
+    "1": {
+      "UnitId": "1210001300",
+      "Unit": "里奥",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1210001700",
+      "Unit": "里奥 (肩部加农炮装备)",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1210002200",
+      "Unit": "马格亚那克",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1210000700",
+      "Unit": "重装高达",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1210002600",
+      "Unit": "墨丘利",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1210003500",
+      "Unit": "重装高达改",
+      "MinimumLevel": 1
+    }
+  },
+  "1210001602": {
+    "1": {
+      "UnitId": "1210001900",
+      "Unit": "艾亚里斯",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1210002700",
+      "Unit": "杜拉士 (OZ版本)",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1210002300",
+      "Unit": "比尔哥",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1210002400",
+      "Unit": "比尔哥Ⅱ",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1210002500",
+      "Unit": "韦依埃度",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1210002500",
+      "Unit": "韦依埃度",
+      "MinimumLevel": 1
+    }
+  },
+  "1210002300": {
+    "6": {
+      "UnitId": "1210000800",
+      "Unit": "神龙高达",
+      "MinimumLevel": 1
+    }
+  },
+  "1219000101": {
+    "6": {
+      "UnitId": "1211000500",
+      "Unit": "飞翼高达 零式原型机 (EW版)",
+      "MinimumLevel": 1
+    }
+  },
+  "1219000500": {
+    "6": {
+      "UnitId": "1211001000",
+      "Unit": "神龙高达 (EW版/獠牙装备)",
+      "MinimumLevel": 1
+    }
+  },
+  "1219000600": {
+    "6": {
+      "UnitId": "1211001100",
+      "Unit": "多鲁基斯F",
+      "MinimumLevel": 1
+    }
+  },
+  "1230000100": {
+    "1": {
+      "UnitId": "1230001200",
+      "Unit": "多托列斯",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1230001700",
+      "Unit": "杰尼斯",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1230002200",
+      "Unit": "赛布特姆",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1230003100",
+      "Unit": "巴林",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1230003600",
+      "Unit": "古兰帝尼",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1230000900",
+      "Unit": "华沙哥高达",
+      "MinimumLevel": 1
+    }
+  },
+  "1230000200": {
+    "6": {
+      "UnitId": "1230000700",
+      "Unit": "阿斯塔隆高达",
+      "MinimumLevel": 1
+    }
+  },
+  "1230001200": {
+    "1": {
+      "UnitId": "1230005000",
+      "Unit": "多斯特",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1230005200",
+      "Unit": "多托列斯·飞行型",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1230003300",
+      "Unit": "普利托瓦",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1230003200",
+      "Unit": "二月",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1230003400",
+      "Unit": "拉斯维特",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1230003400",
+      "Unit": "拉斯维特",
+      "MinimumLevel": 1
+    }
+  },
+  "1300000100": {
+    "1": {
+      "UnitId": "1300003600",
+      "Unit": "先锋式",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1300003200",
+      "Unit": "空中霸者",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1304000700",
+      "Unit": "M1A异端",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1300004000",
+      "Unit": "梅比乌斯 (核弹装备型)",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1300001800",
+      "Unit": "嫣红强袭",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1304000700",
+      "Unit": "M1A异端",
+      "MinimumLevel": 1
+    }
+  },
+  "1300001700": {
+    "1": {
+      "UnitId": "1300002200",
+      "Unit": "基恩",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1300003100",
+      "Unit": "迪因",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1300002900",
+      "Unit": "佐诺",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1300002600",
+      "Unit": "席古",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1300002700",
+      "Unit": "盖兹",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1300000900",
+      "Unit": "决斗高达 强袭尸装",
+      "MinimumLevel": 1
+    }
+  },
+  "1300003200": {
+    "6": {
+      "UnitId": "1300001800",
+      "Unit": "嫣红强袭",
+      "MinimumLevel": 1
+    }
+  },
+  "1330000105": {
+    "1": {
+      "UnitId": "1330001800",
+      "Unit": "渣古战士",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1330002000",
+      "Unit": "盖兹R",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1330003000",
+      "Unit": "炮击型渣古战士",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1330003500",
+      "Unit": "渣古幽灵",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1330000200",
+      "Unit": "脉冲高达",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1330001100",
+      "Unit": "深渊高达",
+      "MinimumLevel": 1
+    }
+  },
+  "1330000401": {
+    "6": {
+      "UnitId": "1330004800",
+      "Unit": "威达 (喷射型攻击装备)",
+      "MinimumLevel": 1
+    }
+  },
+  "1330000502": {
+    "1": {
+      "UnitId": "1330001700",
+      "Unit": "短剑L",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1330004600",
+      "Unit": "短剑L (双联装无后坐力炮装备)",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1330002200",
+      "Unit": "巴比",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1330004800",
+      "Unit": "威达 (喷射型攻击装备)",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1330002100",
+      "Unit": "大魔骑兵",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1330004800",
+      "Unit": "威达 (喷射型攻击装备)",
+      "MinimumLevel": 1
+    }
+  },
+  "1370000101": {
+    "1": {
+      "UnitId": "1370003100",
+      "Unit": "长鼻式",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1370005200",
+      "Unit": "联合实战式",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1370002600",
+      "Unit": "铁人式高机动B型",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1370001300",
+      "Unit": "0高达",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1370005100",
+      "Unit": "厄运式",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1370001600",
+      "Unit": "座天使高达三型",
+      "MinimumLevel": 1
+    }
+  },
+  "1370000500": {
+    "6": {
+      "UnitId": "1370001400",
+      "Unit": "座天使高达一型",
+      "MinimumLevel": 1
+    }
+  },
+  "1370003502": {
+    "1": {
+      "UnitId": "1370005100",
+      "Unit": "厄运式",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1370001500",
+      "Unit": "座天使高达二型",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1370007900",
+      "Unit": "先驱式",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1370011000",
+      "Unit": "加格",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1370010700",
+      "Unit": "恩普拉斯",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1370008500",
+      "Unit": "女武式 (布林格专用机)",
+      "MinimumLevel": 1
+    }
+  },
+  "1400000101": {
+    "6": {
+      "UnitId": "1400000100",
+      "Unit": "高达AGE-1 基本型",
+      "MinimumLevel": 1
+    }
+  },
+  "1400002002": {
+    "6": {
+      "UnitId": "1400006700",
+      "Unit": "杰诺亚斯II",
+      "MinimumLevel": 1
+    }
+  },
+  "1430000100": {
+    "1": {
+      "UnitId": "1430003000",
+      "Unit": "铁华团机动工兵",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1430002900",
+      "Unit": "曼·罗迪",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1430001500",
+      "Unit": "格雷兹 (决斗式样)",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1430001300",
+      "Unit": "希宾纳·罗迪",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1430000400",
+      "Unit": "高达·古辛",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1430001500",
+      "Unit": "格雷兹 (决斗式样)",
+      "MinimumLevel": 1
+    }
+  },
+  "1430001700": {
+    "6": {
+      "UnitId": "1430000800",
+      "Unit": "高达·锡蒙力 冲锋型",
+      "MinimumLevel": 1
+    }
+  },
+  "1430002500": {
+    "1": {
+      "UnitId": "1430006500",
+      "Unit": "凯莱尔",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1430006600",
+      "Unit": "行刑式凯莱尔",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1430005100",
+      "Unit": "盾式格雷兹",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1430005200",
+      "Unit": "雷金雷兹",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1430004600",
+      "Unit": "辟邪",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1430007700",
+      "Unit": "雷金雷兹朱莉娅",
+      "MinimumLevel": 1
+    }
+  },
+  "1501000100": {
+    "1": {
+      "UnitId": "1500000300",
+      "Unit": "魔灵高达 量产试作型",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1501001000",
+      "Unit": "学院训练机",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1501000800",
+      "Unit": "传令骑兵",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1501000700",
+      "Unit": "迪兰扎",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1501000400",
+      "Unit": "铁骑高达",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1501000400",
+      "Unit": "铁骑高达",
+      "MinimumLevel": 1
+    }
+  },
+  "1501000201": {
+    "6": {
+      "UnitId": "1501000500",
+      "Unit": "恶魔审判者",
+      "MinimumLevel": 1
+    }
+  },
+  "1501000302": {
+    "1": {
+      "UnitId": "1500000400",
+      "Unit": "魔女审判者",
+      "MinimumLevel": 1
+    },
+    "2": {
+      "UnitId": "1501000700",
+      "Unit": "迪兰扎",
+      "MinimumLevel": 1
+    },
+    "3": {
+      "UnitId": "1501001100",
+      "Unit": "学院警卫机",
+      "MinimumLevel": 1
+    },
+    "4": {
+      "UnitId": "1501000100",
+      "Unit": "风灵高达",
+      "MinimumLevel": 1
+    },
+    "5": {
+      "UnitId": "1501001200",
+      "Unit": "达利尔巴尔德",
+      "MinimumLevel": 1
+    },
+    "6": {
+      "UnitId": "1501001200",
+      "Unit": "达利尔巴尔德",
+      "MinimumLevel": 1
+    }
+  }
+}

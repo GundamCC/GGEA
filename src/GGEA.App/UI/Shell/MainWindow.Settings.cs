@@ -49,6 +49,7 @@ public partial class MainWindow
         // 应用新配置：重建依赖 ADB 路径的服务；旧会话仅借用窗口 OCR。
         _automation?.Dispose();
         _config = settings.Config;
+        RestoreDeliveryOptions();
         _textOcr?.Dispose();
         _textOcr = null;
         ConfigService.ApplyResourceLanguage(_config);

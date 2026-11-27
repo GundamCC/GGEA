@@ -33,6 +33,16 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/common/templates/base/character_requests/delivery_selected_one.png",
+      "sha256": "5f975b3bffa3923fbb089bb8397c51d2f672c134108c5d969bbae686690953c4",
+      "width": 40,
+      "height": 36,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu 1920x1080, character request unit delivery screen",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/common/templates/common/back.png",
       "sha256": "11e81213896e94c50a0dd0f63127af219b33a72831f94e74e86789f51f2e16f4",
       "width": 165,
@@ -3223,6 +3233,16 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/zh-CN/templates/base/character_requests/button_cancel_delivery.png",
+      "sha256": "540f6657c9d01d62c0a375769162029de005bae3fb5009d65150b702eea0e92a",
+      "width": 91,
+      "height": 51,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu 1920x1080, character request unit delivery screen",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/zh-CN/templates/base/character_requests/button_challenge.png",
       "sha256": "b8ef77813b406793b54578105a8efe5e0ad557b3e22fbe1bd1fe4eca3952e3c3",
       "width": 78,
@@ -3283,6 +3303,16 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/zh-CN/templates/base/character_requests/button_submit_delivery.png",
+      "sha256": "3e105ab2a2684934283afc6e29318128f479cb7e0e907b02bb47c24f23acf66b",
+      "width": 96,
+      "height": 53,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu 1920x1080, character request unit delivery screen",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/zh-CN/templates/base/character_requests/card_refresh.png",
       "sha256": "492981fae8040c87c691d14294b7a63e4f318be824e3aba5fe2e768c4909b150",
       "width": 115,
@@ -3333,6 +3363,16 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/zh-CN/templates/base/character_requests/dialog_skip.png",
+      "sha256": "faabc8066d8d5b0d1efc41f80cde2705b253c525c23448517fcda55feb824ec7",
+      "width": 136,
+      "height": 67,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu 1920x1080, character request unit delivery screen",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/zh-CN/templates/base/character_requests/title_character_requests.png",
       "sha256": "8c9fc546f9d780dde93ee3dac2bfadb7b7a3a146f0de692eb78c2a5c96e6bab8",
       "width": 271,
@@ -3349,6 +3389,36 @@
       "height": 66,
       "category": "recognition-resource",
       "source": "Game-derived appearance; MuMu zh-CN 1920x1080, crop (868,60,186,66)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/character_requests/title_confirm_delivery.png",
+      "sha256": "d64f4e0d3ce406ba3f68bf9383e6baf05fe19c389a5c6209bc18cd17d0c62ac9",
+      "width": 172,
+      "height": 44,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu 1920x1080, character request unit delivery screen",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/character_requests/title_deliver_unit.png",
+      "sha256": "e80fb71e7b6214d05eddad31c91787e4d392efb21696ab16f958ec2f6d681eca",
+      "width": 135,
+      "height": 35,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu 1920x1080, character request unit delivery screen",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/character_requests/title_delivery_complete.png",
+      "sha256": "54560d3a470f4fd83290d9116adfdd0cb09e9b6cc78711dbf9e13f26ec7ca9a5",
+      "width": 286,
+      "height": 69,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu 1920x1080, character request unit delivery screen",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "thumbnail-no-obvious-account-id"
     },

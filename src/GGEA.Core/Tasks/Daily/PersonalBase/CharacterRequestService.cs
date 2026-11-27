@@ -8,7 +8,7 @@ namespace GGEA.App.Tasks;
 public sealed record CharacterRequestResult(int Accepted, int Reported, IReadOnlyList<string> FailedRoles);
 
 /// <summary>按本轮解锁栏位逐人承接。强化委托按角色、编号与进度执行，报告后再处理下一栏。</summary>
-public sealed class CharacterRequestService(AutomationService automation, IGgeaLog log, OnnxTextRecognizer? ocr = null)
+public sealed class CharacterRequestService(AutomationService automation, IGgeaLog log, OnnxTextRecognizer? ocr = null, DeliveryProtection? protection = null)
 {
     private const string Root = "resources/templates/base/character_requests/";
     private static readonly Roi ActionLabelArea = new(1540, 800, 170, 110);
@@ -20,14 +20,18 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
     private readonly TemplateImages _challenge = new(Root + "button_challenge.png");
     private readonly TemplateImages _report = new(Root + "button_report.png");
     private readonly TemplateImages _dialogFrame = new(Root + "dialog_com_frame.png");
+    private readonly TemplateImages _skip = new(Root + "dialog_skip.png");
     private readonly TemplateImages _dialogAdvance = new(Root + "dialog_advance.png");
     private readonly TemplateImages _complete = new(Root + "title_report_complete.png");
     private readonly TemplateImages _reward = new(Root + "title_claim_result.png");
     private readonly TemplateImages _ok = new("resources/templates/dialog/button_ok.png");
-    private readonly TemplateImages _arrow = new(Root + "button_next_character.png");
+    private readonly TemplateImages _next = new(Root + "button_next_character.png");
+    private readonly TemplateImages _info = new(Root + "button_request_info.png");
+    private readonly TemplateImages _deliver = new(Root + "button_deliver.png");
+    private readonly TemplateImages _deliveryComplete = new(Root + "title_delivery_complete.png");
     private readonly TemplateImages _back = new("resources/templates/common/back.png");
 
-    private enum Control { Accept, Challenge, Report }
+    private enum Control { Accept, Challenge, Report, Deliver }
     private enum ArrivalKind { List, Dialogue, Detail, Complete, Reward }
     private sealed record Detail(Control Action, Roi Back, Roi Button);
     private sealed record Arrival(ArrivalKind Kind, Detail? Detail = null, Roi Button = default);
@@ -72,7 +76,34 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                     detail = arrival.Detail!;
                 }
 
-                if (_catalog is not null)
+                if (detail.Action == Control.Deliver && _catalog is not null)
+                {
+                    var evidence = await WaitAsync(serial, frame =>
+                    {
+                        if (ReadDetail(frame, ct)?.Action != Control.Deliver) return null;
+                        var offer = _catalog.ReadDelivery(frame, ct, out var isDelivery);
+                        return Tuple.Create(isDelivery, offer);
+                    }, ct) ?? throw Unknown();
+                    if (evidence.Item2 is { } delivery)
+                    {
+                        await TapAsync(serial, detail.Button, ct);
+                        var service = new UnitDeliveryService(automation, ocr!, protection ?? new(), delivery.MinimumLevel);
+                        if (await service.SubmitAsync(serial, ct))
+                        {
+                            await FollowDialogueAsync(serial, reporting: true, ct, delivering: true);
+                            var list = await WaitForListAsync(serial, ct);
+                            if ((list.ActiveMask & (1 << slot)) != 0) throw Unknown();
+                            reported++;
+                            continue;
+                        }
+                        failures.Add(L.Format($"第 {slot + 1} 栏没有可安全交付的{delivery.Unit}"));
+                        detail = await WaitAsync(serial, frame => ReadDetail(frame, ct) is { Action: Control.Deliver } d ? d : null, ct)
+                            ?? throw Unknown();
+                    }
+                    else if (evidence.Item1)
+                        failures.Add(L.Format($"第 {slot + 1} 栏交付委托未能与表格核对"));
+                }
+                else if (_catalog is not null)
                 {
                     var offer = await WaitOfferAsync(serial, ct);
                     detail = offer.Detail;
@@ -122,7 +153,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
         }, ct) ?? throw Unknown();
 
     // 报告结算遮罩后面仍可能看见上一句台词；先识别结算，确认新页面后才继续。
-    private async Task<Arrival> FollowDialogueAsync(string serial, bool reporting, CancellationToken ct)
+    private async Task<Arrival> FollowDialogueAsync(string serial, bool reporting, CancellationToken ct, bool delivering = false)
     {
         var deadline = Environment.TickCount64 + 2 * GameTiming.RecognitionTimeoutMs;
         var closedComplete = false;
@@ -139,7 +170,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                         var ok = _ok.Match(_matcher, frame, .87, new Roi(744, 908, 440, 152), ct);
                         return !closedReward && ok is not null ? new Arrival(ArrivalKind.Reward, Button: ok.Region) : null;
                     }
-                    if (_complete.Match(_matcher, frame, .93, new Roi(765, 287, 390, 168), ct) is not null)
+                    if ((delivering ? _deliveryComplete : _complete).Match(_matcher, frame, .93, new Roi(765, 287, 390, 168), ct) is not null)
                         return closedComplete ? null : new Arrival(ArrivalKind.Complete);
                 }
                 if (_page.HasTitle(frame, ct))
@@ -151,7 +182,8 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                 }
                 return !closedComplete && !closedReward &&
                     _dialogFrame.Match(_matcher, frame, .92, new Roi(245, 126, 185, 98), ct) is not null &&
-                    _dialogAdvance.Match(_matcher, frame, .93, new Roi(415, 729, 1230, 195), ct) is not null
+                    (_dialogAdvance.Match(_matcher, frame, .93, new Roi(415, 729, 1230, 195), ct) is not null ||
+                     _skip.Match(_matcher, frame, .96, new Roi(1686, 26, 153, 80), ct) is not null)
                     ? new Arrival(ArrivalKind.Dialogue) : null;
             }, ct, budget);
             if (state is null || Environment.TickCount64 >= deadline) break;
@@ -172,14 +204,18 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
 
     private Detail? ReadDetail(ScreenImage frame, CancellationToken ct)
     {
-        if (!_page.HasTitle(frame, ct) || _arrow.Match(_matcher, frame, .93, new Roi(1830, 463, 90, 157), ct) is null) return null;
+        if (!_page.HasTitle(frame, ct) ||
+            (_next.Match(_matcher, frame, .93, new(1830, 463, 90, 157), ct) is null &&
+             _info.Match(_matcher, frame, .93, new(1610, 10, 310, 113), ct) is null)) return null;
         var back = _back.Match(_matcher, frame, .90, new Roi(0, 0, 220, 130), ct);
         if (back is null) return null;
         var report = _report.Match(_matcher, frame, .93, ActionLabelArea, ct);
         var challenge = _challenge.Match(_matcher, frame, .93, ActionLabelArea, ct);
+        var deliver = _deliver.Match(_matcher, frame, .95, ActionLabelArea, ct);
         var accept = _matcher.Match(frame.Bgra, frame.Width, frame.Height, _acceptLabel.Bgra,
             _acceptLabel.Width, _acceptLabel.Height, .93, ActionLabelArea, ct: ct);
-        if ((accept is null ? 0 : 1) + (report is null ? 0 : 1) + (challenge is null ? 0 : 1) != 1) return null;
+        if ((accept is null ? 0 : 1) + (report is null ? 0 : 1) + (challenge is null ? 0 : 1) + (deliver is null ? 0 : 1) != 1) return null;
+        if (deliver is not null) return new(Control.Deliver, back.Region, deliver.Region);
         if (report is not null) return new(Control.Report, back.Region, report.Region);
         return challenge is not null ? new(Control.Challenge, back.Region, challenge.Region) :
             new(Control.Accept, back.Region, accept!.Region);

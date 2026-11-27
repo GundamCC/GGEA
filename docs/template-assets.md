@@ -46,6 +46,10 @@
 | `button_accept.png` | 1540, 800, 170, 110 | 取原按钮中心 78×41 的「承接」文字 |
 | `title_request_info.png` | 820, 47, 280, 93 | 要求信息弹窗顶部标题 |
 | `button_deliver.png` | 1540, 800, 170, 110 | 已承接的交付委托详情右下角「交付」文字，MuMu 两帧均为 1.000，承接、挑战、报告画面均低于 0.93 |
+| `title_deliver_unit.png`、`title_confirm_delivery.png` | 详情标题、弹窗顶部 | 编号用数字 OCR，普通单机交付从 `resources/common/data/delivery_requests.json` 读取角色、编号、目标机体 ID 和最低等级。使用 `tools/export-delivery-requests.py 工作簿 输出文件` 再生成 |
+| `button_submit_delivery.png`、`button_cancel_delivery.png`、`delivery_selected_one.png` | 弹窗底部与库存卡片右上角 | 比对当帧目标缩略图，读取卡片 LV 与星级区。保护突破机体时要求星级条整行呈空白底色。提交前复核同卡蓝色序号、数量 1/1 和启用按钮 |
+| `dialog_skip.png` | 1686, 26, 153, 80 | 与通信框共同核实角色对话，推进时点击画面中央 |
+| `title_delivery_complete.png` | 765, 287, 390, 168 | 交付后的结算，继续确认领取奖励并返回角色列表 |
 | `button_challenge.png` | 1540, 800, 170, 110 | 详情右下角「挑战」文字，标记已承接 |
 | `dialog_com_frame.png` | 245, 126, 185, 98 | 通信框左上角，阈值 0.92 |
 | `dialog_advance.png` | 415, 729, 1230, 195 | 当前台词末尾的蓝色向下箭头 |

@@ -76,6 +76,7 @@ public partial class MainWindow
         _busy = busy;
         if (!busy) _waitingForIdle?.TrySetResult();
         SettingsButton.IsEnabled = !busy;
+        DeliveryOptions.IsEnabled = !busy;
         DeviceCombo.IsEnabled = !busy;
         RefreshButton.IsEnabled = !busy;
         ReconnectButton.IsEnabled = !busy && DeviceCombo.SelectedItem is AdbDevice { CanReconnect: true };

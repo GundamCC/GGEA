@@ -73,8 +73,9 @@ public partial class MainWindow
                 case DailyTaskKind.CharacterRequests:
                     try
                     {
-                        var result = await _personalBaseService!.RunCharacterRequestsAsync(serial, _mainLayout, GetTextOcr(), ct);
-                        _logger!.Info(L.Format($"本轮承接 {result.Accepted} 个角色要求，已报告 {result.Reported} 个强化委托。"));
+                        var result = await _personalBaseService!.RunCharacterRequestsAsync(serial, _mainLayout, GetTextOcr(), ct,
+                            new(_config.ProtectDeliveryLimitBreak, _config.ProtectDeliveryHighLevel));
+                        _logger!.Info(L.Format($"本轮承接 {result.Accepted} 个角色要求，已完成 {result.Reported} 个委托。"));
                         failedSubtasks.AddRange(result.FailedRoles);
                         taskSucceeded = result.FailedRoles.Count == 0;
                     }

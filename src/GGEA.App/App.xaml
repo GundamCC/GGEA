@@ -426,9 +426,7 @@
                                     BorderThickness="0,0,0,1"
                                     CornerRadius="0"
                                     Padding="0">
-                                <TabPanel IsItemsHost="True"
-                                          KeyboardNavigation.TabIndex="1"
-                                          Background="Transparent"/>
+                                <ItemsPresenter KeyboardNavigation.TabIndex="1"/>
                             </Border>
                             <ContentPresenter x:Name="PART_SelectedContentHost"
                                               Grid.Row="1"

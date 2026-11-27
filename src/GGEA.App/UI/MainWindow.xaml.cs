@@ -18,6 +18,27 @@ public partial class MainWindow : Window
     private bool _windowClosing;
     private readonly WindowTaskLifetime _windowTasks = new();
 
+    private void RestoreDeliveryOptions()
+    {
+        ProtectLimitBreak.IsChecked = _config.ProtectDeliveryLimitBreak;
+        ProtectHighLevel.IsChecked = _config.ProtectDeliveryHighLevel;
+    }
+
+    private void DeliveryOption_Click(object sender, RoutedEventArgs e)
+    {
+        if (_logger is null) return;
+        try
+        {
+            _config = new ConfigService(_logger).Update(ConfigService.ResolvePath(DefaultConfigFile), latest =>
+            {
+                if (sender == ProtectLimitBreak) latest.ProtectDeliveryLimitBreak = ProtectLimitBreak.IsChecked == true;
+                if (sender == ProtectHighLevel) latest.ProtectDeliveryHighLevel = ProtectHighLevel.IsChecked == true;
+            });
+        }
+        catch (Exception ex) { _logger.Warn(L.Format($"交付保护设置保存失败：{ex.Message}")); }
+        RestoreDeliveryOptions();
+    }
+
     public MainWindow()
     {
         InitializeComponent();
@@ -87,6 +108,7 @@ public partial class MainWindow : Window
             }
             catch (Exception ex) { _logger.Warn(L.Format($"界面语言保存失败：{ex.Message}")); }
             ConfigService.ApplyResourceLanguage(_config);
+            RestoreDeliveryOptions();
             if (_config.LimitedEventDaily?.Index < _config.FierceEnemyDaily?.Index)
             {
                 RestoreLimitedDaily();

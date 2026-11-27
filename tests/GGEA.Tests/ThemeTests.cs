@@ -691,7 +691,11 @@ public sealed class ThemeTests
         var progress = (TabItem)window.FindName("AutoProgressTab");
         Assert.Equal(tabs.Items.IndexOf(scout) + 1, tabs.Items.IndexOf(progress));
         var fierce = (TabItem)window.FindName("FierceEnemyAssaultTab");
-        Assert.Equal(tabs.Items.IndexOf(progress) + 1, tabs.Items.IndexOf(fierce));
+        var requests = window.CharacterRequestsTab;
+        Assert.Equal(tabs.Items.IndexOf(progress) + 1, tabs.Items.IndexOf(requests));
+        Assert.Equal(tabs.Items.IndexOf(requests) + 1, tabs.Items.IndexOf(fierce));
+        Assert.True(window.ProtectLimitBreak.IsChecked);
+        Assert.True(window.ProtectHighLevel.IsChecked);
         var league = (TabItem)window.FindName("MasterLeagueTab");
         Assert.Equal(tabs.Items.IndexOf(fierce) + 1, tabs.Items.IndexOf(window.LimitedEventTab));
         Assert.Equal(tabs.Items.IndexOf(window.LimitedEventTab) + 1, tabs.Items.IndexOf(league));
@@ -705,6 +709,10 @@ public sealed class ThemeTests
             content.Measure(new Size(width, 780));
             content.Arrange(new Rect(0, 0, width, 780));
             content.UpdateLayout();
+            var progressPosition = progress.TranslatePoint(new Point(), tabs);
+            var requestsPosition = requests.TranslatePoint(new Point(), tabs);
+            Assert.Equal(progressPosition.Y, requestsPosition.Y);
+            Assert.True(requestsPosition.X > progressPosition.X);
             Assert.Same(factory.Content, tabs.SelectedContent);
             var panel = (StackPanel)factory.Content;
             Assert.Equal("开始制造", Assert.Single(Descendants(panel).OfType<Button>()).Content);

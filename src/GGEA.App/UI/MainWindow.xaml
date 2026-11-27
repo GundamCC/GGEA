@@ -184,6 +184,9 @@
                 <Border Grid.Row="0" Style="{StaticResource Card}">
                     <DockPanel>
                         <TabControl x:Name="MainTabControl" Background="Transparent" BorderThickness="0">
+                            <TabControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                            </TabControl.ItemsPanel>
                             <TabItem x:Name="ApConsumptionTab" Header="{loc:Text Source='AP 消耗'}">
                                 <ui:ApConsumptionView x:Name="ApConsumptionView"/>
                             </TabItem>
@@ -207,6 +210,16 @@
                             <!-- 推图队列、编制权限与当前状态共用执行会话，运行中禁止改写队列和策略。 -->
                             <TabItem x:Name="AutoProgressTab" Header="{loc:Text Source='自动推图'}">
                                 <ui:AutoProgressView x:Name="AutoProgressView"/>
+                            </TabItem>
+                            <TabItem x:Name="CharacterRequestsTab" Header="{loc:Text Source='角色要求'}">
+                                <StackPanel x:Name="DeliveryOptions" Margin="8,12,0,0">
+                                    <CheckBox x:Name="ProtectLimitBreak" Content="{loc:Text Source='不交付含有突破的机体'}"
+                                              HorizontalContentAlignment="Left" Style="{StaticResource TaskCheckBox}" Foreground="{DynamicResource Brush.Text}"
+                                              IsChecked="True" Click="DeliveryOption_Click" Margin="0,0,0,10"/>
+                                    <CheckBox x:Name="ProtectHighLevel" Content="{loc:Text Source='不交付高等级单位（LV60以上）'}"
+                                              HorizontalContentAlignment="Left" Style="{StaticResource TaskCheckBox}" Foreground="{DynamicResource Brush.Text}"
+                                              IsChecked="True" Click="DeliveryOption_Click"/>
+                                </StackPanel>
                             </TabItem>
                             <!-- 活动导航止于左侧入口选择，后续玩法由独立流程接入。 -->
                             <TabItem x:Name="FierceEnemyAssaultTab" Header="{loc:Text Source='强敌来袭'}">
