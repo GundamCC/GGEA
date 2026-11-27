@@ -1,0 +1,13 @@
+{
+    "event":  [
+                       {
+                           "id":  1,
+                           "work":  "Mobile Suit Gundam Wing Dual Story -G-Unit-",
+                           "normalCount":  7,
+                           "sideStories": 0,
+                           "hardCount":  3,
+                           "specialHardCount":1,
+                           "screenshot":  "logo_l_series_2170"
+                       }
+                   ]
+}

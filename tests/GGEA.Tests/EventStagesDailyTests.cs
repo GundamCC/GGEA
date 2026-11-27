@@ -76,7 +76,7 @@ public class EventStagesDailyTests
         await new EventStagesService(automation, "test").OpenFromMenuAsync(default);
         Assert.Equal(3, device.Taps.Count);
         Assert.Equal((1165,400), device.Taps[0]);
-        Assert.InRange(device.Taps[1].X, 190, 225);
+        Assert.InRange(device.Taps[1].X, 286, 300);
         Assert.InRange(device.Taps[2].X, 1660, 1690);
     }
 

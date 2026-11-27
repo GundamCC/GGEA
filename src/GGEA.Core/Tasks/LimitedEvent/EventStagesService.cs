@@ -1,3 +1,5 @@
+using System.IO;
+using System.Text.Json;
 using GGEA.App.Automation;
 using GGEA.App.Config;
 using GGEA.App.UI;
@@ -78,22 +80,41 @@ internal sealed class EventStagesService(AutomationService automation, string se
 
     internal async Task OpenFromMenuAsync(CancellationToken ct)
     {
+        using var config = JsonDocument.Parse(File.ReadAllBytes(ConfigService.ResolvePath("resources/common/limited_time_event.json")));
+        var logos = new List<FierceEnemyAssaultRecognizer>();
+        foreach (var item in config.RootElement.GetProperty("event").EnumerateArray())
+        {
+            var name = item.GetProperty("screenshot").GetString();
+            if (string.IsNullOrWhiteSpace(name) || name.Any(c => !char.IsAsciiLetterOrDigit(c) && c != '_'))
+                throw new InvalidDataException("限时活动配置中的 LOGO 文件名无效。");
+            logos.Add(new FierceEnemyAssaultRecognizer(ConfigService.ResolvePath($"resources/templates/logo/{name}.png")));
+        }
+        if (logos.Count == 0) throw new InvalidDataException("当前没有已配置的限时活动。");
         await FierceEnemyAssaultService.OpenEventListAsync(automation, serial, ct);
         var options = new WaitOptions { Region = RecognitionRegion.PageTitle, Threshold = .85,
             TimeoutMs = GameTiming.RecognitionTimeoutMs, AllowGlobalContinuation = false };
         if (!await FierceEnemyAssaultService.WaitEventListAsync(automation, serial,
             ConfigService.ResolvePath(FierceEnemyAssaultService.TitleTemplate), options, ct))
             throw new InvalidOperationException("未确认事件列表标题。");
-        var banner = E("event_banner", new(0, 105, 398, 871));
+        FierceEnemyAssaultRecognizer? selected = null;
         if (!await FierceEnemyAssaultService.SelectEventBannerAsync(automation, serial,
             ConfigService.ResolvePath(FierceEnemyAssaultService.TitleTemplate), options,
-            (frame, token) => Match(frame, banner, token), ct))
+            (frame, token) => Task.Run(() =>
+            {
+                // 配置顺序决定多个可见活动的优先级。右侧海报必须与选中的同一 LOGO 相符。
+                foreach (var logo in logos)
+                {
+                    var hit = logo.Match(frame, new(0, 105, 398, 871), [(.245,.245), (.25,.25), (.24,.24)], token);
+                    if (hit is null) continue;
+                    selected = logo;
+                    return hit;
+                }
+                return null;
+            }, token), ct))
             throw new InvalidOperationException("事件列表未确认当前活动横幅。");
-        var poster = E("event_poster", new(740, 230, 635, 370));
-        await Require(null, ct, poster);
         if (!await FierceEnemyAssaultEntryService.EnterSelectedAsync(automation, serial,
             options with { Region = null, Roi = FierceEnemyAssaultEntryService.ButtonRegion },
-            async (screen, token) => await Match(screen, poster, token) is not null, ct))
+            (screen, token) => Task.Run(() => selected!.Match(screen, new(730, 220, 660, 410), [(1,1), (.99,.99), (1.01,1.01)], token) is not null, token), ct))
             throw new InvalidOperationException("未确认当前故事事件的前往按钮。");
         await Require(null, ct, Story);
     }
