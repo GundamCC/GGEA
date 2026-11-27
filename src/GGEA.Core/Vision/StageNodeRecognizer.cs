@@ -584,7 +584,8 @@ public sealed class StageNodeRecognizer : IStageNodeRecognizer, IStageNextNodeRe
             WorkStageKind.Boss => "locked_boss",
             _ => "locked_normal",
         };
-        if (Match(screen, roi, templates, lockedTemplate, StateThreshold) is not null)
+        if (Match(screen, roi, templates, lockedTemplate, StateThreshold,
+            accept: (match, template) => HasLockGlyph(screen, match.Region, template)) is not null)
         {
             return WorkStageNodeState.Locked;
         }
@@ -600,6 +601,25 @@ public sealed class StageNodeRecognizer : IStageNodeRecognizer, IStageNextNodeRe
             accept: (match, template) => HasCompleteBadgeColors(screen, match.Region, template));
         return clear is not null
             ? WorkStageNodeState.Cleared : WorkStageNodeState.Incomplete;
+    }
+
+    // 未锁定的同型号台座也能通过整块模板匹配。再核对白色锁形的亮笔画，
+    // 只检查当前候选自身，不从相邻关卡或右侧略过按钮借用锁标。
+    private static bool HasLockGlyph(ScreenImage screen, Roi region, NodeTemplate template)
+    {
+        int expected = 0, covered = 0;
+        for (var y = 0; y < template.Height; y++)
+        for (var x = 0; x < template.Width; x++)
+        {
+            var pixel = y * template.Width + x;
+            var i = pixel * 4;
+            if (template.Mask[pixel] == 0 || Math.Min(template.Bgra[i],
+                Math.Min(template.Bgra[i + 1], template.Bgra[i + 2])) < 205) continue;
+            expected++;
+            var j = ((region.Y + y) * screen.Width + region.X + x) * 4;
+            if (Math.Min(screen.Bgra[j], Math.Min(screen.Bgra[j + 1], screen.Bgra[j + 2])) >= 180) covered++;
+        }
+        return expected > 0 && covered >= expected * MinimumLabelColorCoverage;
     }
 
     /// <summary>青色标记既要覆盖模板的有效图案，也不能只是同色背景；与标签校验使用相同覆盖/精度要求。</summary>

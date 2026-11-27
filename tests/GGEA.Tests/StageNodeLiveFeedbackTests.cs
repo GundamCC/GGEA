@@ -14,6 +14,29 @@ public sealed class StageNodeLiveFeedbackTests : IDisposable
     private static readonly HardStageEntry Work = new() { Id = 20, Work = "Mobile Suit Victory Gundam", NormalCount = 20, HardCount = 3 };
     private readonly OnnxStageNumberRecognizer _numbers = new(TapToNextOcrSamples.SharedOcr);
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task EventHardOne_LockRequiresGlyphOnSelectedPedestal(bool locked)
+    {
+        var rail = ImageCodec.DecodePng(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory,
+            "Fixtures/StageNodes/event-hard1-unlocked-rail.png")));
+        var pixels = TestImageFactory.CreateBgra(1920, 1080, 0);
+        for (var y = 0; y < rail.Height; y++)
+            Buffer.BlockCopy(rail.Bgra, y * rail.Width * 4, pixels, (y + 160) * 1920 * 4, rail.Width * 4);
+        // 阳性对照仅把同一画面 HARD 3 台座中央实际白锁放到选中位。
+        if (locked)
+            for (var y = -17; y <= 17; y++)
+                Buffer.BlockCopy(pixels, ((532 + y) * 1920 + 890 - 17) * 4,
+                    pixels, ((532 + y) * 1920 + 510 - 17) * 4, 35 * 4);
+        var adb = new FakeAdbService(ImageCodec.EncodePng(pixels, 1920, 1080));
+        using var recognizer = new StageNodeRecognizer(adb, new TemplateMatcher(), new TestLog(),
+            Templates, numberRecognizer: _numbers, layout: StageNodeLayout.History);
+        var node = await recognizer.RecognizeSelectedAsync("test", new HardStageEntry { NormalCount = 7, HardCount = 4 });
+        Assert.Equal(new WorkStagePosition(WorkStageKind.Hard, 1, 8), node?.Position);
+        Assert.Equal(locked ? WorkStageNodeState.Locked : WorkStageNodeState.Incomplete, node?.State);
+    }
+
     /// <summary>MuMu 5558 的 Z 高达选关页保持原识别阈值；返回稳定后两帧应确认 HARD 2，而非猜测上一关加一。</summary>
     [Fact]
     public async Task ZetaHardTwo_AfterReturn_ConfirmsActualNode()
