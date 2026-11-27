@@ -34,6 +34,66 @@ public sealed class MedalExchangeReplayTests
         return Encode(frame);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MumuStatusReadsSevenOrClosesUnreadableStatus(bool unreadable)
+    {
+        var status = Scene("mumu-key-seven");
+        if (unreadable)
+            for (int y = 390; y < 460; y++)
+                Array.Clear(status.Bgra, (status.Width * y + 1185) * 4, 229 * 4);
+        var statusPng = Encode(status);
+        var general = ImageCodec.DecodePng(PoolFrame("pool-full-key", "reward-status-1", false));
+        // 模拟读取一般报酬时向下滚动后的画面。
+        var generalPng = Encode(general);
+        var supply = Encode(Scene("supply"));
+        var settings = Encode(Scene("settings"));
+        var device = new FakeAdbService(supply);
+        string page = "supply";
+        int visibleKeyFrames = 0;
+        device.ScreenshotProvider = () =>
+        {
+            if (page == "settings") return settings;
+            if (page != "status") return supply;
+            if (device.Swipes.Count > 0) return generalPng;
+            visibleKeyFrames++;
+            return statusPng;
+        };
+        using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        device.TapFailure = (x,y) =>
+        {
+            if (!unreadable && page == "status" && x is > 820 and < 1100 && y is > 920 and < 1060) stop.Cancel();
+            page = (page,x,y) switch
+            {
+                ("supply", > 670 and < 949, > 810 and < 920) => "settings",
+                ("settings", > 820 and < 1100, > 920 and < 1060) => "supply",
+                ("supply", > 1100 and < 1427, > 680 and < 790) => "status",
+                ("status", > 820 and < 1100, > 920 and < 1060) => "supply",
+                _ => throw new InvalidOperationException($"意外输入 {page}: {x},{y}")
+            };
+            return null;
+        };
+        var log = new TestLog();
+        using var automation = new AutomationService(device,new TemplateMatcher(),log);
+        using var ocr = new OnnxTextRecognizer();
+        var service = new MedalExchangeService(automation,ocr,log,"test");
+        if (unreadable)
+        {
+            await Assert.ThrowsAsync<MedalRecognitionException>(() => service.RunAsync(stop.Token));
+            Assert.Equal("supply",page);
+            Assert.Contains(log.Entries,e => e.Message.Contains("已退出目前获得状况并确认补给页"));
+            Assert.Equal(4, device.Taps.Count);
+        }
+        else
+        {
+            // 只回放至首次核对奖池后关闭状况，不提交兑换。
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.RunAsync(stop.Token));
+            Assert.Contains(log.Entries,e => e.Message.Contains("关键报酬 7/7，一般报酬 591/793"));
+            Assert.True(visibleKeyFrames >= 3);
+        }
+    }
+
     [Fact]
     public async Task Settled69RewardsAt345MedalsFinishOnTwoDisabledFramesWithoutBalanceOcr()
     {

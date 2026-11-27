@@ -28,9 +28,9 @@ internal readonly record struct MedalPool(RewardCount Key, RewardCount General)
 /// <summary>按分类标题的实际高度读取同行蓝色分数。奖池总数由当前页面决定。</summary>
 internal sealed class MedalPoolReader(OnnxTextRecognizer ocr)
 {
-    public RewardCount? Count(ScreenImage frame, int headerCenterY, CancellationToken ct, Action<string>? observe = null)
+    public RewardCount? Count(ScreenImage frame, int headerCenterY, CancellationToken ct, Action<string>? observe = null, double minimumConfidence = .80)
     {
-        var text = Read(frame, new(1185, headerCenterY - 19, 229, 38), false, ct, observe);
+        var text = Read(frame, new(1185, headerCenterY - 19, 229, 38), false, ct, observe, minimumConfidence);
         var parts = text.Split('/');
         if (parts.Length == 2 && Number(parts[0], out var n) && Number(parts[1], out var total)
             && total is > 0 and <= 99999 && n <= total)
@@ -61,7 +61,7 @@ internal sealed class MedalPoolReader(OnnxTextRecognizer ocr)
     private static bool Number(string text, out int value) =>
         int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out value);
 
-    private string Read(ScreenImage frame, Roi roi, bool white, CancellationToken ct, Action<string>? observe = null)
+    private string Read(ScreenImage frame, Roi roi, bool white, CancellationToken ct, Action<string>? observe = null, double minimumConfidence = .80)
     {
         var pixels = new byte[roi.Width * roi.Height];
         int left = roi.Width, top = roi.Height, right = -1, bottom = -1;
@@ -79,7 +79,7 @@ internal sealed class MedalPoolReader(OnnxTextRecognizer ocr)
         if (right < left || bottom < top) { observe?.Invoke("未读到数字"); return ""; }
         var result = ocr.Recognize(pixels, roi.Width, new(left, top, right-left+1, bottom-top+1), ct);
         observe?.Invoke($"{(string.IsNullOrWhiteSpace(result.Text) ? "未读到数字" : result.Text)}（平均 {result.Confidence:P0}，最低 {result.MinimumContentConfidence ?? result.MinimumConfidence:P0}）");
-        return result.Confidence >= .90 && (result.MinimumContentConfidence ?? result.MinimumConfidence) >= .80
+        return result.Confidence >= .90 && (result.MinimumContentConfidence ?? result.MinimumConfidence) >= minimumConfidence
             ? result.Text.Trim() : "";
     }
 }

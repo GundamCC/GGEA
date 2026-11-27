@@ -45,6 +45,7 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
     private readonly MedalPoolReader reader = new(ocr);
 
     private ScreenImage? lastFrame;
+    private bool readingPool;
     private readonly Dictionary<string,string> readings = new();
     private string submission = "尚未提交";
     private string Diagnostics => string.Join("，", readings.Select(p => $"{p.Key}={p.Value}"));
@@ -55,13 +56,57 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         foreach (var key in new[] { "补给余额", "上一兑换结果页余额", "当前按钮报价", "关键报酬", "一般报酬" }) readings[key] = "尚未读取";
         submission = "尚未提交";
         lastFrame = null;
+        readingPool = false;
         try { await ExchangeAsync(ct); }
         catch (MedalRecognitionException ex)
         {
             log.Warn(ex.Message);
             if (evidence is not null && lastFrame is { } frame)
                 await evidence.SaveContextAsync("medal-exchange", serial, frame, new { reason = ex.Message, submission, readings });
+            // 保存原失败帧后再退出已知状况弹窗；返回结果页时只操作关闭按钮。
+            if (readingPool || (lastFrame is { } failed && await Match(failed, Status, ct) is not null))
+            {
+                try
+                {
+                    await ReturnFromStatusFailure(ct);
+                    log.Info("奖章兑换：已退出目前获得状况并确认补给页。");
+                }
+                catch (MedalRecognitionException recovery)
+                {
+                    log.Warn($"奖章兑换：退出状况页未确认，交由每日导航重新识别。{recovery.Message}");
+                }
+            }
             throw;
+        }
+    }
+
+    private sealed record ExitPage(Target Page, TemplateMatchResult Button);
+
+    private async Task ReturnFromStatusFailure(CancellationToken ct)
+    {
+        // 每次补点前重新确认弹窗身份和关闭按钮；结果页只允许关闭，补给页只读确认。
+        var attempts = new Dictionary<Target,int>();
+        while (true)
+        {
+            var state = await StableObservation.WaitAsync<ExitPage>(async () =>
+            {
+                var frame = await Capture(ct);
+                foreach (var (page, button) in new[] { (Status, ModalClose), (Results, ResultClose), (Supply, SupplyStatus) })
+                {
+                    if (await Match(frame, page, ct) is null) continue;
+                    var hit = await Match(frame, button, ct);
+                    return hit is null ? null : new ExitPage(page, hit);
+                }
+                return null;
+            }, (a,b) => a.Page == b.Page && Math.Abs(a.Button.CenterX-b.Button.CenterX) <= 4 &&
+                Math.Abs(a.Button.CenterY-b.Button.CenterY) <= 4, GameTiming.RecognitionTimeoutMs, ct);
+            if (state is null) throw Failure("退出状况后确认当前界面");
+            if (state.Page == Supply) return;
+            int count = attempts.GetValueOrDefault(state.Page);
+            if (count >= 3) throw Failure($"退出 {state.Page.Key} 后仍在原页");
+            attempts[state.Page] = count + 1;
+            await Tap(state.Button, ct);
+            await Task.Delay(1500, ct);
         }
     }
 
@@ -342,8 +387,10 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
 
     private async Task<MedalPool> ReadPool(CancellationToken ct)
     {
+        readingPool = true;
         var pool = new MedalPool(await ReadCategory(Key, true, ct), await ReadCategory(General, false, ct));
         log.Info($"奖章兑换：关键报酬 {pool.Key.Obtained}/{pool.Key.Total}，一般报酬 {pool.General.Obtained}/{pool.General.Total}。");
+        readingPool = false;
         return pool;
     }
 
@@ -360,11 +407,14 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             {
                 var category = backToTop ? "关键报酬" : "一般报酬";
                 RewardCount? previous = null;
+                int consecutive = 0;
                 var deadline = Environment.TickCount64 + GameTiming.RecognitionTimeoutMs;
                 do
                 {
-                    var count = reader.Count(frame, label.CenterY, ct, text => readings[category] = text);
-                    if (count.HasValue && count == previous) return count.Value;
+                    // MuMu 的细字 7/7 有单字符约 77%；关键报酬要求三个独立画面的完整分数一致。
+                    var count = reader.Count(frame, label.CenterY, ct, text => readings[category] = text, backToTop ? .75 : .80);
+                    consecutive = count.HasValue && count == previous ? consecutive + 1 : 1;
+                    if (count.HasValue && consecutive >= (backToTop ? 3 : 2)) return count.Value;
                     previous = count;
                     await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
                     frame = await WaitPage(Status, ct);
