@@ -4,6 +4,24 @@ namespace GGEA.Tests;
 
 public sealed partial class AutoProgressFlowTests
 {
+    [Fact]
+    public async Task EventOpeningRewardsBeforeStageTitle()
+    {
+        using var scene = new Scene();
+        byte[] Page(string name) => System.IO.File.ReadAllBytes(GGEA.App.Config.ConfigService.ResolvePath(
+            $"Fixtures/Navigation/limited-daily-{name}.png"));
+        var story = Page("story_return");
+        var stage = Page("hard1done");
+        var reward = scene.UnitRewardFrame();
+        var device = new FakeAdbService(story);
+        device.ScreenshotProvider = () => device.Taps.Count switch { 0 => story, 1 or 2 => reward, _ => stage };
+        using var automation = new GGEA.App.Automation.AutomationService(device, new GGEA.App.Vision.TemplateMatcher(), new TestLog());
+        Assert.True(await new EventStagesService(automation, "test").EnterAsync(false, default));
+        Assert.Equal((1240, 407), device.Taps.First());
+        Assert.Equal(3, device.Taps.Count);
+        Assert.All(device.Taps.Skip(1), tap => Assert.InRange(tap.Y, 1020, 1035));
+    }
+
     /// <summary>战后先获得六台机体再结算；正常轮询与两分钟恢复均须识别实际奖励文字，再确认返回选关页。</summary>
     [Theory]
     [InlineData(false)]

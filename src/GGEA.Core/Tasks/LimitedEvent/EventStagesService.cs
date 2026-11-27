@@ -72,7 +72,7 @@ internal sealed class EventStagesService(AutomationService automation, string se
             if (checkCompletion && await Observe(Story, [Complete], ct, 2000) is not null) return false;
             await automation.TapAsync(serial, 1240, 407, ct);
         }
-        await Require(null, ct, Stage);
+        await WaitForEntryTitleAsync(Stage, ct);
         return true;
     }
 
@@ -134,7 +134,30 @@ internal sealed class EventStagesService(AutomationService automation, string se
             options with { Region = null, Roi = FierceEnemyAssaultEntryService.ButtonRegion },
             (screen, token) => Task.Run(() => selected.Match(screen, new(730, 220, 660, 410), [(1,1), (.99,.99), (1.01,1.01)], token) is not null, token), ct))
             throw new InvalidOperationException("未确认当前故事事件的前往按钮。");
-        await Require(null, ct, Story);
+        await WaitForEntryTitleAsync(Story, ct);
+    }
+
+    // 首次进入可能连续发放机体。奖励动作只推进演出，连续确认标题才算完成导航。
+    private async Task WaitForEntryTitleAsync(Target title, CancellationToken ct)
+    {
+        var deadline = Environment.TickCount64 + GameTiming.RecognitionTimeoutMs;
+        var limit = deadline + 120_000;
+        var stable = false;
+        while (Environment.TickCount64 < deadline)
+        {
+            var png = await automation.ScreenshotAsync(serial, ct);
+            var screen = ImageCodec.DecodePng(png);
+            var found = await Match(screen, title, ct) is not null;
+            if (found && stable) return;
+            stable = found;
+            if (!found && await automation.GlobalScreens.HandleContinuationAsync(serial, png, ct,
+                allowSkip: false, tapRegion: RecognitionRegion.ProgressTapToNext) == GlobalScreenResult.ActionSent)
+            {
+                deadline = Math.Min(limit, Environment.TickCount64 + GameTiming.RecognitionTimeoutMs);
+            }
+            await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
+        }
+        throw new InvalidOperationException($"活动入场：等待 {title.Key} 超时，未确认已进入目标页。");
     }
 
     internal async Task ReturnFromBossAsync(CancellationToken ct)
