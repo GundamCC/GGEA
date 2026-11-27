@@ -404,7 +404,11 @@ public sealed class StageNodeRecognizer : IStageNodeRecognizer, IStageNextNodeRe
         if (rings.Count == 0) return null;
         var largest = rings.OrderByDescending(ring => ring.Width * ring.Height).First();
         return rings.All(ring => Math.Abs(ring.CenterX - largest.CenterX) <= 24 &&
-                                 Math.Abs(ring.CenterY - largest.CenterY) <= 40)
+                                 (Math.Abs(ring.CenterY - largest.CenterY) <= 40 ||
+                                  // 事件台座升起的双弧与下环中心相隔 44px，但同轴、边缘紧邻。
+                                  (Math.Abs(ring.CenterX - largest.CenterX) <= 8 &&
+                                   Math.Abs(ring.CenterY - largest.CenterY) <= 52 &&
+                                   Math.Max(ring.Y, largest.Y) - Math.Min(ring.Y + ring.Height, largest.Y + largest.Height) <= 10)))
             ? (largest.CenterX, largest.CenterY) : null;
     }
 

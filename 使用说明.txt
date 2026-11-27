@@ -1,4 +1,4 @@
-GGEA v1.4.22.1 使用说明 — 正式发布 / Release
+GGEA v1.4.22.2 使用说明 — 正式发布 / Release
 
 主要关卡和历史关卡共用作品 Logo 目录 resources/common/templates/logo/。已有配置会自动迁移旧版默认路径，自定义目录继续生效。
 

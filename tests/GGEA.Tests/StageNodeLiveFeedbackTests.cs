@@ -14,6 +14,22 @@ public sealed class StageNodeLiveFeedbackTests : IDisposable
     private static readonly HardStageEntry Work = new() { Id = 20, Work = "Mobile Suit Victory Gundam", NormalCount = 20, HardCount = 3 };
     private readonly OnnxStageNumberRecognizer _numbers = new(TapToNextOcrSamples.SharedOcr);
 
+    [Fact]
+    public async Task EventHardTwo_StackedArcsIdentifyOneSelectedNode()
+    {
+        var rail = ImageCodec.DecodePng(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory,
+            "Fixtures/StageNodes/event-hard2-stacked-rings.png")));
+        var pixels = TestImageFactory.CreateBgra(1920, 1080, 0);
+        for (var y = 0; y < rail.Height; y++)
+            Buffer.BlockCopy(rail.Bgra, y * rail.Width * 4, pixels, (y + 160) * 1920 * 4, rail.Width * 4);
+        var adb = new FakeAdbService(ImageCodec.EncodePng(pixels, 1920, 1080));
+        using var recognizer = new StageNodeRecognizer(adb, new TemplateMatcher(), new TestLog(),
+            Templates, numberRecognizer: _numbers, layout: StageNodeLayout.History);
+        var node = await recognizer.RecognizeSelectedAsync("test", new HardStageEntry { NormalCount = 7, HardCount = 4 });
+        Assert.Equal(new WorkStagePosition(WorkStageKind.Hard, 2, 9), node?.Position);
+        Assert.Equal(WorkStageNodeState.Incomplete, node?.State);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
