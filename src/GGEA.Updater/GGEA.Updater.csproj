@@ -5,6 +5,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <!-- 更新进程不依赖 WPF、原生识图库或目标目录中的运行库。 -->
+    <!-- 裁剪器默认生成随机 MVID 并记录临时快照路径，会让未修改的更新器每次都要下载。 -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <DebugType Condition="'$(PublishTrimmed)' == 'true'">none</DebugType>
+    <TrimmerRemoveSymbols>true</TrimmerRemoveSymbols>
+    <_ExtraTrimmerArgs>$(_ExtraTrimmerArgs) --deterministic</_ExtraTrimmerArgs>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
