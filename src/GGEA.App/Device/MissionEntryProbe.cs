@@ -43,7 +43,7 @@ internal sealed class MissionEntryProbe(IAdbService adb, AutomationService autom
 
         var inactive = await automation.MatchImageAsync(frame,
             ConfigService.ResolvePath(config.MainScreenInactiveTemplate), homeWait, ct);
-        var stageTitle = new WaitOptions { Region = RecognitionRegion.PageTitle, Threshold = .85 };
+        var stageTitle = new WaitOptions { Roi = StageMenuEntryService.TitleRegion, Threshold = .85 };
         var returningHome = inactive is not null && await automation.MatchImageAsync(frame,
                 ConfigService.ResolvePath(StageMenuEntryService.TitleTemplate), stageTitle, ct) is not null;
         if (returningHome)

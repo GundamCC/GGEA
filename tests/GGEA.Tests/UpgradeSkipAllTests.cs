@@ -70,6 +70,42 @@ public sealed class UpgradeSkipAllTests
         Assert.Equal((1676, 988), adb.Taps[2]);
     }
 
+    /// <summary>从强化培育结算页接续限时活动，须先恢复关卡菜单再点击事件。</summary>
+    [Fact]
+    public async Task EventAfterUpgradeReturnsThroughStageMenu()
+    {
+        var upgrade = Screen((Fixture("title.png"), 0, 0));
+        var menu = TestImageFactory.CreateStageMenuPng();
+        var list = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures/Navigation/limited-event-list.png"));
+        var story = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures/Navigation/limited-daily-story_return.png"));
+        var device = new FakeAdbService(upgrade);
+        var log = new TestLog();
+        using var automation = new AutomationService(device, new TemplateMatcher(), log);
+        device.ScreenshotProvider = () => device.Taps.Count switch
+        {
+            0 => upgrade,
+            1 => menu,
+            2 or 3 => list,
+            _ => story,
+        };
+        device.TapFailure = (x, y) =>
+        {
+            if (device.Taps.Count == 1) Assert.Equal((1000, 950), (x, y));
+            return null;
+        };
+
+        var layout = new UiLayout { Anchors = [new() { Name = "navStage", X = 900, Y = 900, Width = 200, Height = 100 }] };
+        await new EventStagesService(automation, "test").NavigateAsync(EventStagesService.Destination.Story, async ct =>
+        {
+            var result = await new StageMenuEntryService(automation, log).OpenFromHomeAsync("test", layout, 0, ct);
+            Assert.True(result.Success, result.Message);
+        }, default);
+        Assert.Equal(4, device.Taps.Count);
+        Assert.Equal((1165, 400), device.Taps[1]);
+        Assert.InRange(device.Taps[2].X, 286, 300);
+        Assert.InRange(device.Taps[3].X, 1660, 1690);
+    }
+
     /// <summary>标题缺失不点击；已点击一次略过而执行缺失时也不能回退旧流程。</summary>
     [Theory]
     [InlineData(false, 0)]

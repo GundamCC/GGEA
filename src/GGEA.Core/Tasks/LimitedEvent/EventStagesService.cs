@@ -85,7 +85,7 @@ internal sealed class EventStagesService(AutomationService automation, string se
         var supply = E("medal_supply_title", Header, .90);
         var receipt = E("medal_reset_complete_title", new(817,175,310,115), .90);
         var pageTitle = RecognitionRegions.Resolve(RecognitionRegion.PageTitle, 1920, 1080);
-        var menu = new Target("stage/title_stage", pageTitle, .85);
+        var menu = new Target("stage/title_stage", StageMenuEntryService.TitleRegion, .85);
         var list = new Target("stage/event/title_event", pageTitle, .85);
         var seen = await Observe(null, [receipt, Mission, Story, Stage, boss, supply, list, menu], ct, 3500);
         var page = seen?.Target;

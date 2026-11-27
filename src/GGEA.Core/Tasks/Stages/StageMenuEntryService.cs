@@ -13,6 +13,8 @@ public sealed class StageMenuEntryService
 {
     /// <summary>随包分发的关卡菜单左上角标题素材。</summary>
     public const string TitleTemplate = "resources/templates/stage/title_stage.png";
+    // 顶层菜单标题位于左端，区域需容纳日文标题，并排除子页长标题末尾的“关卡”。
+    internal static readonly Roi TitleRegion = new(0, 0, 330, 120);
     private readonly AutomationService _automation;
     private readonly IGgeaLog _log;
     private readonly string _titleTemplatePath;
@@ -44,11 +46,11 @@ public sealed class StageMenuEntryService
         _log.Info($"进入关卡菜单: ({nav.CenterX},{nav.CenterY})");
         await _automation.TapAsync(serial, nav.CenterX, nav.CenterY, ct);
         if (settleDelayMs <= 5000) await Task.Delay(Math.Max(0, settleDelayMs), ct);
-        // 沿用统一标题区域；等待期间只观察，避免卡在主界面时触发额外的全局点击。
+        // 等待期间只观察，避免卡在主界面时触发额外的全局点击。
         var title = await _automation.WaitForImageAsync(serial, _titleTemplatePath,
             new WaitOptions
             {
-                Region = RecognitionRegion.PageTitle,
+                Roi = TitleRegion,
                 Threshold = .85,
                 TimeoutMs = _timeoutMs,
                 PollIntervalMs = _pollIntervalMs,

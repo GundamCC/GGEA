@@ -35,7 +35,7 @@ public class TemplateRegionCompatibilityTests
             ("home/home_screen_button_activated.png", MainScreenDetector.DefaultOptions.ButtonRoi),
             ("develop/title_develop.png", Layout("develop", "developTitle")),
             ("develop/title_roadmap_display_settings.png", Layout("develop", "roadmapDisplaySettingsTitle")),
-            ("stage/title_stage.png", RecognitionRegions.Resolve(RecognitionRegion.PageTitle, 1920, 1080)),
+            ("stage/title_stage.png", StageMenuEntryService.TitleRegion),
             ("stage/upgrade_stage.png", new Roi(0, 0, 737, 104)),
             ("stage/main_stage.png", RecognitionRegions.Resolve(RecognitionRegion.PageTitle, 1920, 1080)),
             ("stage/sortie/title_select_stage.png", new Roi(0, 0, 1000, 120)),
