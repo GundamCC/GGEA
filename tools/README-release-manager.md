@@ -49,7 +49,7 @@ pwsh -File tools/build-release-manager.ps1
 
 独立更新器的块附件与主程序一起自动生成，公开名称为 `GGEA-v目标版本-win-x64.zip.updater.blocks`。将两个块附件、完整 ZIP、摘要和索引一起上传；索引分别绑定主程序和更新器的块。旧客户端仍可读取其支持的条目。
 
-打包还会生成 `.zip.index.json.br` 和针对旧发行包的 `.index.br`、`.copy.br`。发布时上传当前 ZIP 旁全部以该 ZIP 文件名开头的附件，将共同前缀换成公开 ZIP 名，保留每个附件的完整后缀。构建机没有旧包时，脚本会下载并验证上一个公开正式包。离线打包时用 `-BaseDirectory` 指向解压的上一正式版。同目录有近期正式 ZIP 和对应校验文件时，脚本也会自动处理最近两个旧版本。发布前从上一公开版本走一次应用内更新并记录实际下载字节。
+所有旧版本共用当前 ZIP 的压缩文件列表 `.zip.index.json.br`。新机器可以直接离线打包。构建目录里有近期旧包时，脚本可为其中最近两个旧版本生成大文件的 `.copy.br` 补丁；也可用 `-BaseDirectory` 指定一个已解压的旧包。只为至少 64 KiB 且补丁比整文件压缩数据更小的变化文件生成补丁。发布时将当前 ZIP 及其同名前缀附件上传，替换为公开 ZIP 名并保留完整后缀。跳过中间版本的客户端可以直接使用同一份列表，按需读取 ZIP 中的文件。
 
 ### 文件级差异附件
 
@@ -61,7 +61,7 @@ pwsh -File tools/build-release-manager.ps1
 pwsh -File tools/package-delta.ps1 -BaseDirectory <旧版原始解压目录> -PublishDirectory <新版已验证解压目录> -OutputDirectory <输出目录>
 ```
 
-也可在 `tools/release.ps1` 或 `tools/package-dist.ps1` 传入 `-BaseDirectory <旧版原始解压目录>`，在完整 ZIP 验收后生成差异附件；不传时保留原全量流程。构建管理器的完整包按钮同时生成按需更新索引，需要差异附件时使用上述命令。可为多个旧版本分别生成附件，不覆盖已有同名产物。脚本验证两端发布身份、文件集合与摘要，复读 ZIP 验证内容；它不代替完整发布的 EXE 自检，也不联网发布。
+上述脚本单独用于需要旧协议附件的历史客户端。常规打包使用面向目标版本的文件列表及可选的大文件补丁。
 
 差异 ZIP 沿用目标完整包的一层目录，包含目标 `build-info.json`、`delta-info.json`、新增或变化文件，以及所有用户配置默认文件。`delta-info.json` 的 `schemaVersion` 为 1，`baseVersion` 是四段旧版本，`baseManifestSha256` 绑定旧包原始 `build-info.json` 字节摘要。客户端校验附件、已下载文件和基线身份，复制并校验未变化文件，构成完整暂存包后交给原更新器。只删除旧清单管理且新清单不再包含的非用户文件；未知文件、插件、日志与已有用户配置保留。相同内容文件不重复备份与替换，失败仍按日志恢复。
 

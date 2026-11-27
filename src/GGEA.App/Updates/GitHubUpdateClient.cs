@@ -56,7 +56,6 @@ public sealed class GitHubUpdateClient : IDisposable
             Delta = ReadDelta(assets, downloadRoot, version, current, size),
             Index = ReadIndex(assets, downloadRoot, name + ".index.json.br", brotli: true)
                 ?? ReadIndex(assets, downloadRoot, name + ".index.json", brotli: false),
-            BaseIndexes = ReadBaseIndexes(assets, downloadRoot, name),
             CopyPatches = ReadCopyPatches(assets, downloadRoot, name),
             Blocks = ReadBlocks(assets, downloadRoot, name + ".blocks"),
             UpdaterBlocks = ReadBlocks(assets, downloadRoot, name + ".updater.blocks")
@@ -82,21 +81,6 @@ public sealed class GitHubUpdateClient : IDisposable
         var size = asset.GetProperty("size").GetInt64();
         if (size is <= 0 or > 16 * 1024 * 1024) throw new InvalidDataException("更新索引大小无效。");
         return new(AssetUri(asset, downloadRoot, name), hash, (int)size) { Brotli = brotli };
-    }
-
-    private static Dictionary<string, UpdateRangeIndex> ReadBaseIndexes(JsonElement[] assets, string root, string package)
-    {
-        var result = new Dictionary<string, UpdateRangeIndex>(StringComparer.OrdinalIgnoreCase);
-        foreach (var asset in assets)
-        {
-            var name = asset.GetProperty("name").GetString() ?? "";
-            if (!name.StartsWith(package + ".", StringComparison.Ordinal) || !name.EndsWith(".index.br", StringComparison.Ordinal)) continue;
-            var parts = name[(package.Length + 1)..].Split('.');
-            if (parts.Length != 3 || !UpdateSourceCatalog.IsHash(parts[0])) continue;
-            if (ReadIndex([asset], root, name, brotli: true) is { } index)
-                result.Add(parts[0], index with { BaseHash = parts[0] });
-        }
-        return result;
     }
 
     private static List<UpdateCopyPatch> ReadCopyPatches(JsonElement[] assets, string root, string package)

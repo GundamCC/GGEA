@@ -9,7 +9,6 @@ var archive = Path.GetFullPath(args[0]);
 var targetRoot = args[1];
 var fullIndex = File.ReadAllBytes(archive + ".index.json");
 using var index = JsonDocument.Parse(fullIndex);
-var archiveHash = index.RootElement.GetProperty("archiveHash").GetString();
 var manifest = File.ReadAllBytes(Path.Combine(targetRoot, "build-info.json"));
 var expectedManifest = index.RootElement.GetProperty("manifest").GetBytesFromBase64();
 if (!manifest.AsSpan().SequenceEqual(expectedManifest)) throw new InvalidDataException("Target manifest mismatch");
@@ -18,8 +17,7 @@ var targetVersion = Version.Parse(target.RootElement.GetProperty("version").GetS
 var entries = index.RootElement.GetProperty("entries");
 Save(".index.json.br", Compress(fullIndex));
 
-var explicitBase = args.Length == 3;
-if (explicitBase)
+if (args.Length == 3)
 {
     var root = args[2];
     if (File.Exists(root))
@@ -43,39 +41,6 @@ foreach (var (path, _) in bases)
         throw new InvalidDataException("Invalid baseline checksum: " + path);
     ReadBaselineArchive(path);
 }
-if (!explicitBase && bases.Length == 0)
-{
-    // 新构建机也须为线上用户产出可用的增量。下载只发生在发布端，临时 ZIP 用完即删。
-    using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-    client.DefaultRequestHeaders.UserAgent.ParseAdd("GGEA-Release/1");
-    using var releases = JsonDocument.Parse(await client.GetByteArrayAsync("https://api.github.com/repositories/1435670943/releases?per_page=30"));
-    foreach (var release in releases.RootElement.EnumerateArray())
-    {
-        if (release.GetProperty("draft").GetBoolean() || release.GetProperty("prerelease").GetBoolean()) continue;
-        var tag = release.GetProperty("tag_name").GetString() ?? "";
-        if (!tag.StartsWith('v') || !Version.TryParse(tag[1..], out var version) || version >= targetVersion) continue;
-        string name = $"GGEA-{tag}-win-x64.zip";
-        var asset = release.GetProperty("assets").EnumerateArray().Single(a => a.GetProperty("name").GetString() == name);
-        var digest = asset.GetProperty("digest").GetString();
-        var url = asset.GetProperty("browser_download_url").GetString();
-        if (url != $"https://github.com/GundamCC/GGEA-SD-Gundam-G-Generation-Eternal-Assistant/releases/download/{tag}/{name}")
-            throw new InvalidDataException("Invalid official baseline URL");
-        var temp = Path.GetTempFileName();
-        try
-        {
-            using (var remote = await client.GetStreamAsync(url))
-            using (var output = File.Create(temp)) await remote.CopyToAsync(output);
-            using var file = File.OpenRead(temp);
-            if ("sha256:" + Convert.ToHexString(SHA256.HashData(file)).ToLowerInvariant() != digest)
-                throw new InvalidDataException("Official baseline checksum mismatch");
-            ReadBaselineArchive(temp);
-        }
-        finally { File.Delete(temp); }
-        return;
-    }
-    throw new InvalidDataException("No previous public release found. Supply -BaseDirectory to package an offline baseline.");
-}
-
 void ReadBaselineArchive(string path)
 {
     using var zip = ZipFile.OpenRead(path);
@@ -98,19 +63,13 @@ void Generate(byte[] previousManifest, Func<string, byte[]> readBase)
         throw new InvalidDataException("Expected an older release");
     var oldFiles = old.RootElement.GetProperty("files");
     var nextFiles = target.RootElement.GetProperty("files");
-    var changed = new Dictionary<string, JsonElement>();
     foreach (var entry in entries.EnumerateObject())
     {
         var name = entry.Name;
         var nextHash = nextFiles.GetProperty(name).GetString();
-        bool present = oldFiles.TryGetProperty(name, out var previous);
-        // 用户配置可能在运行中改变，需要保留从完整包取回发布默认文件的入口。
-        bool mutable = name.StartsWith("config/", StringComparison.OrdinalIgnoreCase) ||
-            name is "resources/stage_work_positions.json" or "resources/common/stage_work_positions.json";
-        if (present && previous.GetString() == nextHash && !mutable) continue;
-        changed.Add(name, entry.Value);
         var size = entry.Value.GetProperty("size").GetInt64();
-        if (!present || previous.GetString() == nextHash || size > FileCopyPatch.MaximumFileBytes) continue;
+        if (size is < FileCopyPatch.MinimumFileBytes or > FileCopyPatch.MaximumFileBytes ||
+            !oldFiles.TryGetProperty(name, out var previous) || previous.GetString() == nextHash) continue;
         byte[] source = readBase(name);
         if (source.Length == 0) continue;
         if (Hash(source) != previous.GetString()) throw new InvalidDataException("Invalid baseline file: " + name);
@@ -120,9 +79,7 @@ void Generate(byte[] previousManifest, Func<string, byte[]> readBase)
         if (patch.Length < entry.Value.GetProperty("compressed").GetInt64() && patch.Length <= FileCopyPatch.MaximumPatchBytes)
             Save($".{previous.GetString()}.{nextHash}.copy.br", patch);
     }
-    var descriptor = new { schema = 2, archiveHash, manifestSize = manifest.Length, manifestHash = Hash(manifest),
-        manifestPatch = MakePatch(previousManifest, manifest), entries = changed };
-    Save("." + Hash(previousManifest) + ".index.br", Compress(JsonSerializer.SerializeToUtf8Bytes(descriptor)));
+
 }
 
 static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();

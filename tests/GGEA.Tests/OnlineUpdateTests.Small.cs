@@ -43,6 +43,58 @@ public sealed partial class OnlineUpdateTests
         Assert.Equal(0, output.Length);
     }
 
+    [Theory]
+    [InlineData("small", 0, false)]
+    [InlineData("unrelated", 0, false)]
+    [InlineData("missing", 1, false)]
+    [InlineData("available", 1, true)]
+    [InlineData("corrupt", 1, false)]
+    public async Task OptionalPatch_IsSelectedByContentAndOnlyNetworkFailureFallsBack(string scenario, int requestsExpected, bool used)
+    {
+        using var temp = new TempDirectory();
+        var size = scenario == "small" ? 37 : FileCopyPatch.MinimumFileBytes;
+        var source = new byte[size];
+        new Random(27).NextBytes(source);
+        var path = Path.Combine(temp.Path, "component.dll");
+        File.WriteAllBytes(path, source);
+        var before = GGEA.Updater.UpdateFiles.Hash(path);
+        source[0] ^= 1;
+        var after = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(source)).ToLowerInvariant();
+        using var recipe = new MemoryStream();
+        using (var compression = new BrotliStream(recipe, CompressionLevel.Optimal, true))
+        using (var writer = new BinaryWriter(compression))
+        {
+            writer.Write(1);
+            writer.Write(source[0]);
+            writer.Write(-(size - 1));
+            writer.Write(1);
+        }
+        var bytes = recipe.ToArray();
+        var digest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
+        var release = new UpdateRelease(new(1,4,24,2), "", "p.zip", new("https://github.com/p.zip"), size * 2, null, after)
+        {
+            CopyPatches = [new(after, scenario == "unrelated" ? after : before, new("https://github.com/file.copy.br"), bytes.Length, digest)]
+        };
+        int requests = 0;
+        if (scenario == "corrupt") bytes[0] ^= 1;
+        using var http = new UpdateHttpTransport(new ReplyHandler(_ =>
+        {
+            requests++;
+            return new(scenario == "missing" ? HttpStatusCode.NotFound : HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
+        }));
+        using var output = File.Create(Path.Combine(temp.Path, "new.dll"));
+        var apply = CopyPatchDownload.TryPrepareAsync(http, release, temp.Path, "component.dll", after, size, size, output, default);
+        if (scenario == "corrupt") await Assert.ThrowsAsync<InvalidDataException>(() => apply);
+        else Assert.Equal(used, await apply);
+        Assert.Equal(requestsExpected, requests);
+        if (used)
+        {
+            output.Position = 0;
+            Assert.Equal(after, Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(output)).ToLowerInvariant());
+        }
+        else Assert.Equal(0, output.Length);
+    }
+
     [Fact]
     public async Task SmallRelease_MissingAttachmentsNeverDownloadsFullZip()
     {

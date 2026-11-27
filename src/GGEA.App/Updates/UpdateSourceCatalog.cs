@@ -22,7 +22,6 @@ public sealed record UpdateRelease(Version Version, string Notes, string Package
     public string SourceId { get; init; } = "github";
     public string SourceName { get; init; } = "GitHub";
     public IReadOnlyCollection<string> AllowedHosts { get; init; } = UpdateHttpTransport.GitHubHosts;
-    internal IReadOnlyDictionary<string, UpdateRangeIndex> BaseIndexes { get; init; } = new Dictionary<string, UpdateRangeIndex>();
     internal IReadOnlyList<UpdateCopyPatch> CopyPatches { get; init; } = [];
     public UpdateBlockAsset? UpdaterBlocks { get; init; }
     public UpdateBlockAsset? Blocks { get; init; }
@@ -34,7 +33,6 @@ public sealed record UpdateBlockAsset(Uri Url, long Size);
 
 public sealed record UpdateRangeIndex(Uri Url, string Sha256, int Size)
 {
-    internal string? BaseHash { get; init; }
     internal bool Brotli { get; init; }
 }
 

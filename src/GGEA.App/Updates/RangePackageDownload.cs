@@ -26,14 +26,11 @@ internal static class RangePackageDownload
             var bytes = await VerifiedUpdateAsset.ReadAsync(http, update, index.Url, index.Size, index.Sha256, token);
             using var document = ParseIndex(bytes, index.Brotli);
             var root = document.RootElement;
-            if (root.GetProperty("schema").GetInt32() != (index.BaseHash is null ? 1 : 2) ||
+            if (root.GetProperty("schema").GetInt32() != 1 ||
                 !string.Equals(root.GetProperty("archiveHash").GetString(), update.Sha256, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("更新索引与正式附件不匹配。");
             var manifestPath = UpdateFiles.SafePath(package, "build-info.json");
-            if (index.BaseHash is null)
-                await File.WriteAllBytesAsync(manifestPath, root.GetProperty("manifest").GetBytesFromBase64(), token);
-            else
-                RestoreManifest(root, installation, index.BaseHash, manifestPath, token);
+            await File.WriteAllBytesAsync(manifestPath, root.GetProperty("manifest").GetBytesFromBase64(), token);
             var manifest = UpdateManifest.Read(package);
             if (manifest.Version != update.Version.ToString(4) || !manifest.Files.ContainsKey("GGEA.Updater.exe"))
                 throw new InvalidDataException("更新索引版本或文件集合无效。");
@@ -56,26 +53,11 @@ internal static class RangePackageDownload
                 expanded += file.Size;
                 var target = UpdateFiles.SafePath(package, file.Path);
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                if (!TryReuse(installation, file.Path, file.Size, hash, target)) pending.Add(file);
+                if (TryReuse(installation, file.Path, file.Size, hash, target)) continue;
+                if (UpdateFiles.IsUserFile(file.Path) && TryReuse(PublishedDefaults.CacheRoot(installation), file.Path, file.Size, hash, target)) continue;
+                pending.Add(file);
             }
-            if (paths.Count != manifest.Files.Count)
-            {
-                if (index.BaseHash is null) throw new InvalidDataException("更新索引缺少文件。");
-                foreach (var (path, hash) in manifest.Files)
-                {
-                    if (paths.Contains(path)) continue;
-                    token.ThrowIfCancellationRequested();
-                    var source = new FileInfo(UpdateFiles.SafePath(installation, path));
-                    if (!source.Exists || source.Length > UpdatePackage.MaximumExpandedBytes - expanded)
-                        throw new UpdateBaseUnavailableException("本机文件需要修复。");
-                    var length = source.Length;
-                    var dest = UpdateFiles.SafePath(package, path);
-                    Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-                    if (!TryReuse(installation, path, length, hash, dest))
-                        throw new UpdateBaseUnavailableException("本机文件需要修复。");
-                    expanded += length;
-                }
-            }
+            if (paths.Count != manifest.Files.Count) throw new InvalidDataException("更新索引缺少文件。");
             var total = pending.Sum(file => file.Size);
             long written = 0;
             var buffer = new byte[81920];
@@ -95,8 +77,6 @@ internal static class RangePackageDownload
                     "GGEA.Updater.exe" => (update.UpdaterBlocks, "updaterBlocks"),
                     _ => (null, "")
                 };
-                if (index.BaseHash is not null && blocks is not null)
-                    throw new UpdateBaseUnavailableException("正在按实际安装内容修复程序文件。");
                 if (blocks is not null && root.TryGetProperty(mapName, out var blockMap) &&
                     await ExeBlockDownload.TryPrepareAsync(http, update, blocks, blockMap, installation, file.Path, output,
                         file.Size, file.Compressed, token))
@@ -132,6 +112,7 @@ internal static class RangePackageDownload
                 if (fileBytes != file.Size) throw new InvalidDataException("更新文件不完整。");
             }
             manifest.Verify(package, cancellationToken: token);
+            PublishedDefaults.Remember(installation, package);
             progress.Report(100);
             return package;
         }
@@ -140,20 +121,6 @@ internal static class RangePackageDownload
             UpdatePackageDownloader.DeleteDownload(workspace);
             throw;
         }
-    }
-
-    private static void RestoreManifest(JsonElement root, string installation, string baseHash, string target, CancellationToken token)
-    {
-        var size = root.GetProperty("manifestSize").GetInt32();
-        if (size is <= 0 or > 8 * 1024 * 1024) throw new InvalidDataException("更新文件列表大小无效。");
-        using var source = File.OpenRead(UpdateFiles.SafePath(installation, "build-info.json"));
-        if (source.Length > 8 * 1024 * 1024 || !Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(source))
-                .Equals(baseHash, StringComparison.OrdinalIgnoreCase))
-            throw new UpdateBaseUnavailableException("本机版本信息已改变。");
-        using var recipe = new MemoryStream(root.GetProperty("manifestPatch").GetBytesFromBase64());
-        using (var output = File.Create(target)) FileCopyPatch.Apply(source, recipe, output, size, token);
-        if (!UpdateFiles.Hash(target).Equals(root.GetProperty("manifestHash").GetString(), StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("目标文件列表校验失败。");
     }
 
     // 压缩附件经过摘要校验后仍限制展开大小，避免有缺陷的发布索引耗尽内存。
@@ -191,7 +158,7 @@ internal static class RangePackageDownload
             var path = UpdateFiles.SafePath(installation, relativePath);
             if (!File.Exists(path) || new FileInfo(path).Length != size ||
                 !UpdateFiles.Hash(path).Equals(hash, StringComparison.OrdinalIgnoreCase)) return false;
-            File.Copy(path, target);
+            File.Copy(path, target, overwrite: true);
             return new FileInfo(target).Length == size;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }

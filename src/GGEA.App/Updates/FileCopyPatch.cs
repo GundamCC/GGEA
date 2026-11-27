@@ -8,6 +8,8 @@ namespace GGEA.App.Updates;
 /// <summary>应用已认证的 Brotli 复制指令流：正长度为新字节，负长度从旧文件指定偏移复制。</summary>
 internal static class FileCopyPatch
 {
+    // 小文件直接取压缩后的目标文件，避免为几 KB 的数据增加发布附件。
+    public const int MinimumFileBytes = 64 * 1024;
     public const int MaximumPatchBytes = 8 * 1024 * 1024;
     public const int MaximumFileBytes = 256 * 1024 * 1024;
 

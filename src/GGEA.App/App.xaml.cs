@@ -127,6 +127,7 @@ public partial class App : Application
             return;
         }
 
+        if (_installation is not null) Updates.PublishedDefaults.Remember(AppContext.BaseDirectory, AppContext.BaseDirectory);
         base.OnStartup(e);
     }
 
