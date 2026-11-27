@@ -81,6 +81,7 @@ public class EventStagesDailyTests
     }
 
     [Theory]
+    [InlineData(6)]
     [InlineData(9)]
     [InlineData(10)]
     public async Task FullDailyReplayChecksMissionAfterSingleNormalSkip(int finalCount)
@@ -97,6 +98,13 @@ public class EventStagesDailyTests
         {
             Enter();
             steps.Add(("hard3done",30 + i*190, i == 2 ? 458 : 394));
+            // HARD 2 的次数已手动用完时，只允许返回检查使命，不允许点击略过。
+            if (finalCount == 6 && i == 2)
+            {
+                steps.Add(("hard2limit",122,48));
+                Mission("progress3");
+                continue;
+            }
             Execute(i == 1 ? "nativehard1" : $"hard{i}", "skip1");
             if (i == 3) break;
             steps.Add(($"hard{i}done",122,48));
@@ -111,6 +119,15 @@ public class EventStagesDailyTests
 
         byte[] Frame(string key)
         {
+            if (key == "hard2limit")
+            {
+                var frame = ImageCodec.DecodePng(Frame("hard2done"));
+                var limit = ImageCodec.DecodePng(File.ReadAllBytes(ConfigService.ResolvePath("resources/templates/stage/skip/count_limit.png")));
+                for (int y = 0; y < limit.Height; y++)
+                    Buffer.BlockCopy(limit.Bgra, y * limit.Width * 4, frame.Bgra,
+                        ((710 - limit.Height / 2 + y) * frame.Width + 1674 - limit.Width / 2) * 4, limit.Width * 4);
+                return ImageCodec.EncodePng(frame.Bgra, frame.Width, frame.Height);
+            }
             bool native = key.StartsWith("progress") || key == "nativehard1";
             var name = native ? $"limited-native720-{(key == "nativehard1" ? "hard1" : key)}" : $"limited-daily-{key}";
             var raw = File.ReadAllBytes(ConfigService.ResolvePath($"Fixtures/Navigation/{name}.png"));
@@ -144,7 +161,7 @@ public class EventStagesDailyTests
         });
         var message = await new EventStagesService(automation,"test").DailyAsync(settlement,
             new UiLayoutService(log).Load(ConfigService.ResolvePath("resources/ui_layout/stage.json")), navigation, default, false);
-        if (finalCount < 10) Assert.Contains("9/10", message);
+        if (finalCount < 10) Assert.Contains($"{finalCount}/10", message);
         Assert.Equal(steps.Count,index);
     }
 
