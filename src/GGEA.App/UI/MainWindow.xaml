@@ -217,6 +217,7 @@
                                 <StackPanel Margin="0,8,0,0">
                                     <TextBlock Text="{loc:Text Source='请在非战斗界面使用。'}" Style="{StaticResource HintText}"/>
                                     <Grid Margin="0,10,0,0">
+                                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="12"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <TextBlock Text="{loc:Text Source='当前活动'}" Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                         <ComboBox x:Name="LimitedActivity" Grid.Column="1" HorizontalAlignment="Stretch" Style="{StaticResource ComboBoxDark}" DisplayMemberPath="Work"/>
@@ -224,15 +225,12 @@
                                         <ComboBox x:Name="LimitedDifficulty" Grid.Column="3" Style="{StaticResource ComboBoxDark}" Width="130" SelectedIndex="0">
                                             <ComboBoxItem Content="EXPERT"/><ComboBoxItem Content="HARD"/><ComboBoxItem Content="NORMAL"/>
                                         </ComboBox>
-                                    </Grid>
-                                    <Grid Margin="0,12,0,0">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="76"/><ColumnDefinition/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="{loc:Text Source='立即执行'}" Foreground="{DynamicResource Brush.Text}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                        <UniformGrid Grid.Column="1" Columns="4" Rows="1">
-                                            <Button x:Name="EventProgress" Content="{loc:Text Source='事件关卡推图'}" Click="QueueEventProgress_Click" Style="{StaticResource ButtonSecondary}" Margin="0,0,6,0" Padding="5,0"/>
-                                            <Button x:Name="EventDaily" Content="{loc:Text Source='每日10次关卡'}" Click="LimitedStart_Click" Style="{StaticResource ButtonSecondary}" Margin="0,0,6,0" Padding="5,0"/>
-                                            <Button x:Name="LimitedStart" Content="{loc:Text Source='BOSS 略过'}" Click="LimitedStart_Click" Style="{StaticResource ButtonSecondary}" Margin="0,0,6,0" Padding="5,0"/>
-                                            <Button x:Name="MedalStart" Content="{loc:Text Source='奖章自动兑换'}" Click="LimitedStart_Click" Style="{StaticResource ButtonSecondary}" Margin="0,0,6,0" Padding="5,0"/>
+                                        <TextBlock Grid.Row="2" Text="{loc:Text Source='立即执行'}" Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <UniformGrid Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Columns="4" Rows="1" Margin="-3,0,-3,0">
+                                            <Button x:Name="EventProgress" Content="{loc:Text Source='事件关卡推图'}" Click="QueueEventProgress_Click" Style="{StaticResource ButtonSecondary}" Margin="3,0" Padding="5,0"/>
+                                            <Button x:Name="EventDaily" Content="{loc:Text Source='每日10次关卡'}" Click="LimitedStart_Click" Style="{StaticResource ButtonSecondary}" Margin="3,0" Padding="5,0"/>
+                                            <Button x:Name="LimitedStart" Content="{loc:Text Source='BOSS 略过'}" Click="LimitedStart_Click" Style="{StaticResource ButtonSecondary}" Margin="3,0" Padding="5,0"/>
+                                            <Button x:Name="MedalStart" Content="{loc:Text Source='奖章自动兑换'}" Click="LimitedStart_Click" Style="{StaticResource ButtonSecondary}" Margin="3,0" Padding="5,0"/>
                                         </UniformGrid>
                                     </Grid>
                                     <Border BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" Margin="0,12,0,0" Padding="0,10,0,0">
