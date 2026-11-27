@@ -20,6 +20,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
     private readonly TemplateImages _challenge = new(Root + "button_challenge.png");
     private readonly TemplateImages _report = new(Root + "button_report.png");
     private readonly TemplateImages _dialogFrame = new(Root + "dialog_com_frame.png");
+    private readonly TemplateImages _panelCorner = new(Root + "dialog_panel_corner.png");
     private readonly TemplateImages _skip = new(Root + "dialog_skip.png");
     private readonly TemplateImages _dialogAdvance = new(Root + "dialog_advance.png");
     private readonly TemplateImages _complete = new(Root + "title_report_complete.png");
@@ -29,13 +30,22 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
     private readonly TemplateImages _info = new(Root + "button_request_info.png");
     private readonly TemplateImages _deliver = new(Root + "button_deliver.png");
     private readonly TemplateImages _deliveryComplete = new(Root + "title_delivery_complete.png");
+    private readonly TemplateImages _strengthTitle = new(Root + "title_strengthen_troops.png");
+    private readonly TemplateImages _unitTitle = new(Root + "title_deliver_unit.png");
+    private readonly TemplateImages _fundingTitle = new(Root + "title_funding.png");
+    private readonly TemplateImages _weeklyReward = new(Root + "title_weekly_reward.png");
+    private readonly TemplateImages _weeklyNext = new(Root + "weekly_tap_to_next.png");
+    private readonly FundingRequest? _funding = ocr is null ? null : new(ocr);
     private readonly TemplateImages _back = new("resources/templates/common/back.png");
 
     private enum Control { Accept, Challenge, Report, Deliver }
-    private enum ArrivalKind { List, Dialogue, Detail, Complete, Reward }
-    private sealed record Detail(Control Action, Roi Back, Roi Button);
+    private enum ArrivalKind { List, Dialogue, Detail, Complete, Reward, WeeklyReward }
+    private enum RequestKind { Unknown, Funding, Strength, UnitDelivery }
+    private readonly record struct Title(RequestKind Kind, Roi Region);
+    private sealed record Detail(Control Action, Roi Back, Roi Button, Title Title, int? Amount);
     private sealed record Arrival(ArrivalKind Kind, Detail? Detail = null, Roi Button = default);
-    private sealed record OfferScreen(Detail Detail, bool Strength, StrengthRequest? Request);
+    private sealed record OfferScreen(Detail Detail, StrengthRequest? Request);
+    private sealed record UnitOfferScreen(DeliveryOffer? Offer);
 
     private static ScreenImage LoadAcceptLabel()
     {
@@ -72,27 +82,46 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                     await TapAsync(serial, detail.Button, ct);
                     var arrival = await FollowDialogueAsync(serial, reporting: false, ct);
                     accepted++;
-                    if (arrival.Kind == ArrivalKind.List) continue;
-                    detail = arrival.Detail!;
+                    var initialKind = detail.Title.Kind;
+                    if (arrival.Kind == ArrivalKind.List)
+                    {
+                        if (initialKind != RequestKind.Funding) continue;
+                        var list = await WaitForListAsync(serial, ct);
+                        if ((list.ActiveMask & (1 << slot)) == 0) continue;
+                        await automation.TapAsync(serial, 427 + 535 * slot, 410, ct);
+                        detail = await WaitAsync(serial, f => ReadDetail(f, ct), ct) ?? throw Unknown();
+                    }
+                    else detail = arrival.Detail!;
+                    if (initialKind == RequestKind.Funding &&
+                        (detail.Title.Kind != initialKind || detail.Action != Control.Deliver)) throw Unknown();
                 }
 
-                if (detail.Action == Control.Deliver && _catalog is not null)
+                if (detail.Title.Kind == RequestKind.Funding && detail.Action == Control.Deliver)
+                {
+                    if (detail.Amount is not { } amount) throw FundingUnknown();
+                    await TapAsync(serial, detail.Button, ct);
+                    var confirmation = await WaitAsync(serial, frame => _funding!.ReadConfirmation(frame, amount, ct), ct)
+                        ?? throw FundingUnknown();
+                    await TapAsync(serial, confirmation.Button, ct);
+                    await FinishDeliveryAsync(serial, slot, ct);
+                    reported++;
+                    continue;
+                }
+                if (detail.Title.Kind == RequestKind.UnitDelivery && detail.Action == Control.Deliver)
                 {
                     var evidence = await WaitAsync(serial, frame =>
                     {
-                        if (ReadDetail(frame, ct)?.Action != Control.Deliver) return null;
-                        var offer = _catalog.ReadDelivery(frame, ct, out var isDelivery);
-                        return Tuple.Create(isDelivery, offer);
+                        if (ReadDetail(frame, ct) is not { Action: Control.Deliver, Title.Kind: RequestKind.UnitDelivery } current)
+                            return null;
+                        return new UnitOfferScreen(_catalog!.ReadDelivery(frame, current.Title.Region, ct));
                     }, ct) ?? throw Unknown();
-                    if (evidence.Item2 is { } delivery)
+                    if (evidence.Offer is { } delivery)
                     {
                         await TapAsync(serial, detail.Button, ct);
                         var service = new UnitDeliveryService(automation, ocr!, protection ?? new(), delivery.MinimumLevel);
                         if (await service.SubmitAsync(serial, ct))
                         {
-                            await FollowDialogueAsync(serial, reporting: true, ct, delivering: true);
-                            var list = await WaitForListAsync(serial, ct);
-                            if ((list.ActiveMask & (1 << slot)) != 0) throw Unknown();
+                            await FinishDeliveryAsync(serial, slot, ct);
                             reported++;
                             continue;
                         }
@@ -100,14 +129,14 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                         detail = await WaitAsync(serial, frame => ReadDetail(frame, ct) is { Action: Control.Deliver } d ? d : null, ct)
                             ?? throw Unknown();
                     }
-                    else if (evidence.Item1)
+                    else
                         failures.Add(L.Format($"第 {slot + 1} 栏交付委托未能与表格核对"));
                 }
-                else if (_catalog is not null)
+                else if (detail.Title.Kind == RequestKind.Strength)
                 {
                     var offer = await WaitOfferAsync(serial, ct);
                     detail = offer.Detail;
-                    if (offer.Strength && offer.Request is null)
+                    if (offer.Request is null)
                         failures.Add(L.Format($"第 {slot + 1} 栏强化委托未能与表格核对"));
                     if (offer.Request is { } request)
                     {
@@ -147,10 +176,16 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
         await WaitAsync(serial, frame =>
         {
             var detail = ReadDetail(frame, ct);
-            if (detail is null || detail.Action == Control.Accept) return null;
-            var request = _catalog!.Read(frame, ct, out var strength);
-            return new OfferScreen(detail, strength, request);
+            if (detail is null || detail.Action == Control.Accept || detail.Title.Kind != RequestKind.Strength) return null;
+            return new OfferScreen(detail, _catalog!.Read(frame, detail.Title.Region, ct));
         }, ct) ?? throw Unknown();
+
+    private async Task FinishDeliveryAsync(string serial, int slot, CancellationToken ct)
+    {
+        await FollowDialogueAsync(serial, reporting: true, ct, delivering: true);
+        var list = await WaitForListAsync(serial, ct);
+        if ((list.ActiveMask & (1 << slot)) != 0) throw Unknown();
+    }
 
     // 报告结算遮罩后面仍可能看见上一句台词；先识别结算，确认新页面后才继续。
     private async Task<Arrival> FollowDialogueAsync(string serial, bool reporting, CancellationToken ct, bool delivering = false)
@@ -158,6 +193,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
         var deadline = Environment.TickCount64 + 2 * GameTiming.RecognitionTimeoutMs;
         var closedComplete = false;
         var closedReward = false;
+        var closedWeekly = false;
         while (Environment.TickCount64 < deadline)
         {
             var budget = (int)Math.Min(GameTiming.RecognitionTimeoutMs, deadline - Environment.TickCount64);
@@ -165,6 +201,9 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
             {
                 if (reporting)
                 {
+                    if (closedReward && _weeklyReward.Match(_matcher, frame, .94, new(801, 329, 314, 103), ct) is not null &&
+                        _weeklyNext.Match(_matcher, frame, .94, new(806, 916, 307, 82), ct) is not null)
+                        return closedWeekly ? null : new Arrival(ArrivalKind.WeeklyReward);
                     if (_reward.Match(_matcher, frame, .93, new Roi(823, 29, 275, 122), ct) is not null)
                     {
                         var ok = _ok.Match(_matcher, frame, .87, new Roi(744, 908, 440, 152), ct);
@@ -180,10 +219,12 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                     var detail = ReadDetail(frame, ct);
                     return !reporting && detail is { Action: not Control.Accept } ? new Arrival(ArrivalKind.Detail, detail) : null;
                 }
-                return !closedComplete && !closedReward &&
-                    _dialogFrame.Match(_matcher, frame, .92, new Roi(245, 126, 185, 98), ct) is not null &&
-                    (_dialogAdvance.Match(_matcher, frame, .93, new Roi(415, 729, 1230, 195), ct) is not null ||
-                     _skip.Match(_matcher, frame, .96, new Roi(1686, 26, 153, 80), ct) is not null)
+                if (closedComplete || closedReward) return null;
+                var skip = _skip.Match(_matcher, frame, .96, new(1686, 26, 153, 80), ct) is not null;
+                if (skip && _panelCorner.Match(_matcher, frame, .96, new(244, 886, 41, 59), ct) is not null)
+                    return new Arrival(ArrivalKind.Dialogue);
+                return _dialogFrame.Match(_matcher, frame, .92, new(245, 126, 185, 98), ct) is not null &&
+                    (skip || _dialogAdvance.Match(_matcher, frame, .93, new(415, 729, 1230, 195), ct) is not null)
                     ? new Arrival(ArrivalKind.Dialogue) : null;
             }, ct, budget);
             if (state is null || Environment.TickCount64 >= deadline) break;
@@ -192,6 +233,11 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
             {
                 await TapAsync(serial, state.Button, ct);
                 closedReward = true;
+            }
+            else if (state.Kind == ArrivalKind.WeeklyReward)
+            {
+                await automation.TapAsync(serial, 960, 950, ct);
+                closedWeekly = true;
             }
             else
             {
@@ -215,11 +261,27 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
         var accept = _matcher.Match(frame.Bgra, frame.Width, frame.Height, _acceptLabel.Bgra,
             _acceptLabel.Width, _acceptLabel.Height, .93, ActionLabelArea, ct: ct);
         if ((accept is null ? 0 : 1) + (report is null ? 0 : 1) + (challenge is null ? 0 : 1) + (deliver is null ? 0 : 1) != 1) return null;
-        if (deliver is not null) return new(Control.Deliver, back.Region, deliver.Region);
-        if (report is not null) return new(Control.Report, back.Region, report.Region);
-        return challenge is not null ? new(Control.Challenge, back.Region, challenge.Region) :
-            new(Control.Accept, back.Region, accept!.Region);
+        var title = _catalog is null ? default : ReadTitle(frame, ct);
+        if (deliver is not null)
+            return new(Control.Deliver, back.Region, deliver.Region, title,
+                title.Kind == RequestKind.Funding ? _funding!.ReadAmount(frame, ct) : null);
+        if (report is not null) return new(Control.Report, back.Region, report.Region, title, null);
+        return challenge is not null ? new(Control.Challenge, back.Region, challenge.Region, title, null) :
+            new(Control.Accept, back.Region, accept!.Region, title, null);
     }
+
+    // 同帧标题决定后续流程。只有强化和机体交付分支需要访问角色立绘目录。
+    private Title ReadTitle(ScreenImage frame, CancellationToken ct)
+    {
+        var area = new Roi(1340, 225, 300, 80);
+        if (_fundingTitle.Match(_matcher, frame, .96, area, ct) is { } funds) return new(RequestKind.Funding, funds.Region);
+        if (_unitTitle.Match(_matcher, frame, .96, area, ct) is { } unit) return new(RequestKind.UnitDelivery, unit.Region);
+        if (_strengthTitle.Match(_matcher, frame, .93, area, ct) is { } strength) return new(RequestKind.Strength, strength.Region);
+        return default;
+    }
+
+    private static InvalidOperationException FundingUnknown() =>
+        new(L.Text("无法核对调度资金的 CAPITAL 交付金额或确认按钮，已停止本轮。"));
 
     private Task TapAsync(string serial, Roi button, CancellationToken ct) =>
         automation.TapAsync(serial, button.CenterX, button.CenterY, ct);

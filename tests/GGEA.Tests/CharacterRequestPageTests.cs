@@ -99,6 +99,79 @@ public class CharacterRequestPageTests
         Assert.Equal(new CharacterRequestPage.ListState(2, 2), new CharacterRequestPage().ReadList(frame, default));
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    public async Task Funding_CompletesWithoutPortrait(bool alreadyAccepted, bool weekly)
+    {
+        // 所有详情的立绘区均为空。只有调度资金标题与相符的 CAPITAL 数量可以触发交付。
+        var before = CreateList(true, false, true);
+        void CompleteSlot(int slot)
+        {
+            int dx = 535 * slot;
+            for (int y = 604; y < 678; y++) Array.Clear(before.Bgra, (y * 1920 + 191 + dx) * 4, 166 * 4);
+            PasteTemplate(before, "card_refresh.png", 272 + dx, 644);
+        }
+        CompleteSlot(1);
+        var list = Encode(before);
+        CompleteSlot(0);
+        var finished = Encode(before);
+
+        var detail = Empty();
+        PasteTemplate(detail, "title_character_requests.png", 216, 17);
+        PasteTemplate(detail, "button_next_character.png", 1869, 502);
+        PasteTemplate(detail, "title_funding.png", 1403, 246);
+        Paste(detail, ConfigService.ResolvePath("resources/templates/common/back.png"), 40, 14);
+        PasteTemplate(detail, "button_accept.png", 1442, 798);
+        var accept = Encode(detail);
+        PasteTemplate(detail, "button_deliver.png", 1584, 837);
+        Paste(detail, Path.Combine(AppContext.BaseDirectory, "Fixtures/Base/funding_progress.png"), 1680, 404);
+        var deliver = Encode(detail);
+
+        var dialog = Empty();
+        PasteTemplate(dialog, "title_confirm_delivery.png", 874, 216);
+        PasteTemplate(dialog, "button_submit_delivery.png", 1103, 822);
+        using var ocr = new OnnxTextRecognizer();
+        var funding = new FundingRequest(ocr);
+        Assert.Null(funding.ReadConfirmation(dialog, 5000, default));
+        Paste(dialog, Path.Combine(AppContext.BaseDirectory, "Fixtures/Base/funding_cost.png"), 503, 541);
+        Assert.Null(funding.ReadConfirmation(dialog, 1000, default));
+        Assert.Equal(5000, funding.ReadAmount(detail, default));
+        var confirm = Encode(dialog);
+
+        var complete = Empty();
+        PasteTemplate(complete, "title_delivery_complete.png", 817, 337);
+        var reward = Empty();
+        PasteTemplate(reward, "title_claim_result.png", 868, 60);
+        var ok = ConfigService.ResolvePath("resources/templates/dialog/button_ok.png");
+        var okImage = ImageCodec.DecodePng(File.ReadAllBytes(ok));
+        Paste(reward, ok, 960 - okImage.Width / 2, 995 - okImage.Height / 2);
+        var milestone = Empty();
+        PasteTemplate(milestone, "title_weekly_reward.png", 821, 349);
+        PasteTemplate(milestone, "weekly_tap_to_next.png", 823, 932);
+
+        var steps = new List<(byte[] Screen, (int, int) Tap)> { (list, (427, 410)) };
+        if (!alreadyAccepted)
+        {
+            steps.Add((accept, (1623, 857)));
+            steps.Add((list, (427, 410))); // 承接后回到列表时，重新打开同一栏并核对标题。
+        }
+        steps.Add((deliver, (1623, 857)));
+        steps.Add((confirm, (1151, 848)));
+        steps.Add((Encode(complete), (960, 540)));
+        steps.Add((Encode(reward), (960, 995)));
+        if (weekly) steps.Add((Encode(milestone), (960, 950)));
+        var adb = new FakeAdbService(list);
+        adb.ScreenshotProvider = () => adb.Taps.Count < steps.Count ? steps[adb.Taps.Count].Screen : finished;
+        var log = new TestLog();
+        using var automation = new AutomationService(adb, new TemplateMatcher(), log);
+        var result = await new CharacterRequestService(automation, log, ocr).RunFromListAsync("serial");
+        Assert.Equal(alreadyAccepted ? 0 : 1, result.Accepted);
+        Assert.Equal(1, result.Reported);
+        Assert.Empty(result.FailedRoles);
+        Assert.Equal(steps.Select(step => step.Tap), adb.Taps);
+    }
+
     private const string Root = "resources/templates/base/character_requests/";
     private static byte[] Encode(ScreenImage image) => ImageCodec.EncodePng(image.Bgra, image.Width, image.Height);
     private static ScreenImage Empty() => new()

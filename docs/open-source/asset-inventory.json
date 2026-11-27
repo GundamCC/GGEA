@@ -33,12 +33,42 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/common/templates/base/character_requests/capital_label.png",
+      "sha256": "07f72269e00aafba5423065c653eed4878d8c61898650adbca01579b5d32c88e",
+      "width": 169,
+      "height": 51,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu 1920x1080, character request funding and settlement",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/common/templates/base/character_requests/delivery_selected_one.png",
       "sha256": "5f975b3bffa3923fbb089bb8397c51d2f672c134108c5d969bbae686690953c4",
       "width": 40,
       "height": 36,
       "category": "recognition-resource",
       "source": "Game-derived appearance; MuMu 1920x1080, character request unit delivery screen",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/common/templates/base/character_requests/dialog_panel_corner.png",
+      "sha256": "d6cffd2b06e9f1131ffa71f846c2d667ce0398900babbb8f511f8172be25f423",
+      "width": 31,
+      "height": 49,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu 1920x1080, character request dialogue",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/common/templates/base/character_requests/weekly_tap_to_next.png",
+      "sha256": "df0c00732f443a20638b7a3a45adfb4fb309dfc380e9e787e74bf63c26833748",
+      "width": 273,
+      "height": 53,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu 1920x1080, character request funding and settlement",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
@@ -3423,6 +3453,16 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "resources/zh-CN/templates/base/character_requests/title_funding.png",
+      "sha256": "22ffe7e135f8362090203915086faf2c037be40ce7bafc28d7f02b39eb710dd5",
+      "width": 135,
+      "height": 35,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu 1920x1080, character request funding and settlement",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
       "path": "resources/zh-CN/templates/base/character_requests/title_report_complete.png",
       "sha256": "d5c7d3409032306506be69403d64b9b99c4d5a06433677e2c2efc4dd51421426",
       "width": 290,
@@ -3449,6 +3489,16 @@
       "height": 34,
       "category": "recognition-resource",
       "source": "Game-derived appearance; zh-CN Character Requests, MuMu 1920x1080, crop (1405,248,133,34)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/character_requests/title_weekly_reward.png",
+      "sha256": "1729f2f86881b4608bc78acc466e7389cb1b40165b997b72d68b88f4b8b69586",
+      "width": 274,
+      "height": 63,
+      "category": "recognition-resource",
+      "source": "Game-derived appearance; MuMu 1920x1080, character request funding and settlement",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
