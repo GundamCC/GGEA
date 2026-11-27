@@ -52,7 +52,7 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
     public async Task RunAsync(CancellationToken ct)
     {
         readings.Clear();
-        foreach (var key in new[] { "补给余额", "结果余额", "本批费用", "关键报酬", "一般报酬" }) readings[key] = "尚未读取";
+        foreach (var key in new[] { "补给余额", "上一兑换结果页余额", "当前按钮报价", "关键报酬", "一般报酬" }) readings[key] = "尚未读取";
         submission = "尚未提交";
         lastFrame = null;
         try { await ExchangeAsync(ct); }
@@ -91,6 +91,7 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
         var pool = await ReadPool(ct);
         if (entry == Complete && !pool.IsNew) throw Failure("复核重置后新池，两类已获得数应为零");
         var parent = Supply;
+        int? lastSettledCost = null;
 
         while (true)
         {
@@ -108,8 +109,8 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             await Click(Status, ModalClose, ct);
             parent = await WaitParent(ct);
             if (parent == Results) await Click(Results, ResultClose, ct);
-            var batch = await SubmitFromSupply(balance, pool.Remaining, ct);
-            if (batch == 0) { log.Info($"奖章兑换：补给页批量按钮已置灰，余额 {balance}。"); return; }
+            var batch = await SubmitFromSupply(balance, pool.Remaining, ct, lastSettledCost);
+            if (batch == 0) return;
 
             await OpenStatus(Results, ct, balance);
             var after = await ReadPool(ct);
@@ -121,16 +122,17 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
                 gain = after.TryGainSince(pool, batch);
             }
             var gained = gain ?? throw Failure($"核对本批到账，最多 {batch} 份，兑换前 {pool}，当前 {after}");
-            balance -= MedalCost * gained;
+            lastSettledCost = MedalCost * gained;
+            balance -= lastSettledCost.Value;
             if (balance < 0) throw Failure($"核对扣款，推算余额 {balance}");
             log.Info($"奖章机体补给：本批获得 {gained} 份，关键 {after.Key.Obtained}/{after.Key.Total}，一般 {after.General.Obtained}/{after.General.Total}。");
-            submission = $"上一批已核对到账 {gained} 份";
+            submission = $"上一批已核对到账 {gained} 份，实际费用 {lastSettledCost} 枚，扣款后推算余额 {balance} 枚";
             pool = after;
         }
     }
 
     /// <summary>每轮关闭结果后从补给页重新报价。两帧的余额、按钮状态与费用一致才提交一次。</summary>
-    internal async Task<int> SubmitFromSupply(int expectedBalance, int remaining, CancellationToken ct)
+    internal async Task<int> SubmitFromSupply(int expectedBalance, int remaining, CancellationToken ct, int? lastSettledCost = null)
     {
         var deadline = Environment.TickCount64 + GameTiming.RecognitionTimeoutMs;
         int? previous = null;
@@ -140,17 +142,23 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             int? count = null;
             TemplateMatchResult? action = null;
             readings["批量按钮"] = "未确认";
-            if (await Match(frame, Supply, ct) is not null && ReadSupplyBalance(frame, ct) == expectedBalance)
+            readings["当前按钮报价"] = "尚无当前报价";
+            readings["补给余额"] = "尚未确认补给页";
+            if (await Match(frame, Supply, ct) is not null)
             {
-                if (await Match(frame, DarkBulk, ct) is not null)
+                var observed = ReadSupplyBalance(frame, ct);
+                // 上一批由奖池增量证明实际扣款。仅在不足一份时，允许灰态双帧补足余额漏读。
+                bool settledBelowMinimum = lastSettledCost.HasValue && expectedBalance is >= 0 and < MedalCost;
+                if ((observed == expectedBalance || (observed is null && settledBelowMinimum)) &&
+                    await Match(frame, DarkBulk, ct) is not null)
                 {
                     readings["批量按钮"] = "置灰";
                     count = 0;
                 }
-                else if (await Match(frame, Bulk, ct) is { } bulk)
+                else if (observed == expectedBalance && await Match(frame, Bulk, ct) is { } bulk)
                 {
                     readings["批量按钮"] = $"亮态 {bulk.Confidence:P1}";
-                    if (reader.BulkCost(frame, bulk, ct, text => readings["本批费用"] = text) is int cost && cost <= expectedBalance)
+                    if (reader.BulkCost(frame, bulk, ct, text => readings["当前按钮报价"] = text) is int cost && cost <= expectedBalance)
                     {
                         count = cost / MedalCost;
                         action = bulk;
@@ -159,7 +167,12 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             }
             if (count is int quantity && count == previous)
             {
-                if (quantity == 0) return 0;
+                if (quantity == 0)
+                {
+                    string previousCost = lastSettledCost is int paid ? $"上一批实际费用 {paid} 枚；" : "";
+                    log.Info($"奖章兑换正常完成：{previousCost}当前预计余额 {expectedBalance} 枚，补给页余额 OCR：{readings["补给余额"]}。已连续两帧确认批量交换按钮置灰。");
+                    return 0;
+                }
                 log.Info($"奖章机体补给：余额 {expectedBalance}，补给页本批 {quantity} 次。");
                 submission = $"已发出本批兑换指令（{quantity} 次，提交前余额 {expectedBalance}）";
                 await Tap(action!, ct);
@@ -246,7 +259,7 @@ internal sealed class MedalExchangeService(AutomationService automation, OnnxTex
             bool fresh = true;
             if (button is not null && previousBalance is int before)
             {
-                current = visible == Supply ? ReadSupplyBalance(frame, ct) : reader.ResultBalance(frame, ct, text => readings["结果余额"] = text);
+                current = visible == Supply ? ReadSupplyBalance(frame, ct) : reader.ResultBalance(frame, ct, text => readings["上一兑换结果页余额"] = text);
                 fresh = current is int n
                     ? before - n is >= MedalCost and <= 100 * MedalCost && (before - n) % MedalCost == 0
                     : visible == Results;

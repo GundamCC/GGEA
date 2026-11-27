@@ -35,6 +35,29 @@ public sealed class MedalExchangeReplayTests
     }
 
     [Fact]
+    public async Task Settled69RewardsAt345MedalsFinishOnTwoDisabledFramesWithoutBalanceOcr()
+    {
+        var empty = Scene("exhausted-69");
+        var disabled = Encode(empty);
+        var device = new FakeAdbService(disabled);
+        using var ocr = new OnnxTextRecognizer();
+        Assert.Null(new MedalPoolReader(ocr).Balance(empty, default));
+        int frames = 0;
+        var interrupted = Encode(Scene("result"));
+        device.ScreenshotProvider = () => ++frames == 2 ? interrupted : disabled;
+        var log = new TestLog();
+        using var automation = new AutomationService(device, new TemplateMatcher(), log);
+        var service = new MedalExchangeService(automation, ocr, log, "replay");
+        var before = new MedalPool(new(0, 0), new(800, 1212));
+        var after = new MedalPool(new(0, 0), new(869, 1212));
+        int cost = after.GainSince(before, 69) * 5;
+        Assert.Equal(0, await service.SubmitFromSupply(345 - cost, after.Remaining, default, cost));
+        Assert.Equal(4, frames);
+        Assert.Empty(device.Taps);
+        Assert.Contains(log.Entries, e => e.Message.Contains("上一批实际费用 345 枚") && e.Message.Contains("当前预计余额 0 枚"));
+    }
+
+    [Fact]
     public async Task LdSupplyRecoversMissingBalanceAndSubmitsEightySixOnce()
     {
         var scene = Scene("supply");

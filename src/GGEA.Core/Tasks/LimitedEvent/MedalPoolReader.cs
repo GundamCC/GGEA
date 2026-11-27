@@ -78,7 +78,7 @@ internal sealed class MedalPoolReader(OnnxTextRecognizer ocr)
         }
         if (right < left || bottom < top) { observe?.Invoke("未读到数字"); return ""; }
         var result = ocr.Recognize(pixels, roi.Width, new(left, top, right-left+1, bottom-top+1), ct);
-        observe?.Invoke($"{result.Text}（平均 {result.Confidence:P0}，最低 {result.MinimumContentConfidence ?? result.MinimumConfidence:P0}）");
+        observe?.Invoke($"{(string.IsNullOrWhiteSpace(result.Text) ? "未读到数字" : result.Text)}（平均 {result.Confidence:P0}，最低 {result.MinimumContentConfidence ?? result.MinimumConfidence:P0}）");
         return result.Confidence >= .90 && (result.MinimumContentConfidence ?? result.MinimumConfidence) >= .80
             ? result.Text.Trim() : "";
     }
