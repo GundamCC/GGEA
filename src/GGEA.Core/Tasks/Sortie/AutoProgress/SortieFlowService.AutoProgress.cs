@@ -35,6 +35,7 @@ public sealed partial class SortieFlowService
     {
         ValidateAutoProgressFlow(templates);
         if (watchEntry) _progressButtons.Validate(WatchExecuteTemplate, WatchSkipExecuteRoi);
+        var attemptDialog = new EventAttemptDialog(watchEntry ? null : templates.EventAttemptHint);
         var autoRecognizer = new AutoButtonRecognizer(_matcher, templates.AutoAll, templates.AutoEnemy, templates.AutoClose);
         var deadline = Environment.TickCount64 + Math.Max(0, timeoutMs);
         var waitingForStageReturn = false;
@@ -81,6 +82,8 @@ public sealed partial class SortieFlowService
             var screen = await CaptureProgressScreenAsync(serial, ct);
             // 共享截图保留网络错误保护；失败/AP 不足优先于故事、菜单及自动按钮。
             if (await HandleTerminalStateAsync(serial, screen, ct) is { } terminal) return terminal;
+
+            if (await HandleEventAttemptAsync(serial, screen, attemptDialog, ct)) continue;
 
             var progressOk = skipObserved ? FindProgressOk(screen, ct) : null;
             // 跳过与执行必须使用不同截图；等待期间保留失败、AP、网络与取消保护，不重复点跳过。

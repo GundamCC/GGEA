@@ -138,8 +138,9 @@ public sealed partial class SortieFlowService
         int againPollIntervalMs = 5000,
         int againWaitTimeoutMs = 600000,
         CancellationToken ct = default, TimeProvider? recoveryTimeProvider = null, string? recoverySortieTemplate = null,
-        bool forAutoProgress = false)
+        bool forAutoProgress = false, string? eventAttemptHint = null)
     {
+        var attemptDialog = new EventAttemptDialog(eventAttemptHint);
         var recovery = new FarmRecoverySession(allowDownload, allowEmptySlotSortie, allowTerrainUnsuitableSortie,
             recoverySortieTemplate, recoveryTimeProvider, forAutoProgress);
         if (!forAutoProgress) _log.Info("已点击首轮出击，开始检查编制、下载、开场、战斗和结算页面。");
@@ -157,6 +158,11 @@ public sealed partial class SortieFlowService
             // 下载按钮仅在下载提示命中后匹配，避免其它页面的相似按钮触发下载流程。
             var screen = ImageCodec.DecodePng(await _automation.ScreenshotAsync(serial, ct));
             if (await HandleTerminalStateAsync(serial, screen, ct) is { } initialTerminal) return initialTerminal;
+            if (await HandleEventAttemptAsync(serial, screen, attemptDialog, ct))
+            {
+                openingFrames = 0;
+                continue;
+            }
             var delay = Math.Max(1, pollIntervalMs);
             if (!forAutoProgress && Environment.TickCount64 - startedAt < GameTiming.AnimationSettleMs)
                 delay = Math.Min(delay, GameTiming.ConfirmationIntervalMs);
@@ -239,7 +245,7 @@ public sealed partial class SortieFlowService
                         againStartDelayMs,
                         againPollIntervalMs,
                         againWaitTimeoutMs,
-                        ct, recovery: recovery);
+                        ct, recovery: recovery, attemptDialog: attemptDialog);
                 }
 
                 // 下载提示仍在但按钮尚未渲染完成：保持在下载处理阶段，不能越过提示去点击其它目标。
@@ -295,6 +301,11 @@ public sealed partial class SortieFlowService
             await Task.Delay(Math.Max(1, pollIntervalMs), ct);
         }
 
+        if (attemptDialog.Visible)
+        {
+            _log.Warn("事件推图：次数确认弹窗仍未消失，停止本关并保留现场。");
+            return SortieFlowResult.TapToNextTimeout;
+        }
         if (!forAutoProgress)
         {
             _log.Warn($"首轮出击后 {downloadDetectTimeoutMs}ms 内未确认开场、战斗或结算，停止刷本并保留当前画面。");

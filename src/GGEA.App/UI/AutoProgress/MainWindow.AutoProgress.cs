@@ -306,7 +306,7 @@ public partial class MainWindow
                         await sortieFlow.ExecuteAfterSortieAsync(serial,
                             allowDownload: _config.AllowGgeaDownload, allowEmptySlotSortie: allowEmpty,
                             moreRoundsRemaining: false, allowTerrainUnsuitableSortie: allowTerrain, ct: token,
-                            recoverySortieTemplate: ConfigService.ResolvePath(_config.SortieTemplate), forAutoProgress: true),
+                            recoverySortieTemplate: ConfigService.ResolvePath(_config.SortieTemplate), forAutoProgress: true, eventAttemptHint: templates.EventAttemptHint),
                         templates.SelectStageTitle, token, confirmSelectedNode: confirmStageNodes,
                         confirmPreparation: formation.IsPreparationPageAsync)
                     // 正常 HARD 仍走原结算流程；两条路径均在两分钟无进展后才启用恢复。

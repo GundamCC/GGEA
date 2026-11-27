@@ -123,7 +123,8 @@ public partial class MainWindow
         var reader = _stageService!.CreateProgressReader(nodes);
         var path = EventStagesService.PathFor("stage_title");
         var title = new SelectStageTitleRecognizer(path);
-        var battle = CreateProgressBattle(serial, AutoProgressFlowTemplates.FromDefaults() with { SelectStageTitle = path },
+        var battle = CreateProgressBattle(serial, AutoProgressFlowTemplates.FromDefaults() with
+            { SelectStageTitle = path, EventAttemptHint = EventStagesService.PathFor("sortie_attempt_cost") },
             false, title.Recognize);
         battle.Validate(settings);
         var formation = new AutoFormationSession();

@@ -5,6 +5,40 @@ namespace GGEA.App.Tasks;
 
 public sealed partial class SortieFlowService
 {
+    /// <summary>每次出击独立确认；点击后的残留弹窗只等待消失，避免重复消耗次数。</summary>
+    internal sealed class EventAttemptDialog(string? hint)
+    {
+        internal string? Hint = hint;
+        internal readonly StableStageEntry Button = new();
+        internal bool Submitted;
+        internal bool Visible;
+    }
+
+    internal async Task<bool> HandleEventAttemptAsync(string serial, ScreenImage screen, EventAttemptDialog dialog, CancellationToken ct)
+    {
+        if (dialog.Hint is null) return false;
+        dialog.Visible = Match(screen, dialog.Hint, new Roi(740, 400, 450, 95), StageSortieTemplateThreshold) is not null;
+        if (!dialog.Visible)
+        {
+            dialog.Button.Observe(null, "sortie");
+            if (dialog.Submitted) dialog.Hint = null;
+            return false;
+        }
+        if (!dialog.Submitted)
+        {
+            var button = _progressButtons.MatchBlueLabel(screen, _emptySlotSortieTemplatePath,
+                new Roi(945, 765, 415, 170), StageSortieTemplateThreshold, ct);
+            if (dialog.Button.Observe(button, "sortie", 2) is { } confirmed)
+            {
+                await _automation.TapAsync(serial, confirmed.CenterX, confirmed.CenterY, ct);
+                dialog.Submitted = true;
+                _log.Info("事件推图：已确认消耗 1 次可出击次数，点击出击，等待后续画面。");
+            }
+        }
+        await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
+        return true;
+    }
+
     /// <summary>所有轮次/结算阶段共用的终止检查；错误优先于任何推进操作，禁用按钮独立识别。</summary>
     private async Task<SortieFlowResult?> HandleTerminalStateAsync(string serial, ScreenImage screen, CancellationToken ct)
     {

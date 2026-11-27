@@ -8,6 +8,8 @@ public sealed record AutoProgressFlowTemplates(
     string AutoClose, string AutoAll, string AutoEnemy, string SeriesCompleteClose, string MainStageTitle,
     string SeriesCompleteTitle)
 {
+    public string? EventAttemptHint { get; init; }
+
     /// <summary>统一解析随包资源路径，测试可注入隔离素材。</summary>
     public static AutoProgressFlowTemplates FromDefaults()
     {

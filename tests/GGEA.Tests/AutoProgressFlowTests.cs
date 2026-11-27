@@ -748,6 +748,35 @@ public sealed partial class AutoProgressFlowTests
     }
 
     /// <summary>测试场景只随点击推进，错误点击或漏点击都会破坏最终坐标序列。</summary>
+    [Theory]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, true)]
+    [InlineData(false, false, true)]
+    [InlineData(true, true, false)]
+    [InlineData(false, false, false)]
+    public async Task EventAttemptAndDownloadAreHandledInEitherOrder(bool hard, bool downloadFirst, bool allowDownload)
+    {
+        using var scene = new Scene(eventAttempts: true);
+        var attempt = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures/Sortie/event-sortie-attempt-confirm.png"));
+        var download = scene.Frame(("download_hint", 800, 100), ("download", 600, 850), ("cancel", 1000, 850));
+        var end = scene.Frame(("failed", 100, 20));
+        var pages = downloadFirst ? new[] { download, attempt, end } : new[] { attempt, download, end };
+        var attemptIndex = downloadFirst ? 1 : 0;
+        var lingering = 0;
+        scene.Adb.ScreenshotProvider = () =>
+            scene.Adb.Taps.Count == attemptIndex + 1 && lingering++ < 2 ? attempt : pages[Math.Min(2, scene.Adb.Taps.Count)];
+        Assert.Equal(allowDownload ? SortieFlowResult.FailureDetected : SortieFlowResult.DownloadCancelled,
+            await scene.RunEventOpening(hard, allowDownload));
+        if (!downloadFirst || allowDownload)
+        {
+            var tap = scene.Adb.Taps[attemptIndex];
+            Assert.InRange(tap.X, 1135, 1162);
+            Assert.InRange(tap.Y, 836, 860);
+        }
+        Assert.Equal(allowDownload ? 3 : downloadFirst ? 1 : 2, scene.Adb.Taps.Count);
+    }
+
     private sealed class Scene : IDisposable
     {
         private readonly string _directory = Path.Combine(Path.GetTempPath(), "ggea-progress-" + Guid.NewGuid().ToString("N"));
@@ -761,7 +790,7 @@ public sealed partial class AutoProgressFlowTests
         public TestLog Log { get; } = new();
 
         /// <summary>新增识别使用原始素材；其余提示使用互不相似的隔离字形，避免单色模板假阳性。</summary>
-        public Scene()
+        public Scene(bool eventAttempts = false)
         {
             Directory.CreateDirectory(_directory);
             foreach (var name in new[] { "menu", "skip", "story", "auto_close", "auto_all", "auto_enemy", "continue",
@@ -791,6 +820,7 @@ public sealed partial class AutoProgressFlowTests
             }
             _paths["speed_on"] = ConfigService.ResolvePath("resources/templates/stage/sortie/double_speed_on.png");
             _paths["speed_off"] = ConfigService.ResolvePath("resources/templates/stage/sortie/double_speed_close.png");
+            if (eventAttempts) _paths["confirm"] = ConfigService.ResolvePath("resources/templates/dialog/sortie.png");
             foreach (var (name, path) in _paths) _images[name] = ImageCodec.DecodePng(File.ReadAllBytes(path));
             Adb = new FakeAdbService(Frame());
             var matcher = new TemplateMatcher();
@@ -804,6 +834,16 @@ public sealed partial class AutoProgressFlowTests
                 _paths["confirm"], _paths["cancel"], _paths["no_ap"], _paths["level"], _paths["reward"], _paths["reward_tap"], .90,
                 _paths["terrain"], _paths["download_hint"]);
             _templates = new(_paths["menu"], _paths["skip"], _paths["story"], _paths["title"], _paths["auto_close"], _paths["auto_all"], _paths["auto_enemy"], _paths["series_close"], _paths["main_title"], _paths["series_title"]);
+        }
+
+        public Task<SortieFlowResult> RunEventOpening(bool hard, bool allowDownload)
+        {
+            var hint = EventStagesService.PathFor("sortie_attempt_cost");
+            return hard
+                ? _service.ExecuteAfterSortieAsync("test", allowDownload, true, false, pollIntervalMs: 1,
+                    tapToNextPollIntervalMs: 1, forAutoProgress: true, eventAttemptHint: hint)
+                : _service.ExecuteForProgressAsync("test", allowDownload, true, true,
+                    _templates with { EventAttemptHint = hint }, pollIntervalMs: 1, actionDelayMs: 1);
         }
 
         /// <summary>返回实际模板中心，断言点击没有偏离识别到的按钮。</summary>
