@@ -17,6 +17,7 @@ internal sealed class UpgradeMaterialService(AutomationService automation, OnnxT
     private readonly TemplateImages _minus = new(Root + "material_minus.png");
     private readonly TemplateImages _cancel = new("resources/templates/dialog/cancel.png");
     private readonly TemplateImages _unit = new(Root + "title_unit_info.png");
+    private readonly TemplateImages _back = new("resources/templates/common/back.png");
     private readonly TemplateImages _result = new(Root + "title_lv_up_complete.png");
     private readonly ScreenImage[] _icons = Enumerable.Range(1, 3)
         .Select(i => MaterialPatch(new TemplateImages(Root + $"uexp_000{i}.png").Primary)).ToArray();
@@ -54,7 +55,7 @@ internal sealed class UpgradeMaterialService(AutomationService automation, OnnxT
         if (plan is null)
         {
             await TapControlAsync(_cancel, new(560, 920, 400, 150), .93);
-            await RequireUnitAsync();
+            await RequireUnitAsync(serial, ct);
             return false;
         }
 
@@ -86,14 +87,7 @@ internal sealed class UpgradeMaterialService(AutomationService automation, OnnxT
             return _confirm.Match(_matcher, frame, .92, new Roi(1030, 930, 240, 120), ct);
         }, (a,b) => a.Region == b.Region, GameTiming.RecognitionTimeoutMs, ct) ?? throw Unknown();
         await automation.TapAsync(serial, submit.CenterX, submit.CenterY, ct);
-        var next = await StableObservation.WaitAsync(async () =>
-        {
-            var frame = await automation.CaptureScreenAsync(serial, ct);
-            if (_result.Match(_matcher, frame, .93, new Roi(720, 215, 475, 158), ct) is null) return null;
-            return automation.TapToNext.Recognize(frame, ct);
-        }, (a,b) => a.Region == b.Region, GameTiming.RecognitionTimeoutMs, ct) ?? throw Unknown();
-        await automation.TapAsync(serial, next.CenterX, next.CenterY, ct);
-        await RequireUnitAsync();
+        await WaitAfterSubmitAsync(serial, ct);
         return true;
 
         async Task TapControlAsync(TemplateImages template, Roi roi, double threshold)
@@ -106,13 +100,35 @@ internal sealed class UpgradeMaterialService(AutomationService automation, OnnxT
             }, (a,b) => a.Region == b.Region, GameTiming.RecognitionTimeoutMs, ct) ?? throw Unknown();
             await automation.TapAsync(serial, match.CenterX, match.CenterY, ct);
         }
+    }
 
-        async Task RequireUnitAsync()
-        {
-            _ = await StableObservation.WaitAsync(async () => _unit.Match(_matcher,
-                await automation.CaptureScreenAsync(serial, ct), .93, new Roi(175, 0, 390, 108), ct),
-                (a,b) => a.Region == b.Region, GameTiming.RecognitionTimeoutMs, ct) ?? throw Unknown();
-        }
+    private sealed record SubmissionPage(bool LevelUp, Roi Control);
+
+    // 材料可能只增加经验。单位资料页允许按原路返回，委托是否完成仍由原角色的进度和报告按钮确认。
+    private async Task WaitAfterSubmitAsync(string serial, CancellationToken ct)
+    {
+        var page = await StableObservation.WaitAsync(async () => ReadSubmissionPage(
+            await automation.CaptureScreenAsync(serial, ct), ct), (a,b) => a == b,
+            GameTiming.RecognitionTimeoutMs, ct) ?? throw Unknown();
+        if (!page.LevelUp) return;
+
+        await automation.TapAsync(serial, page.Control.CenterX, page.Control.CenterY, ct);
+        await RequireUnitAsync(serial, ct);
+    }
+
+    private SubmissionPage? ReadSubmissionPage(ScreenImage frame, CancellationToken ct)
+    {
+        if (_title.Match(_matcher, frame, .93, new Roi(850, 30, 220, 113), ct) is not null) return null;
+        if (_result.Match(_matcher, frame, .93, new Roi(720, 215, 475, 158), ct) is not null)
+            return automation.TapToNext.Recognize(frame, ct) is { } next ? new(true, next.Region) : null;
+        if (_unit.Match(_matcher, frame, .93, new Roi(175, 0, 390, 108), ct) is null) return null;
+        return _back.Match(_matcher, frame, .90, new Roi(0, 0, 220, 130), ct) is { } back ? new(false, back.Region) : null;
+    }
+
+    private async Task RequireUnitAsync(string serial, CancellationToken ct)
+    {
+        _ = await StableObservation.WaitAsync(async () => ReadSubmissionPage(await automation.CaptureScreenAsync(serial, ct), ct)
+            is { LevelUp: false } unit ? unit : null, (a,b) => a == b, GameTiming.RecognitionTimeoutMs, ct) ?? throw Unknown();
     }
 
     private async Task<MaterialStack[]> WaitStacksAsync(string serial, MaterialStack[]? expected, CancellationToken ct) =>
