@@ -11,6 +11,8 @@ namespace GGEA.App.Updates;
 internal static class RangePackageDownload
 {
     private sealed record Entry(string Path, long Offset, long Compressed, long Size, int Method);
+    // 纯素材发布也会改变程序的版本戳。给重建这些映像的每种传输方式设同一上限。
+    private const long LiveImageDownloadLimit = 1024 * 1024;
 
     public static async Task<string> PrepareAsync(UpdateHttpTransport http, UpdateRelease update, UpdateRangeIndex index,
         string installation, IProgress<double> progress, CancellationToken cancellationToken)
@@ -58,13 +60,18 @@ internal static class RangePackageDownload
                 pending.Add(file);
             }
             if (paths.Count != manifest.Files.Count) throw new InvalidDataException("更新索引缺少文件。");
+            var liveData = update.IncrementalOnly && File.Exists(UpdateFiles.SafePath(installation, "build-info.json")) &&
+                UpdateInstaller.CanApplyLiveData(UpdateManifest.Read(installation), manifest);
             var total = pending.Sum(file => file.Size);
             long written = 0;
             var buffer = new byte[81920];
-            foreach (var file in pending)
+            // 主程序最先检查，轻量路径暂时不可用时避免白白下载其余文件。
+            foreach (var file in pending.OrderByDescending(file => liveData && file.Path == "GGEA.exe"))
             {
                 using var output = File.Create(UpdateFiles.SafePath(package, file.Path));
-                if (await CopyPatchDownload.TryPrepareAsync(http, update, installation, file.Path, manifest.Files[file.Path], file.Size, file.Compressed, output, token))
+                var limit = liveData && file.Path is ("GGEA.exe" or "GGEA.dll") ? LiveImageDownloadLimit : long.MaxValue;
+                var differenceCostLimit = Math.Min(limit, file.Compressed - 1);
+                if (await CopyPatchDownload.TryPrepareAsync(http, update, installation, file.Path, manifest.Files[file.Path], file.Size, differenceCostLimit, output, token))
                 {
                     written += file.Size;
                     progress.Report(100.0 * written / Math.Max(1, total));
@@ -79,12 +86,14 @@ internal static class RangePackageDownload
                 };
                 if (blocks is not null && root.TryGetProperty(mapName, out var blockMap) &&
                     await ExeBlockDownload.TryPrepareAsync(http, update, blocks, blockMap, installation, file.Path, output,
-                        file.Size, file.Compressed, token))
+                        file.Size, differenceCostLimit, token))
                 {
                     written += file.Size;
                     progress.Report(100.0 * written / Math.Max(1, total));
                     continue;
                 }
+                if (file.Compressed > limit)
+                    throw new HttpRequestException($"素材更新暂时无法轻量重建 {file.Path}，请稍后重试。");
                 if (mapName.Length > 0 && (blocks is null || !root.TryGetProperty(mapName, out _)))
                     http.Trace($"{file.Path} 回退整文件：缺少分块附件或索引。");
                 http.Trace($"整文件：{file.Path}（{file.Compressed} B 压缩数据）");

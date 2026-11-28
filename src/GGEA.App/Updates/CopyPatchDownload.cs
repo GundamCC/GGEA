@@ -9,9 +9,9 @@ internal static class CopyPatchDownload
 {
     /// <summary>用实际运行文件的摘要选择补丁。旧版本号相同但构建内容不同也不会套用错误差异。</summary>
     internal static async Task<bool> TryPrepareAsync(UpdateHttpTransport http, UpdateRelease update, string installation,
-        string fileName, string targetHash, long targetSize, long compressedSize, FileStream destination, CancellationToken token)
+        string fileName, string targetHash, long targetSize, long maxPatchBytes, FileStream destination, CancellationToken token)
     {
-        if (targetSize is < FileCopyPatch.MinimumFileBytes or > FileCopyPatch.MaximumFileBytes || !update.CopyPatches.Any(p => p.TargetHash.Equals(targetHash, StringComparison.OrdinalIgnoreCase) && p.Size < compressedSize))
+        if (targetSize is < FileCopyPatch.MinimumFileBytes or > FileCopyPatch.MaximumFileBytes || !update.CopyPatches.Any(p => p.TargetHash.Equals(targetHash, StringComparison.OrdinalIgnoreCase) && p.Size <= maxPatchBytes))
             return false;
         var path = UpdateFiles.SafePath(installation, fileName);
         FileStream source;
@@ -22,7 +22,7 @@ internal static class CopyPatchDownload
             if (source.Length > FileCopyPatch.MaximumFileBytes) return false;
             string hash = Convert.ToHexString(await SHA256.HashDataAsync(source, token)).ToLowerInvariant();
             var patch = update.CopyPatches.SingleOrDefault(p => p.TargetHash.Equals(targetHash, StringComparison.OrdinalIgnoreCase) && p.SourceHash == hash);
-            if (patch is null || patch.Size >= compressedSize) return false;
+            if (patch is null || patch.Size > maxPatchBytes) return false;
             byte[] bytes;
             try { bytes = await VerifiedUpdateAsset.ReadAsync(http, update, patch.Url, patch.Size, patch.Sha256, token); }
             catch (Exception error) when (!token.IsCancellationRequested && error is HttpRequestException or OperationCanceledException)

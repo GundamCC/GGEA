@@ -14,11 +14,11 @@ internal static class ExeBlockDownload
     private sealed record Block(long Offset, int Compressed, int Size, string Hash, long? LocalOffset);
 
     public static async Task<bool> TryPrepareAsync(UpdateHttpTransport http, UpdateRelease update, UpdateBlockAsset asset,
-        JsonElement map, string installation, string relativePath, FileStream output, long targetSize, long wholeFileCost, CancellationToken token)
+        JsonElement map, string installation, string relativePath, FileStream output, long targetSize, long maxDownloadBytes, CancellationToken token)
     {
         bool Fallback(string reason)
         {
-            http.Trace($"{relativePath} 回退整文件：{reason}");
+            http.Trace($"{relativePath} 分块重建未完成：{reason}");
             return Reset(output);
         }
         if (map.GetProperty("algorithm").GetString() != "gear-v1") return Fallback("不支持的分块算法");
@@ -59,7 +59,7 @@ internal static class ExeBlockDownload
                 expanded += size;
             }
             if (expanded != targetSize || packed != asset.Size) throw new InvalidDataException("可执行文件块索引不完整。");
-            if (remoteCost >= wholeFileCost) return Fallback("整文件传输量更小或相同");
+            if (remoteCost > maxDownloadBytes) return Fallback("所需流量超过本次分块下载预算");
 
             var buffer = new byte[ExeChunker.Maximum];
             for (var i = 0; i < plan.Count;)
