@@ -31,12 +31,12 @@ public class DeliveryPageTests
         Label("title_confirm_delivery", 874, 71);
         Label("button_cancel_delivery", 729, 967);
         for (var y = 654; y <= 848; y++) Array.Fill(frame.Bgra, (byte)245, (y * 1920 + 1440) * 4, 3);
-        Assert.True(DeliveryPage.HasEmptyStarRow(frame, 580, 642));
-        Assert.False(DeliveryPage.HasEmptyStarRow(frame, 770, 642));
+        Assert.Equal(0, DeliveryPage.ReadLimitBreaks(frame, 580, 768));
+        Assert.Equal(2, DeliveryPage.ReadLimitBreaks(frame, 770, 768));
         Fixture("delivery_one_star", 720, 663);
-        Assert.False(DeliveryPage.HasEmptyStarRow(frame, 770, 546));
+        Assert.Equal(1, DeliveryPage.ReadLimitBreaks(frame, 770, 672));
         Fixture("delivery_three_stars", 910, 579);
-        Assert.False(DeliveryPage.HasEmptyStarRow(frame, 960, 462));
+        Assert.Equal(3, DeliveryPage.ReadLimitBreaks(frame, 960, 588));
         Fixture("delivery_bottom_row", 490, 600);
         // 保留二星 LV20 和无突破 LV60；两项全开时只额外提供第一台无突破 LV20。
         for (var y = 600; y < 779; y++)

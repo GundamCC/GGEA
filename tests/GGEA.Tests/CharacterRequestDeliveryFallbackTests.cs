@@ -109,6 +109,55 @@ public partial class CharacterRequestPageTests
     }
 
     [Fact]
+    public async Task Delivery_ShortFilteredListTapsInsideCardAndConfirmsTheSameSelection()
+    {
+        var frame = Empty();
+        void Fix(string name, int x, int y) => Paste(frame,
+            Path.Combine(AppContext.BaseDirectory, "Fixtures/Base/delivery_" + name + ".png"), x, y);
+        PasteTemplate(frame, "title_confirm_delivery.png", 874, 71);
+        PasteTemplate(frame, "button_cancel_delivery.png", 729, 967);
+        Fix("empty_count", 1337, 799);
+        Fix("amount_one", 1000, 343);
+        Fix("short_row", 490, 501);
+        using var ocr = new OnnxTextRecognizer();
+        var page = new DeliveryPage(ocr, new(), 35);
+        var card = Assert.IsType<DeliveryPage.Card>(page.Read(frame, default)?.Candidate);
+        Assert.Equal((580, 35, 0), (card.X, card.Level, card.LimitBreaks));
+        var available = Encode(frame);
+        Fix("selected_count", 1337, 799);
+        PasteTemplate(frame, "delivery_selected_one.png", 605, 514);
+        PasteTemplate(frame, "button_submit_delivery.png", 1103, 967);
+        var selected = Encode(frame);
+        var adb = new FakeAdbService(available);
+        adb.ScreenshotProvider = () => adb.Taps.Count == 1 && adb.Taps[0].X == 580 &&
+            adb.Taps[0].Y is >= 530 and <= 635 ? selected : available;
+        using var auto = new AutomationService(adb, new TemplateMatcher(), new TestLog());
+        Assert.True(await new UnitDeliveryService(auto, ocr, new(), 35).SubmitAsync("test", default));
+        Assert.Equal(2, adb.Taps.Count);
+        Assert.Empty(adb.Swipes);
+
+        // 仅剩带锁卡时，即使关闭等级和突破保护，也不能选中该卡。
+        frame = ImageCodec.DecodePng(available);
+        for (var y = 501; y < 687; y++)
+            Array.Clear(frame.Bgra, (y * 1920 + 490) * 4, 380 * 4);
+        var locked = new DeliveryPage(ocr, new(false, false), 1).Read(frame, default);
+        Assert.NotNull(locked);
+        Assert.Null(locked.Candidate);
+        Assert.False(locked.UncertainCards);
+
+        // 可见卡的等级读不清时，禁止取消库存并把它当作无合格单位。
+        frame = ImageCodec.DecodePng(available);
+        for (var y = 620; y < 655; y++)
+            for (var x = 580; x <= 770; x += 190)
+                Array.Clear(frame.Bgra, (y * 1920 + x - 39) * 4, 78 * 4);
+        var unreadable = new FakeAdbService(Encode(frame));
+        using var guarded = new AutomationService(unreadable, new TemplateMatcher(), new TestLog());
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            new UnitDeliveryService(guarded, ocr, new(), 35).SubmitAsync("test", default));
+        Assert.Empty(unreadable.Taps);
+    }
+
+    [Fact]
     public void StrengthBaselineUsesOfferSeriesEvenWithoutDeliveryRoute()
     {
         var offer = new StrengthOffer("1121900010101", "新机动战记高达W 无尽的华尔兹", 1);

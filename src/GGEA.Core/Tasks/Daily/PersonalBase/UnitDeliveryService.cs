@@ -24,11 +24,11 @@ internal sealed class UnitDeliveryService(AutomationService automation, OnnxText
         }
 
         view = await ScrollToBottomAsync(serial, view, ct);
-        var unreadable = view.UnreadableLevel;
+        var unreadable = view.UncertainCards;
         while (view.Candidate is null && !view.AtTop)
         {
             view = await ScrollAsync(serial, view, towardBottom: false, ct);
-            unreadable |= view.UnreadableLevel;
+            unreadable |= view.UncertainCards;
         }
         if (view.Candidate is null && unreadable) throw SelectionUnknown();
         if (view.Candidate is null && view.ThumbTop < 0)
@@ -37,14 +37,14 @@ internal sealed class UnitDeliveryService(AutomationService automation, OnnxText
             await automation.DragAsync(serial, 630, 738, 630, 545, 400, ct);
             view = await ObserveAsync(serial, ct, expectedCount: 0);
             var after = await automation.CaptureScreenAsync(serial, ct);
-            if (view.ThumbTop >= 0 || view.UnreadableLevel || !InventoryUnmoved(before, after)) throw SelectionUnknown();
+            if (view.ThumbTop >= 0 || view.UncertainCards || !InventoryUnmoved(before, after)) throw SelectionUnknown();
         }
         if (view.Candidate is not { } card) return await CancelAsync(serial, view, ct);
 
-        await automation.TapAsync(serial, card.X, card.ArtY + 37, ct);
+        await automation.TapAsync(serial, card.X, card.CenterY, ct);
         view = await ObserveAsync(serial, ct, expectedCount: 1);
         if (view.Badge is not { } badge || Math.Abs(badge.X - (card.X + 25)) > 5 ||
-            Math.Abs(badge.Y - (card.ArtY - 32)) > 5 || view.Submit is not { } submit)
+            Math.Abs(badge.Y - (card.Top + 5)) > 5 || view.Submit is not { } submit)
             throw SelectionUnknown();
         await automation.TapAsync(serial, submit.CenterX, submit.CenterY, ct);
         return true;
