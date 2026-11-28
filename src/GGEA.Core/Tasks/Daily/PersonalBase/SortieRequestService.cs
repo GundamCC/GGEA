@@ -48,7 +48,7 @@ public sealed class SortieRequestService(AutomationService automation, StageServ
             var result = await StableObservation.WaitAsync(async () =>
             {
                 var f = await automation.CaptureScreenAsync(serial, ct);
-                return _budget.OnStage(f, ct) && MatchesWork(f, logo, ct)
+                return _budget.OnStage(f, ct) && MatchesWork(f, order.Offer.SeriesId, logo, ct)
                     ? _back.Match(_matcher, f, .90, new(0, 0, 220, 130), ct) : null;
             }, (a, b) => a.Region == b.Region, GameTiming.RecognitionTimeoutMs, ct);
             return result?.Region ?? throw Unknown();
@@ -180,33 +180,49 @@ public sealed class SortieRequestService(AutomationService automation, StageServ
     private sealed record StageReward(bool HasCapture);
 
     // 选关页的 Logo 直接叠在动态作品插图上，只比对完全不透明的原图笔画。
-    internal static bool MatchesWork(ScreenImage frame, string logo, CancellationToken ct)
+    internal static bool MatchesWork(ScreenImage frame, string series, string logo, CancellationToken ct)
     {
         using var raw = Mat.FromPixelData(frame.Height, frame.Width, MatType.CV_8UC4, frame.Bgra);
         using var region = raw[new Rect(0, 68, 540, 346)];
         using var gray = new Mat();
         Cv2.CvtColor(region, gray, ColorConversionCodes.BGRA2GRAY);
-        using var art = Cv2.ImDecode(File.ReadAllBytes(logo), ImreadModes.Unchanged);
-        if (art.Channels() != 4) return false;
         using var shape = new Mat();
         using var mask = new Mat();
         using var texture = new Mat();
         using var scores = new Mat();
-        for (int percent = 45; percent <= 108; percent++)
+        // NT 选关页使用原生小 Logo 的字形，和作品列表的大 Logo 有差异。
+        if (series == "1440")
+        {
+            var path = ConfigService.ResolvePath(DevelopmentMaps.Get(series).Logo);
+            if (File.Exists(path))
+            {
+                using var native = Cv2.ImDecode(File.ReadAllBytes(path), ImreadModes.Unchanged);
+                if (MatchAtScale(native, 1.3125)) return true;
+            }
+        }
+        using var art = Cv2.ImDecode(File.ReadAllBytes(logo), ImreadModes.Unchanged);
+        if (art.Empty()) return false;
+        int maxPercent = Math.Min(108, gray.Width * 100 / art.Width);
+        for (int percent = 45; percent <= maxPercent; percent++)
+            if (MatchAtScale(art, percent / 100d)) return true;
+        return false;
+
+        bool MatchAtScale(Mat template, double scale)
         {
             ct.ThrowIfCancellationRequested();
-            Cv2.Resize(art, shape, default, percent / 100d, percent / 100d, InterpolationFlags.Area);
-            if (shape.Width > gray.Width || shape.Height > gray.Height) break;
+            if (template.Channels() != 4) return false;
+            Cv2.Resize(template, shape, default, scale, scale, InterpolationFlags.Area);
+            if (shape.Width > gray.Width || shape.Height > gray.Height) return false;
             Cv2.ExtractChannel(shape, mask, 3);
             Cv2.Threshold(mask, mask, 254, 255, ThresholdTypes.Binary);
-            if (Cv2.CountNonZero(mask) < 200) continue;
+            if (Cv2.CountNonZero(mask) < 200) return false;
             Cv2.CvtColor(shape, texture, ColorConversionCodes.BGRA2GRAY);
             Cv2.MatchTemplate(gray, texture, scores, TemplateMatchModes.CCoeffNormed, mask);
             Cv2.PatchNaNs(scores, -1);
+            Cv2.Threshold(scores, scores, 1.001, 0, ThresholdTypes.TozeroInv);
             Cv2.MinMaxLoc(scores, out _, out var score, out _, out _);
-            if (double.IsFinite(score) && score is >= .81 and <= 1.001) return true;
+            return score is >= .81 and <= 1.001;
         }
-        return false;
     }
 
     private static InvalidOperationException Unknown() => new(L.Text("无法核对请求出击的作品或关卡。"));

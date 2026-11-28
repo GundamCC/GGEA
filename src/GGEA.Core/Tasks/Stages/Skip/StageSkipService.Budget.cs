@@ -7,8 +7,14 @@ namespace GGEA.App.Tasks;
 
 public sealed partial class StageSkipService
 {
-    internal Task<StageSkipResult> SkipDailyHardAsync(string serial, UiLayout layout, CancellationToken ct) =>
-        SkipWithinBudgetAsync(serial, layout, new StageSkipBudget(_automation.GlobalScreens.TextOcr, _automation.Resources), int.MaxValue, true, ct);
+    internal async Task<StageSkipResult> SkipDailyHardAsync(string serial, UiLayout layout, CancellationToken ct)
+    {
+        // 日常沿用游戏预选次数。仅在游戏明确拒绝该批次且已关闭回复 AP 和略过弹窗后，才重新读数减次。
+        var result = await SkipCurrentAsync(serial, layout, ct);
+        if (!result.IsApInsufficient) return result;
+        var budget = new StageSkipBudget(_automation.GlobalScreens.TextOcr, _automation.Resources);
+        return await SkipWithinBudgetAsync(serial, layout, budget, int.MaxValue, true, ct);
+    }
 
     /// <summary>标准关卡从实际余额和单价计算批次上限。关卡页、弹窗调数及结算各自核对新帧。</summary>
     internal async Task<StageSkipResult> SkipWithinBudgetAsync(string serial, UiLayout layout, StageSkipBudget budget,

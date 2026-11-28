@@ -173,16 +173,98 @@ public sealed class StageSkipBudgetTests
         Assert.Equal(new StageSkipBudget.Stage(760, 10, 3), budget.ReadStage(frame, true, default));
     }
 
-    // 使用实机控件裁图，只替换体力数字来重现 20 AP 和不足一次的情形。
+    private static string Resource(string relative) => ConfigService.ResolvePath("resources/templates/" + relative);
+    private static string Fixture(string name) => Path.Combine(AppContext.BaseDirectory, "Fixtures/ApConsumption/sortie_" + name + ".png");
+    private static ScreenImage Frame() => new() { Width = 1920, Height = 1080, Bgra = TestImageFactory.CreateBgra(1920, 1080, 0) };
+
+    private static FakeAdbService Replay(params ScreenImage[] sequence)
+    {
+        var frames = sequence.Select(f => ImageCodec.EncodePng(f.Bgra, f.Width, f.Height)).ToArray();
+        var adb = new FakeAdbService(frames[0]);
+        adb.ScreenshotProvider = () => frames[Math.Min(adb.Taps.Count, frames.Length - 1)];
+        return adb;
+    }
+
+    private static StageSkipService CreateSkip(AutomationService auto, TestLog log) => new(auto, log, new()
+    {
+        SkipResultTemplatePath = Resource("stage/skip/skip_result.png"),
+        SkipCountLimitTemplatePath = Resource("stage/skip/count_limit.png"),
+        ApRecoveryPromptTemplatePath = Resource("stage/skip/ap_recovery_title.png"),
+        ApRecoveryCloseTemplatePath = Resource("common/close.png"),
+        RecoverUnchangedExecutionDialog = true,
+        ApRecoverySettleMs = 0, SkipDialogWaitMs = 0, SettleAfterOkMs = 0,
+        SkipResultTimeoutMs = 2500, PostSkipTimeoutMs = 2500
+    });
+
+    [Fact]
+    public async Task DailyHard_UsesGameSelectionWithUnreadableStageNumbers()
+    {
+        var dialog = Frame();
+        Paste(dialog, Fixture("dialog"), 561, 206);
+        var result = Frame();
+        Paste(result, Resource("stage/skip/skip_result.png"), 820, 30);
+        var done = Frame();
+        Paste(done, Resource("stage/skip/count_limit.png"), 1590, 680);
+        var adb = Replay(Frame(), dialog, result, done);
+        var log = new TestLog();
+        using var auto = new AutomationService(adb, new TemplateMatcher(), log);
+        var layout = new UiLayoutService(log).Load(ConfigService.ResolvePath("resources/ui_layout/stage.json"));
+        var batch = await CreateSkip(auto, log).SkipDailyHardAsync("replay", layout, default);
+        Assert.True(batch.Success, batch.Message);
+        Assert.Equal(3, adb.Taps.Count); // 打开、执行默认批次、结果 OK。
+        Assert.Equal((1674, 710), adb.Taps[0]);
+        Assert.Equal((1676, 988), adb.Taps[2]);
+    }
+
+    [Fact]
+    public async Task SortieRequest_UsesRemainingDemandOnNarrativeHardOne()
+    {
+        var stage = Frame();
+        Paste(stage, Path.Combine(AppContext.BaseDirectory, "Fixtures/ApConsumption/ld-nt-hard1-ready.png"), 0, 0);
+        var dialog = Frame();
+        Paste(dialog, Fixture("dialog"), 561, 206);
+        var two = Frame();
+        Paste(two, Fixture("two"), 561, 206);
+        // 两张弹窗取自较早的实机回放，体力统一到此次 NT 关卡的 248 AP。
+        Draw(dialog, new(911, 590, 133, 47), "248", false);
+        Draw(dialog, new(1370, 592, 76, 44), "218", false);
+        Draw(two, new(911, 590, 133, 47), "248", false);
+        Draw(two, new(1370, 592, 76, 44), "228", false);
+        var result = Frame();
+        Paste(result, Resource("stage/skip/skip_result.png"), 820, 30);
+        var returned = new ScreenImage { Width = stage.Width, Height = stage.Height, Bgra = stage.Bgra.ToArray() };
+        Draw(returned, new(1660, 627, 106, 44), "2/4", true);
+        Draw(returned, new(1711, 31, 126, 32), "228/166", true);
+        var adb = Replay(stage, dialog, two, result, returned);
+        var log = new TestLog();
+        using var ocr = new OnnxTextRecognizer();
+        using var auto = new AutomationService(adb, new TemplateMatcher(), log, textOcr: ocr);
+        var numbers = new StageSkipBudget(ocr, auto.Resources);
+        Assert.Equal(new StageSkipBudget.Stage(248, 10, 4), numbers.ReadStage(stage, true, default));
+        Assert.Equal(new StageSkipBudget.Stage(228, 10, 2), numbers.ReadStage(returned, true, default));
+        var otherWork = Frame();
+        Paste(otherWork, Path.Combine(AppContext.BaseDirectory, "Fixtures/Base/capture_hard3.png"), 0, 0);
+        Assert.False(SortieRequestService.MatchesWork(otherWork, "1440", Resource("logo/logo_l_series_1440.webp"), default));
+        var layout = new UiLayoutService(log).Load(ConfigService.ResolvePath("resources/ui_layout/stage.json"));
+        var nodes = new FakeStageNodeRecognizer();
+        nodes.EnqueueResults(new StageNodeRecognition(600, 840, WorkStageKind.Hard, 1, WorkStageNodeState.Completed,
+            new(WorkStageKind.Hard, 1, 5), ""));
+        var nav = new StageService(auto, new FakeStageWorkRecognizer(), log, nodeRecognizer: nodes);
+        var work = new HardStageEntry { Id = 8, NormalCount = 4, HardCount = 2, Screenshot = "logo_l_series_1440.webp" };
+        var task = new SortieRequestService(auto, nav, CreateSkip(auto, log), layout, [work], ocr, log);
+        var order = new SortieOrder(Assert.IsType<SortieOffer>(DevelopmentRequestIndex.FindSortie("1144000600", 3)), 1);
+        Assert.Equal(2, await task.RunAsync("replay", order, default));
+        Assert.Equal(5, adb.Taps.Count); // 打开、从预选 3 次减到 2 次、执行、结果 OK、返回委托。
+        Assert.Equal((759, 477), adb.Taps[1]);
+    }
+
+    // 游戏拒绝默认批次后，才读取关卡数字并验证减次的 AP 预览。
     [Theory]
     [InlineData(20, false)]
     [InlineData(9, false)]
     [InlineData(20, true)]
     public async Task DailyHard_ConfirmsAffordableQuantityBeforeExecution(int ap, bool wrongPreview)
     {
-        string Resource(string relative) => ConfigService.ResolvePath("resources/templates/" + relative);
-        string Fixture(string name) => Path.Combine(AppContext.BaseDirectory, "Fixtures/ApConsumption/sortie_" + name + ".png");
-        ScreenImage Frame() => new() { Width = 1920, Height = 1080, Bgra = TestImageFactory.CreateBgra(1920, 1080, 0) };
         var stage = Frame();
         Paste(stage, Fixture("landed"), 0, 0);
         Draw(stage, new(1711, 31, 126, 32), $"{ap}/164", true);
@@ -208,20 +290,11 @@ public sealed class StageSkipBudgetTests
         Paste(returned, Fixture("landed"), 0, 0);
         Paste(returned, Fixture("remaining_one"), 1674, 631);
         Draw(returned, new(1711, 31, 126, 32), "0/164", true);
-        var frames = new[] { stage, original, two, result, returned }
-            .Select(f => ImageCodec.EncodePng(f.Bgra, f.Width, f.Height)).ToArray();
-        var adb = new FakeAdbService(frames[0]);
-        adb.ScreenshotProvider = () => frames[Math.Min(adb.Taps.Count, frames.Length - 1)];
+        var recovery = ImageCodec.DecodePng(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures/Sortie/ap-recovery-ldplayer.png")));
+        var adb = Replay(stage, original, recovery, original, stage, original, two, result, returned);
         var log = new TestLog();
         using var auto = new AutomationService(adb, new TemplateMatcher(), log);
-        var skip = new StageSkipService(auto, log, new()
-        {
-            SkipResultTemplatePath = Resource("stage/skip/skip_result.png"),
-            SkipCountLimitTemplatePath = Resource("stage/skip/count_limit.png"),
-            SkipResultTimeoutMs = 2500,
-            PostSkipTimeoutMs = 2500,
-            SettleAfterOkMs = 0
-        });
+        var skip = CreateSkip(auto, log);
         var layout = new UiLayoutService(log).Load(ConfigService.ResolvePath("resources/ui_layout/stage.json"));
         if (ap == 20)
         {
@@ -230,23 +303,25 @@ public sealed class StageSkipBudgetTests
             Assert.Equal(wrongPreview ? 9 : 0, numbers.ProjectedAp(two, default));
         }
         var batch = await skip.SkipDailyHardAsync("replay", layout, default);
+        Assert.Equal((960, 994), adb.Taps[2]);
+        Assert.Equal((770, 850), adb.Taps[3]);
         if (ap < 10)
         {
             Assert.True(batch.IsApInsufficient, batch.Message);
-            Assert.Empty(adb.Taps);
+            Assert.Equal(4, adb.Taps.Count);
         }
         else if (wrongPreview)
         {
             Assert.False(batch.Success);
-            Assert.Equal(new[] { (1674, 710), (759, 477) }, adb.Taps);
+            Assert.Equal(new[] { (1674, 710), (759, 477) }, adb.Taps.Skip(4));
         }
         else
         {
             Assert.True(batch.Success, batch.Message);
             Assert.Equal(2, batch.ExecutedCount);
             Assert.Equal(0, batch.RemainingAp);
-            Assert.Equal(4, adb.Taps.Count);
-            Assert.Equal((759, 477), adb.Taps[1]);
+            Assert.Equal(8, adb.Taps.Count);
+            Assert.Equal((759, 477), adb.Taps[5]);
         }
     }
 

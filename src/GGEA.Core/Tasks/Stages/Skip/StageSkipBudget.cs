@@ -26,13 +26,18 @@ internal sealed class StageSkipBudget(OnnxTextRecognizer ocr, ResourceResolver r
         int remaining = int.MaxValue;
         if (hard || checkNormalLimit)
         {
-            var counter = Read(f, new(1674, 631, 76, 42), false, ct);
-            if (UpgradeNumbers.TryReadPair(counter, out int available, out int limit) && limit > 0)
-                remaining = available;
+            // 雷电 NT HARD 1 的余次靠右显示；两个位置都须读出完整的分子和分母。
+            var counter = ReadRemaining(f, new(1674, 631, 76, 42), ct) ??
+                ReadRemaining(f, new(1683, 632, 83, 39), ct);
+            if (counter.HasValue) remaining = counter.Value;
             else if (hard) return null;
         }
         return new(ap, cost.Value, remaining);
     }
+
+    private int? ReadRemaining(ScreenImage frame, Roi roi, CancellationToken ct) =>
+        UpgradeNumbers.TryReadPair(Read(frame, roi, false, ct), out int available, out int limit) && limit > 0
+            ? available : null;
 
     internal int? Selected(ScreenImage f, CancellationToken ct) => Number(f, new(918, 437, 110, 75), true, ct);
     internal int? ProjectedAp(ScreenImage f, CancellationToken ct)
