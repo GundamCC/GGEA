@@ -58,7 +58,7 @@ public sealed class BattleshipLocator
     /// <summary>从个人基地当前视野查找角色要求文字按钮；未适配的游戏语言直接返回。</summary>
     public Task<TemplateMatchResult?> FindCharacterRequestsWithPanAsync(
         string serial, int maxDrags = 16, int dragDurationMs = 700,
-        double threshold = 0.85, CancellationToken ct = default)
+        double threshold = 0.85, CancellationToken ct = default, bool fromHarvest = false)
     {
         ct.ThrowIfCancellationRequested();
         const string template = "resources/templates/base/character_requests/character_requests.png";
@@ -67,12 +67,12 @@ public sealed class BattleshipLocator
             _log.Warn("当前游戏语言缺少角色要求按钮素材");
             return Task.FromResult<TemplateMatchResult?>(null);
         }
-        return FindButtonWithPanAsync(serial, "角色要求", template, null, maxDrags, dragDurationMs, threshold, ct);
+        return FindButtonWithPanAsync(serial, "角色要求", template, null, maxDrags, dragDurationMs, threshold, ct, fromHarvest);
     }
 
     private async Task<TemplateMatchResult?> FindButtonWithPanAsync(
         string serial, string buttonName, string templatePath, string? maskPath,
-        int maxDrags, int dragDurationMs, double threshold, CancellationToken ct)
+        int maxDrags, int dragDurationMs, double threshold, CancellationToken ct, bool fromHarvest = false)
     {
         // 大范围拖动：左右各 700px、上下各 500px，并加入四个斜向方向
         var directions = new[]
@@ -97,7 +97,7 @@ public sealed class BattleshipLocator
                 break;
             }
 
-            var (dx, dy) = directions[attempt % directions.Length];
+            var (dx, dy) = fromHarvest && attempt == 0 ? (700, 0) : directions[attempt % directions.Length];
             var sx = 960 - dx / 2;
             var sy = 540 - dy / 2;
             var ex = 960 + dx / 2;

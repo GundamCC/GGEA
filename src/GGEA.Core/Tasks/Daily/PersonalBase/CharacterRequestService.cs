@@ -31,6 +31,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
     private readonly TemplateImages _next = new(Root + "button_next_character.png");
     private readonly TemplateImages _info = new(Root + "button_request_info.png");
     private readonly TemplateImages _deliver = new(Root + "button_deliver.png");
+    private readonly TemplateImages _obtain = new(Root + "button_obtain.png");
     private readonly TemplateImages _deliveryComplete = new(Root + "title_delivery_complete.png");
     private readonly TemplateImages _developmentTitle = new(Root + "title_development.png");
     private readonly TemplateImages _sortieTitle = new(Root + "title_sortie_request.png");
@@ -42,7 +43,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
     private readonly FundingRequest? _funding = ocr is null ? null : new(ocr);
     private readonly TemplateImages _back = new("resources/templates/common/back.png");
 
-    private enum Control { Accept, Challenge, Report, Deliver }
+    private enum Control { Accept, Challenge, Report, Deliver, Obtain }
     private enum ArrivalKind { List, Dialogue, Detail, Complete, Reward, WeeklyReward }
     private enum RequestKind { Unknown, Funding, Strength, UnitDelivery, Development, Sortie }
     private readonly record struct Title(RequestKind Kind, Roi Region);
@@ -51,7 +52,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
     private sealed record OfferScreen(Detail Detail, StrengthRequest? Request);
     private sealed record DevelopmentScreen(Detail Detail, DevelopmentOrder? Order);
     private sealed record SortieScreen(Detail Detail, SortieOrder? Order);
-    private sealed record UnitOfferScreen(DeliveryOffer? Offer);
+    private sealed record UnitOfferScreen(Detail Detail, DeliveryOffer? Offer);
 
     private static ScreenImage LoadAcceptLabel()
     {
@@ -114,14 +115,15 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                     reported++;
                     continue;
                 }
-                if (detail.Title.Kind == RequestKind.UnitDelivery && detail.Action == Control.Deliver)
+                if (detail.Title.Kind == RequestKind.UnitDelivery && detail.Action is Control.Deliver or Control.Obtain)
                 {
                     var evidence = await WaitAsync(serial, frame =>
                     {
-                        if (ReadDetail(frame, ct) is not { Action: Control.Deliver, Title.Kind: RequestKind.UnitDelivery } current)
+                        if (ReadDetail(frame, ct) is not { Action: Control.Deliver or Control.Obtain, Title.Kind: RequestKind.UnitDelivery } current)
                             return null;
-                        return new UnitOfferScreen(_catalog!.ReadDelivery(frame, current.Title.Region, ct));
+                        return new UnitOfferScreen(current, _catalog!.ReadDelivery(frame, current.Title.Region, ct));
                     }, ct) ?? throw Unknown();
+                    detail = evidence.Detail;
                     if (evidence.Offer is { } delivery)
                     {
                         var remaining = await DeliverOrRestockAsync(serial, slot, detail, delivery, ct);
@@ -231,10 +233,13 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
         var attempt = DeliveryProductionAttempt.Start(serial, slot, offer);
         var guards = protection ?? new DeliveryProtection();
         var inventory = new UnitDeliveryService(automation, ocr!, guards, offer.MinimumLevel);
-        await TapAsync(serial, detail.Button, ct);
-        if (await inventory.SubmitAsync(serial, ct)) return null;
-
-        detail = await WaitSameDeliveryAsync(serial, offer, ct);
+        // 「获取途径」表示当前不能打开交付库存，直接复用按角色和编号核对过的补开发流程。
+        if (detail.Action == Control.Deliver)
+        {
+            await TapAsync(serial, detail.Button, ct);
+            if (await inventory.SubmitAsync(serial, ct)) return null;
+            detail = await WaitSameDeliveryAsync(serial, offer, ct);
+        }
         var target = DevelopmentRequestIndex.ForDelivery(offer, guards);
         if (target is null || RestockFromList is null) return detail;
         await TapAsync(serial, detail.Back, ct);
@@ -243,7 +248,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
         await RequireSlotAsync();
         await automation.TapAsync(serial, 427 + 535 * slot, 410, ct);
         detail = await WaitSameDeliveryAsync(serial, offer, ct);
-        if (!made) return detail;
+        if (!made || detail.Action != Control.Deliver) return detail;
 
         // 重开库存，只重选一次，仍然执行全部等级与突破保护。
         await TapAsync(serial, detail.Button, ct);
@@ -260,7 +265,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
         await WaitAsync(serial, frame =>
         {
             var detail = ReadDetail(frame, ct);
-            return detail is { Action: Control.Deliver, Title.Kind: RequestKind.UnitDelivery } &&
+            return detail is { Action: Control.Deliver or Control.Obtain, Title.Kind: RequestKind.UnitDelivery } &&
                 _catalog!.ReadDelivery(frame, detail.Title.Region, ct) == expected ? detail : null;
         }, ct) ?? throw Unknown();
 
@@ -364,8 +369,11 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
         var deliver = _deliver.Match(_matcher, frame, .95, ActionLabelArea, ct);
         var accept = _matcher.Match(frame.Bgra, frame.Width, frame.Height, _acceptLabel.Bgra,
             _acceptLabel.Width, _acceptLabel.Height, .93, ActionLabelArea, ct: ct);
-        if ((accept is null ? 0 : 1) + (report is null ? 0 : 1) + (challenge is null ? 0 : 1) + (deliver is null ? 0 : 1) != 1) return null;
+        var obtain = _obtain.Match(_matcher, frame, .95, ActionLabelArea, ct);
+        if ((obtain is null ? 0 : 1) + (accept is null ? 0 : 1) + (report is null ? 0 : 1) + (challenge is null ? 0 : 1) + (deliver is null ? 0 : 1) != 1) return null;
         var title = _catalog is null ? default : ReadTitle(frame, ct);
+        if (obtain is not null)
+            return title.Kind == RequestKind.UnitDelivery ? new(Control.Obtain, back.Region, obtain.Region, title, null) : null;
         if (deliver is not null)
             return new(Control.Deliver, back.Region, deliver.Region, title,
                 title.Kind == RequestKind.Funding ? _funding!.ReadAmount(frame, ct) : null);

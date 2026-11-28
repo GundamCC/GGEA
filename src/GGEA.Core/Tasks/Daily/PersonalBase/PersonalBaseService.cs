@@ -68,7 +68,7 @@ public sealed class PersonalBaseService
     public async Task<int> AcceptCharacterRequestsAsync(string serial, UiLayout mainLayout, CancellationToken ct = default) =>
         (await RunCharacterRequestsAsync(serial, mainLayout, null, ct)).Accepted;
 
-    public Task<CharacterRequestResult> RunCharacterRequestsAsync(string serial, UiLayout mainLayout, OnnxTextRecognizer? ocr, CancellationToken ct = default, DeliveryProtection? protection = null, DevelopRequest? development = null, SortieRequestService? sortie = null) =>
+    public Task<CharacterRequestResult> RunCharacterRequestsAsync(string serial, UiLayout mainLayout, OnnxTextRecognizer? ocr, CancellationToken ct = default, DeliveryProtection? protection = null, DevelopRequest? development = null, SortieRequestService? sortie = null, bool fromHarvest = false) =>
         Task.Run(async () =>
         {
             var service = new CharacterRequestService(_automation, _log, ocr, protection, development)
@@ -82,17 +82,21 @@ public sealed class PersonalBaseService
                     return made;
                 }
             };
-            await OpenRequestsAsync(serial, mainLayout, ct);
+            await OpenRequestsAsync(serial, mainLayout, ct, fromHarvest);
             return await service.RunFromListAsync(serial, ct);
         }, ct);
 
     // 开发作品列表和主界面都带底部导航，从已核对的页面重新进入个人基地。
-    private async Task OpenRequestsAsync(string serial, UiLayout mainLayout, CancellationToken ct)
+    private async Task OpenRequestsAsync(string serial, UiLayout mainLayout, CancellationToken ct, bool fromHarvest = false)
     {
-        var navBase = mainLayout.Require("navBase", "主界面布局缺少 navBase 锚点");
-        await _automation.TapAsync(serial, navBase.CenterX, navBase.CenterY, ct);
-        await Task.Delay(GameTiming.RecognitionIntervalMs, ct);
-        var entry = await _battleshipLocator.FindCharacterRequestsWithPanAsync(serial, ct: ct);
+        if (!fromHarvest)
+        {
+            var navBase = mainLayout.Require("navBase", "主界面布局缺少 navBase 锚点");
+            await _automation.TapAsync(serial, navBase.CenterX, navBase.CenterY, ct);
+            await Task.Delay(GameTiming.RecognitionIntervalMs, ct);
+        }
+        var entry = await _battleshipLocator.FindCharacterRequestsWithPanAsync(serial,
+            maxDrags: fromHarvest ? 1 : 16, ct: ct, fromHarvest: fromHarvest);
         if (entry is not null)
         {
             await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);

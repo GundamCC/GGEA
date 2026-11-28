@@ -23,14 +23,17 @@ public partial class MainWindow
         }
 
         var allowInitialAnnouncement = true;
+        var atBaseAfterHarvest = false;
         foreach (var task in dailyPlan.Where(task => task.Kind != DailyTaskKind.ClaimMissionReward))
         {
             run.Begin(task);
             ct.ThrowIfCancellationRequested();
 
-            // 每个任务前都重新确认主界面，避免在上一任务的子页面直接操作下一任务。
+            // 基地交接只对紧随正常回收流程的角色要求有效。
+            var continueAtBase = atBaseAfterHarvest && task.Kind == DailyTaskKind.CharacterRequests;
+            atBaseAfterHarvest = false;
             bool allowAnnouncement = allowInitialAnnouncement;
-            if (task.Kind != DailyTaskKind.LimitedEvent && !await EnsureMainScreenAsync(serial, ct, allowAnnouncement))
+            if (!continueAtBase && task.Kind != DailyTaskKind.LimitedEvent && !await EnsureMainScreenAsync(serial, ct, allowAnnouncement))
             {
                 AccountStatusText.Text = L.Text("未能确认主界面，任务中止");
                 if (await AbortTaskChainIfConnectionErrorAsync(serial, L.Text("每日"), ct))
@@ -67,6 +70,7 @@ public partial class MainWindow
                     _logger!.Info(L.Format($"回收战舰: {harvestResult.Message}"));
                     // 出航中暂不可回收属于安全略过；只有定位或状态确认失败才计为失败。
                     taskSucceeded = harvestResult.Completed;
+                    atBaseAfterHarvest = harvestResult.Completed;
                     break;
                 }
 
@@ -76,7 +80,7 @@ public partial class MainWindow
                         var result = await _personalBaseService!.RunCharacterRequestsAsync(serial, _mainLayout, GetTextOcr(), ct,
                             new(_config.ProtectDeliveryLimitBreak, _config.ProtectDeliveryHighLevel), CreateDevelopRequest(),
                             new SortieRequestService(_automation!, _stageService!, _stageSkipService!, _stageLayout, _hardStages,
-                                GetTextOcr(), _logger!));
+                                GetTextOcr(), _logger!), continueAtBase);
                         _logger!.Info(L.Format($"本轮承接 {result.Accepted} 个角色要求，已完成 {result.Reported} 个委托。"));
                         failedSubtasks.AddRange(result.FailedRoles);
                         taskSucceeded = result.FailedRoles.Count == 0;

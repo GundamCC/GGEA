@@ -66,8 +66,10 @@ public class BattleshipLocatorTests
     }
 
     /// <summary>地图初始只显示战舰时应继续拖动，再从实机画面中的相邻设施定位角色要求。</summary>
-    [Fact]
-    public async Task CharacterRequests_FindsCorrectLabelAfterDrag()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CharacterRequests_FindsCorrectLabelAfterDrag(bool fromHarvest)
     {
         var ship = GGEA.App.Config.ConfigService.ResolvePath(new GGEA.App.Config.AppConfig().BattleshipTemplate);
         var adb = new FakeAdbService(File.ReadAllBytes(ship));
@@ -75,11 +77,12 @@ public class BattleshipLocatorTests
             "Fixtures/Base/character_requests_and_training.png")));
         var locator = new BattleshipLocator(adb, new TemplateMatcher(), new TestLog());
 
-        var match = await locator.FindCharacterRequestsWithPanAsync("serial", maxDrags: 1);
+        var match = await locator.FindCharacterRequestsWithPanAsync("serial", maxDrags: 1, fromHarvest: fromHarvest);
         Assert.NotNull(match);
         Assert.InRange(match.CenterX, 186, 196);
         Assert.InRange(match.CenterY, 31, 41);
-        Assert.Single(adb.Swipes);
+        var swipe = Assert.Single(adb.Swipes);
+        Assert.Equal(fromHarvest ? 700 : -700, swipe.X2 - swipe.X1);
         Assert.Empty(adb.Taps);
     }
 

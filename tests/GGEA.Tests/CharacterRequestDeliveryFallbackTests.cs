@@ -12,7 +12,10 @@ public partial class CharacterRequestPageTests
     [InlineData(false, false)]
     [InlineData(true, false)]
     [InlineData(true, true)]
-    public async Task Delivery_ReopensOriginalRoleAndOnlyRetriesInventoryOnce(bool made, bool eligible)
+    [InlineData(false, false, true)]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, true)]
+    public async Task Delivery_ReopensOriginalRoleAndOnlyRetriesInventoryOnce(bool made, bool eligible, bool obtain = false)
     {
         void Fix(ScreenImage f, string name, int x, int y) =>
             Paste(f, Path.Combine(AppContext.BaseDirectory, "Fixtures/Base/delivery_" + name + ".png"), x, y);
@@ -36,6 +39,9 @@ public partial class CharacterRequestPageTests
         Fix(frame, "number1", 1538, 243);
         Fix(frame, "scirocco_portrait", 544, 467);
         var detail = Encode(frame);
+        for (int y = 800; y < 910; y++) Array.Clear(frame.Bgra, (y * 1920 + 1540) * 4, 170 * 4);
+        PasteTemplate(frame, "button_obtain.png", 1554, 839);
+        var unavailable = Encode(frame);
         frame = Empty();
         PasteTemplate(frame, "title_confirm_delivery.png", 874, 71);
         PasteTemplate(frame, "button_cancel_delivery.png", 729, 967);
@@ -58,8 +64,10 @@ public partial class CharacterRequestPageTests
         var image = ImageCodec.DecodePng(File.ReadAllBytes(ok));
         Paste(frame, ok, 960 - image.Width / 2, 995 - image.Height / 2);
 
-        var steps = new List<byte[]> { list, detail, empty, detail, list, detail };
-        if (made)
+        var steps = obtain
+            ? new List<byte[]> { list, unavailable, list, made && eligible ? detail : unavailable }
+            : new List<byte[]> { list, detail, empty, detail, list, detail };
+        if (made && (!obtain || eligible))
         {
             steps.Add(eligible ? available : empty);
             if (eligible) steps.AddRange([selected, complete, Encode(frame)]);
@@ -81,6 +89,8 @@ public partial class CharacterRequestPageTests
             }
         };
         var result = await service.RunFromListAsync("test", default);
+        if (obtain)
+            Assert.DoesNotContain(adb.Taps.Take(3), tap => tap.X > 1540 && tap.Y > 800);
         Assert.Equal(1, calls);
         Assert.Equal(eligible ? 1 : 0, result.Reported);
         Assert.Equal(eligible ? 0 : 1, result.FailedRoles.Count);
