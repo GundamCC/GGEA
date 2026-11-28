@@ -112,6 +112,11 @@ public partial class MainWindow
     {
         switch (task.Kind)
         {
+            case DailyTaskKind.CharacterRequests:
+                CharacterRequestsTab.IsSelected = true;
+                _logger?.Info(L.Text("已打开 角色要求 设置页"));
+                break;
+
             case DailyTaskKind.ClaimRewards:
                 RewardTab.IsSelected = true;
                 _logger?.Info(L.Text("已打开 奖励 设置页"));

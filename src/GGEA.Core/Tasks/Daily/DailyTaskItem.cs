@@ -61,7 +61,7 @@ public sealed class DailyTaskItem : INotifyPropertyChanged
     public bool CanRemove => Kind is DailyTaskKind.FierceEnemySkip or DailyTaskKind.LimitedEvent;
 
     /// <summary>是否显示齿轮设置入口；只有带独立设置页的任务显示。</summary>
-    public bool HasSettings => Kind is DailyTaskKind.ClaimRewards or DailyTaskKind.ConsumeAp;
+    public bool HasSettings => Kind is DailyTaskKind.CharacterRequests or DailyTaskKind.ClaimRewards or DailyTaskKind.ConsumeAp;
 
     /// <summary>任务行可跳转到对应页面；强敌行保留删除图标，不额外显示齿轮。</summary>
     public bool CanOpenSettings => HasSettings || CanRemove;

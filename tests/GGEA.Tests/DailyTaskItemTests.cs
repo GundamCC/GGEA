@@ -88,6 +88,7 @@ public class DailyTaskItemTests
     [Fact]
     public void HasSettings_OnlyTrueForTasksWithSettingsPage()
     {
+        Assert.True(new DailyTaskItem { Kind = DailyTaskKind.CharacterRequests }.HasSettings);
         Assert.True(new DailyTaskItem { Kind = DailyTaskKind.ClaimRewards }.HasSettings);
         Assert.True(new DailyTaskItem { Kind = DailyTaskKind.ConsumeAp }.HasSettings);
         Assert.False(new DailyTaskItem { Kind = DailyTaskKind.HarvestBattleship }.HasSettings);
