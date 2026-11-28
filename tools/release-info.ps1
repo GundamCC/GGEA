@@ -1,4 +1,4 @@
-﻿# 发布身份与资源校验共用实现；清单描述发布文件本身，打包不得从源码覆盖内容。
+# 发布身份与资源校验共用实现；清单描述发布文件本身，打包不得从源码覆盖内容。
 . (Join-Path $PSScriptRoot "publish-files.ps1")
 . (Join-Path $PSScriptRoot "release-notes.ps1")
 
@@ -102,6 +102,38 @@ function Get-ReleaseVersion([string]$SourceRoot) {
     return $version
 }
 
+# 数据发布沿用最近一次程序变更的编译身份。只跨过明确的数据和说明变更，陌生输入一律重新编译为新身份。
+function Get-ProgramIdentity([string]$SourceRoot, [string]$Commit) {
+    $snapshot = Join-Path $SourceRoot '.release-source.json'
+    if (Test-Path -LiteralPath $snapshot) {
+        $fixed = Get-Content -Raw -LiteralPath $snapshot | ConvertFrom-Json
+        if ($fixed.commit -ne $Commit) { throw 'Program identity snapshot mismatch' }
+        if ($fixed.program) { return $fixed.program }
+    }
+    $project = 'src/GGEA.App/GGEA.App.csproj'
+    $cursor = $Commit
+    while ($true) {
+        $line = [string](& git -C $SourceRoot rev-list --parents -n 1 $cursor)
+        if ($LASTEXITCODE) { throw 'Cannot identify program revision' }
+        $parents = $line.Split(' ')
+        if ($parents.Length -lt 2) { break }
+        $prev = $parents[1]
+        $changed = @(& git -c core.quotepath=false -C $SourceRoot diff --name-only --no-renames $prev $cursor)
+        if ($LASTEXITCODE) { throw 'Cannot compare program revisions' }
+        if ($changed | Where-Object { $_ -cne $project -and $_ -cnotmatch '^(resources/|config/|docs/|README(?:\.[\w-]+)?\.md$|CHANGELOG\.md$|RELEASE\.txt$|使用说明\.txt$)' }) { break }
+        if ($changed -ccontains $project) {
+            $before = ((& git -C $SourceRoot show "${prev}:$project") -join "`n") -replace '<Version>[0-9.]+</Version>', '<Version/>'
+            $after = ((& git -C $SourceRoot show "${cursor}:$project") -join "`n") -replace '<Version>[0-9.]+</Version>', '<Version/>'
+            if ($before -cne $after) { break }
+        }
+        $cursor = $prev
+    }
+    [xml]$csproj = ((& git -C $SourceRoot show "${cursor}:$project") -join "`n")
+    $version = [string]$csproj.Project.PropertyGroup.Version
+    if ($version -notmatch '^\d+\.\d+\.\d+\.\d+$') { throw 'Invalid program version' }
+    return [ordered]@{ commit = $cursor; version = $version }
+}
+
 # 清单最后生成；文件集合、资源版本和 EXE 文件/产品版本必须同时一致。
 function Write-ReleaseInfo([string]$Directory, [string]$Version, [string]$Commit, [string]$Runtime) {
     $files = Get-ReleaseInventory $Directory
@@ -125,6 +157,7 @@ function Write-ReleaseInfo([string]$Directory, [string]$Version, [string]$Commit
         $engine = Get-ContentIdentity $inputs ''
     }
     [ordered]@{
+        program = Get-ProgramIdentity $sourceRoot $Commit
         templateEngine = $engine
         schemaVersion = 1; version = $Version; channel = 'Release'; commit = $Commit
         configuration = 'Release'; runtime = $Runtime; selfContained = $true; singleFile = $true
@@ -154,7 +187,10 @@ function Assert-ReleaseInfo([string]$Directory, [string]$Version, [string]$Expec
         if (-not $files.Contains($required)) { throw "Missing release file: $required" }
     }
     $exe = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $Directory 'GGEA.exe'))
-    if ($exe.FileVersion -ne $Version -or $exe.ProductVersion -ne $Version) { throw 'EXE version mismatch' }
+    $root = Split-Path -Parent $PSScriptRoot
+    $binary = Get-ProgramIdentity $root $ExpectedCommit
+    if ((Get-ReleaseVersion $root) -ne $Version -or $info.program.commit -cne $binary.commit -or
+        $info.program.version -cne $binary.version -or $exe.FileVersion -ne $binary.version -or $exe.ProductVersion -ne $binary.version) { throw 'EXE version mismatch' }
     if ($info.resourcesVersion -ne (Get-ContentIdentity $files 'resources/') -or $info.configVersion -ne (Get-ContentIdentity $files 'config/')) { throw 'Resource identity mismatch' }
     Assert-ReleaseResources $Directory
 }

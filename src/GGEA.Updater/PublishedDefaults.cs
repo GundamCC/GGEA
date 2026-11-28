@@ -11,13 +11,13 @@ public static class PublishedDefaults
         UpdateFiles.SafePath(installation, UpdateFiles.StateDirectory + "/defaults");
 
     // 只把新版相对旧出厂配置的变化合入用户文件。旧默认值缺失时无法判断用户意图，保留已有值。
-    internal static Dictionary<string, JsonObject> ChangedSettings(string target, string package,
-        UpdateManifest old, UpdateManifest next)
+    public static Dictionary<string, JsonObject> ChangedSettings(string target, string package,
+        UpdateManifest old, UpdateManifest next, string? only = null)
     {
         var result = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
         foreach (var (name, hash) in next.Files)
         {
-            if (!UpdateFiles.IsUserFile(name) || !name.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
+            if ((only is not null && only != name) || !UpdateFiles.IsUserFile(name) || !name.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ||
                 !old.Files.TryGetValue(name, out var previousHash) || hash.Equals(previousHash, StringComparison.OrdinalIgnoreCase)) continue;
             var path = UpdateFiles.SafePath(target, name);
             if (!File.Exists(path)) continue;

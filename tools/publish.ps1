@@ -27,6 +27,7 @@ if (-not $SourceCommit) {
 if ($SourceCommit -notmatch '^[a-f0-9]{40}$') { throw "Invalid source commit" }
 Assert-ReleaseSource $root $SourceCommit
 $version = Get-ReleaseVersion $root
+$program = Get-ProgramIdentity $root $SourceCommit
 & (Join-Path $root 'tools/test-release-notes.ps1')
 Assert-ReleaseResources $root
 & dotnet build (Join-Path $root 'GGEA.sln') -c Release
@@ -64,12 +65,19 @@ try {
         -r $Runtime `
         --self-contained true `
         -p:PublishSingleFile=true `
-        -p:GgeaReleaseCommit=$SourceCommit `
+        "-p:GgeaReleaseCommit=$($program.commit)" `
+        "-p:GgeaCodeVersion=$($program.version)" `
         -o $staging
 
     if ($LASTEXITCODE -ne 0) {
         throw "Publish failed with exit code $LASTEXITCODE"
     }
+
+    # 内容发布仍以独立的小型 PE 携带版本和源提交，主程序不因新图片而重新打版本戳。
+    $identityOut = Join-Path $root 'build/release-identity'
+    & dotnet build (Join-Path $root 'tools/ReleaseIdentity/ReleaseIdentity.csproj') -c Release -o $identityOut "-p:Version=$version" "-p:InformationalVersion=$SourceCommit"
+    if ($LASTEXITCODE) { throw 'Release identity build failed' }
+    Copy-Item -LiteralPath (Join-Path $identityOut 'GGEA.ReleaseIdentity.dll') -Destination $staging
 
     Assert-NoReleaseManagerPrivateFiles -Directory $staging
 

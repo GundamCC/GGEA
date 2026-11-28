@@ -34,7 +34,7 @@ public static class UpdateInstaller
         foreach (var name in old.Files.Keys.Union(next.Files.Keys, StringComparer.OrdinalIgnoreCase))
         {
             if (old.Files.TryGetValue(name, out var before) && next.Files.TryGetValue(name, out var after) && before == after) continue;
-            if (name is "GGEA.dll" or "GGEA.exe" or "使用说明.txt" or "RELEASE.txt") continue;
+            if (name is "GGEA.dll" or "GGEA.exe" or "GGEA.ReleaseIdentity.dll" or "使用说明.txt" or "RELEASE.txt") continue;
             if (name.StartsWith("config/", StringComparison.OrdinalIgnoreCase) &&
                 name.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) continue;
             if (!name.StartsWith("resources/", StringComparison.OrdinalIgnoreCase)) return false;

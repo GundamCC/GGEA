@@ -15,12 +15,12 @@ internal static class RangePackageDownload
     private const long LiveImageDownloadLimit = 1024 * 1024;
 
     public static async Task<string> PrepareAsync(UpdateHttpTransport http, UpdateRelease update, UpdateRangeIndex index,
-        string installation, IProgress<double> progress, CancellationToken cancellationToken)
+        string installation, IProgress<double> progress, CancellationToken cancellationToken, bool smallIndex = false)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromMinutes(30));
         var token = timeout.Token;
-        var workspace = UpdateFiles.SafePath(installation, ".ggea-update/download-" + Guid.NewGuid().ToString("N"));
+        var workspace = UpdateFiles.SafePath(VersionStore.RootOf(installation), ".ggea-update/download-" + Guid.NewGuid().ToString("N"));
         var package = Path.Combine(workspace, "package");
         Directory.CreateDirectory(package);
         try
@@ -32,7 +32,17 @@ internal static class RangePackageDownload
                 !string.Equals(root.GetProperty("archiveHash").GetString(), update.Sha256, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("更新索引与正式附件不匹配。");
             var manifestPath = UpdateFiles.SafePath(package, "build-info.json");
-            await File.WriteAllBytesAsync(manifestPath, root.GetProperty("manifest").GetBytesFromBase64(), token);
+            if (smallIndex)
+            {
+                var length = root.GetProperty("manifestSize").GetInt32();
+                if (length is <= 0 or > 8 * 1024 * 1024) throw new InvalidDataException("目标清单过大。");
+                using var source = File.OpenRead(UpdateFiles.SafePath(installation, "build-info.json"));
+                using var patch = new MemoryStream(root.GetProperty("manifestPatch").GetBytesFromBase64());
+                using (var output = File.Create(manifestPath)) FileCopyPatch.Apply(source, patch, output, length, token);
+                if (UpdateFiles.Hash(manifestPath) != root.GetProperty("manifestHash").GetString())
+                    throw new InvalidDataException("小版本更新清单校验失败。");
+            }
+            else await File.WriteAllBytesAsync(manifestPath, root.GetProperty("manifest").GetBytesFromBase64(), token);
             var manifest = UpdateManifest.Read(package);
             if (manifest.Version != update.Version.ToString(4) || !manifest.Files.ContainsKey("GGEA.Updater.exe"))
                 throw new InvalidDataException("更新索引版本或文件集合无效。");
@@ -59,6 +69,22 @@ internal static class RangePackageDownload
                 if (UpdateFiles.IsUserFile(file.Path) && TryReuse(PublishedDefaults.CacheRoot(installation), file.Path, file.Size, hash, target)) continue;
                 pending.Add(file);
             }
+            if (smallIndex)
+            {
+                foreach (var (name, hash) in manifest.Files)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (paths.Contains(name)) continue;
+                    var target = UpdateFiles.SafePath(package, name);
+                    Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                    if (!TryReuse(installation, name, null, hash, target) &&
+                        !(UpdateFiles.IsUserFile(name) && TryReuse(PublishedDefaults.CacheRoot(installation), name, null, hash, target)))
+                        throw new UpdateBaseUnavailableException("本机需要补齐文件。");
+                    expanded += new FileInfo(target).Length;
+                    if (expanded > UpdatePackage.MaximumExpandedBytes) throw new InvalidDataException("更新文件总大小超限。");
+                    paths.Add(name);
+                }
+            }
             if (paths.Count != manifest.Files.Count) throw new InvalidDataException("更新索引缺少文件。");
             var liveData = update.IncrementalOnly && File.Exists(UpdateFiles.SafePath(installation, "build-info.json")) &&
                 UpdateInstaller.CanApplyLiveData(UpdateManifest.Read(installation), manifest);
@@ -71,6 +97,13 @@ internal static class RangePackageDownload
                 using var output = File.Create(UpdateFiles.SafePath(package, file.Path));
                 var limit = liveData && file.Path is ("GGEA.exe" or "GGEA.dll") ? LiveImageDownloadLimit : long.MaxValue;
                 var differenceCostLimit = Math.Min(limit, file.Compressed - 1);
+                if (smallIndex && root.GetProperty("patches").TryGetProperty(file.Path, out var recipe) &&
+                    ApplyTextPatch(installation, file, recipe, output, token))
+                {
+                    written += file.Size;
+                    progress.Report(100.0 * written / Math.Max(1, total));
+                    continue;
+                }
                 if (await CopyPatchDownload.TryPrepareAsync(http, update, installation, file.Path, manifest.Files[file.Path], file.Size, differenceCostLimit, output, token))
                 {
                     written += file.Size;
@@ -131,6 +164,17 @@ internal static class RangePackageDownload
         }
     }
 
+    private static bool ApplyTextPatch(string installation, Entry file, JsonElement recipe, Stream output, CancellationToken token)
+    {
+        var path = UpdateFiles.SafePath(installation, file.Path);
+        if (!File.Exists(path) || file.Size > 1024 * 1024 || new FileInfo(path).Length > 1024 * 1024 ||
+            UpdateFiles.Hash(path) != recipe.GetProperty("source").GetString()) return false;
+        using var source = File.OpenRead(path);
+        using var patch = new MemoryStream(recipe.GetProperty("bytes").GetBytesFromBase64());
+        FileCopyPatch.Apply(source, patch, output, file.Size, token);
+        return true;
+    }
+
     // 压缩附件经过摘要校验后仍限制展开大小，避免有缺陷的发布索引耗尽内存。
     private static JsonDocument ParseIndex(byte[] bytes, bool compressed)
     {
@@ -159,15 +203,15 @@ internal static class RangePackageDownload
     }
 
     // 文件缺失、被修改或占用时只重取这一项；复制后统一复核，覆盖并发修改窗口。
-    private static bool TryReuse(string installation, string relativePath, long size, string hash, string target)
+    private static bool TryReuse(string installation, string relativePath, long? size, string hash, string target)
     {
         try
         {
             var path = UpdateFiles.SafePath(installation, relativePath);
-            if (!File.Exists(path) || new FileInfo(path).Length != size ||
+            if (!File.Exists(path) || (size.HasValue && new FileInfo(path).Length != size) ||
                 !UpdateFiles.Hash(path).Equals(hash, StringComparison.OrdinalIgnoreCase)) return false;
             File.Copy(path, target, overwrite: true);
-            return new FileInfo(target).Length == size;
+            return !size.HasValue || new FileInfo(target).Length == size;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
     }

@@ -35,11 +35,6 @@ public partial class MainWindow
         var settings = new SettingsWindow(new ConfigService(_logger).Load(ConfigService.ResolvePath(DefaultConfigFile)), _logger, allowUpdateInstall: true,
             availableUpdate: _startupUpdate, saveUpdatePreference: SaveUpdatePreference, plugins: _plugins) { Owner = this };
         var saved = settings.ShowDialog();
-        if (settings.UpdateRequested)
-        {
-            CloseForUpdate();
-            return;
-        }
         if (saved != true)
         {
             await SyncPluginsAsync((DeviceCombo.SelectedItem as AdbDevice)?.Serial, _windowTasks.Token);

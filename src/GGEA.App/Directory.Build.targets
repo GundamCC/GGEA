@@ -1,0 +1,10 @@
+<Project>
+  <!-- 单文件宿主内嵌 deps.json。纯数据发行沿用程序版本，确保宿主和程序集都逐字节复用。 -->
+  <PropertyGroup Condition="'$(GgeaCodeVersion)' != ''">
+    <Version>$(GgeaCodeVersion)</Version>
+    <PackageVersion>$(GgeaCodeVersion)</PackageVersion>
+    <AssemblyVersion>$(GgeaCodeVersion)</AssemblyVersion>
+    <FileVersion>$(GgeaCodeVersion)</FileVersion>
+    <InformationalVersion>$(GgeaCodeVersion)</InformationalVersion>
+  </PropertyGroup>
+</Project>

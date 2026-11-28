@@ -36,6 +36,24 @@ public sealed class UpdatePackageDownloader
     {
         var hasManifest = File.Exists(UpdateFiles.SafePath(installation, "build-info.json"));
         // 按需重建只信任目标索引中的文件和块摘要；只有旧版差异 ZIP 需要正式基线清单。
+        if (hasManifest && update.SmallIndexes.Count != 0)
+        {
+            var local = UpdateFiles.SafePath(installation, "build-info.json");
+            if (new FileInfo(local).Length <= 8 * 1024 * 1024 && update.SmallIndexes.TryGetValue(UpdateFiles.Hash(local), out var small))
+            {
+                try
+                {
+                    return await Task.Run(() => RangePackageDownload.PrepareAsync(_http, update, small, installation, progress,
+                        cancellationToken, smallIndex: true), cancellationToken);
+                }
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested &&
+                    ex is UpdateBaseUnavailableException or HttpRequestException or OperationCanceledException)
+                {
+                    _http.Trace("继续按目标文件清单复用本机文件。");
+                    progress.Report(0);
+                }
+            }
+        }
         if (update.Index is null)
             _http.Trace("跳过按需下载：来源未提供可用索引。");
         if (update.Index is { } index)
@@ -83,7 +101,7 @@ public sealed class UpdatePackageDownloader
     private async Task<string> DownloadPackageAsync(UpdateRelease update, string installation, IProgress<double> progress,
         CancellationToken cancellationToken, string? baseVersion = null)
     {
-        var workspace = UpdateFiles.SafePath(installation, ".ggea-update/download-" + Guid.NewGuid().ToString("N"));
+        var workspace = UpdateFiles.SafePath(VersionStore.RootOf(installation), ".ggea-update/download-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workspace);
         try
         {

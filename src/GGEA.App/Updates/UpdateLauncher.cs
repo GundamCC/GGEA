@@ -14,23 +14,46 @@ public static class UpdateLauncher
     public static Version CurrentVersion => _activeData is null
         ? typeof(App).Assembly.GetName().Version! : Version.Parse(_activeData.Version);
 
-    /// <summary>调用方持有业务租约。通过完整自检后再更新当前窗口的有效版本。</summary>
-    public static async Task<bool> TryApplyLiveDataAsync(RunningInstallation installation, string root, string package,
-        string version, CancellationToken token)
+    internal static string UserRoot { get; } = VersionStore.RootOf(AppContext.BaseDirectory);
+    internal static string ContentRoot => Config.ConfigService.ContentDirectory;
+    internal static Version? PreparedVersion { get; private set; }
+
+    private static FileStream? _contentLease;
+
+    internal static void SelectContent(string directory)
     {
-        if (!File.Exists(UpdateFiles.SafePath(root, "build-info.json"))) return false;
+        var root = UserRoot;
+        var original = !Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar).Equals(
+            Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase) &&
+            File.Exists(UpdateFiles.SafePath(root, "build-info.json")) ? UpdateManifest.Read(root).Files : null;
+        if (File.Exists(UpdateFiles.SafePath(directory, "build-info.json")))
+            _activeData = UpdateManifest.Read(directory);
+        var lease = VersionStore.Hold(root, directory);
+        Config.ConfigService.SelectDirectories(root, directory, original);
+        Interlocked.Exchange(ref _contentLease, lease)?.Dispose();
+    }
+
+    internal static async Task<bool> ApplyAsync(string package, string version, CancellationToken token)
+    {
+        if (InstallationUnavailableReason(ContentRoot) is { } reason) throw new InvalidOperationException(reason);
+        var old = UpdateManifest.ReadInstallation(ContentRoot);
         var next = UpdateManifest.Read(package);
-        if (!UpdateInstaller.CanApplyLiveData(UpdateManifest.Read(root), next)) return false;
-        try { await Task.Run(() => UpdateManifest.Read(root).Verify(root, preserveUserFiles: true, cancellationToken: token), token); }
-        catch (InvalidDataException) { return false; } // 修复损坏文件由独立安装器执行。
-        if (InstallationUnavailableReason(root) is { } reason) throw new InvalidOperationException(reason);
-        token.ThrowIfCancellationRequested();
-        await installation.StartUpdateAsync(() => Task.Run(() =>
+        var live = UpdateInstaller.CanApplyLiveData(old, next);
+        var directory = await Task.Run(() => VersionStore.Publish(UserRoot, package, version, UpdateInstaller.VerifyExecutable, token), token);
+        return Adopt(directory, next, live);
+    }
+
+    internal static bool Adopt(string directory, UpdateManifest next, bool live)
+    {
+        if (!live)
         {
-            token.ThrowIfCancellationRequested();
-            UpdateInstaller.Install(root, package, version, UpdateInstaller.VerifyExecutable, liveData: true);
-        }), continueRunning: true);
+            PreparedVersion = Version.Parse(next.Version);
+            return false;
+        }
+        VersionStore.ApplyUserDefaults(UserRoot, directory);
+        SelectContent(directory);
         _activeData = next;
+        PreparedVersion = null;
         return true;
     }
 
@@ -54,7 +77,7 @@ public static class UpdateLauncher
             var manifest = UpdateManifest.Read(root);
             var commit = typeof(App).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
                 .SingleOrDefault(a => a.Key == "GgeaReleaseCommit")?.Value;
-            if (manifest.Version != CurrentVersion.ToString(4) || manifest.Commit != (_activeData?.Commit ?? commit))
+            if (manifest.Version != CurrentVersion.ToString(4) || manifest.ProgramCommit != commit || manifest.ProgramVersion != typeof(App).Assembly.GetName().Version!.ToString(4))
                 return L.Text("当前程序与发布清单不一致，请重新下载正式完整包。");
             if (!manifest.Files.TryGetValue("GGEA.Updater.exe", out var hash) ||
                 UpdateFiles.Hash(UpdateFiles.SafePath(root, "GGEA.Updater.exe")) != hash.ToLowerInvariant())

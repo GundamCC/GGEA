@@ -29,7 +29,6 @@ public partial class SettingsWindow : Window
     public AppConfig Config => _config;
 
     /// <summary>主窗口仅在更新器就绪后关闭应用。</summary>
-    public bool UpdateRequested => Updates.UpdateRequested;
 
     public SettingsWindow(AppConfig config, IGgeaLog log, bool allowUpdateInstall = false,
         UpdateRelease? availableUpdate = null, Action<bool>? saveUpdatePreference = null, Plugins.PluginManager? plugins = null)
@@ -46,11 +45,11 @@ public partial class SettingsWindow : Window
             // 仅更新软件更新偏好；其他编辑仍由底部“保存”负责，取消窗口也不会回滚即时偏好。
             if (saveUpdatePreference is not null) saveUpdatePreference(enabled);
             else UpdatePreferences.SaveAutomaticUpdates(enabled,
-                Path.Combine(AppContext.BaseDirectory, "config", "ggea.config.json"));
+                Path.Combine(GGEA.App.Config.ConfigService.UserDirectory, "config", "ggea.config.json"));
             _config.AutomaticUpdates = enabled;
             _config.SavedValues!["automaticUpdates"] = enabled;
         }, config.AutoInstallUpdates);
-        Updates.InstallationReady += (_, _) => DialogResult = false;
+
         foreach (var path in (config.AdbPaths ?? []).Append(config.AdbPath).Where(p => !string.IsNullOrWhiteSpace(p)).Distinct(StringComparer.OrdinalIgnoreCase))
             AdbPathBox.Items.Add(path);
         SelectedAdbPath = config.AdbPath;
@@ -327,7 +326,7 @@ public partial class SettingsWindow : Window
             GameProfiles.Normalize(_config);
             _config.AllowGgeaDownload = AllowGgeaDownloadCheckBox.IsChecked == true;
             _config.EnableWindowsNotifications = EnableWindowsNotificationsCheckBox.IsChecked == true;
-            var configPath = Path.Combine(AppContext.BaseDirectory, "config", "ggea.config.json");
+            var configPath = Path.Combine(GGEA.App.Config.ConfigService.UserDirectory, "config", "ggea.config.json");
             PluginSettings.Save();
             _config = new ConfigService(_log).SaveEdited(_config, configPath);
             _log.Info(L.Format($"设置已保存: ADB 路径 = {path}, 模拟器 = {_config.EmulatorPath}, 游戏包 = {_config.GamePackage}"));

@@ -18,7 +18,7 @@ public sealed class OnlineUpdateClient : IDisposable
     {
         _installation = installation;
         _report = report;
-        _sources = new(installation, message => report?.Invoke(new(message, true)));
+        _sources = new(VersionStore.RootOf(installation), message => report?.Invoke(new(message, true)));
         _http = new(handler);
         _github = new(_http);
     }

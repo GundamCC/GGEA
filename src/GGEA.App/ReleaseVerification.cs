@@ -22,12 +22,14 @@ internal static class ReleaseVerification
                 throw new InvalidDataException("发布包缺少运行库安装脚本。");
             if (RuntimeDependencies.Check(root) is { } failure)
                 throw new InvalidDataException($"原生依赖检查失败：{failure.Library} / {failure.Kind} / {failure.Detail}");
-            using var info = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "build-info.json")));
-            if (info.RootElement.GetProperty("version").GetString() != typeof(App).Assembly.GetName().Version?.ToString(4))
+            var info = GGEA.Updater.UpdateManifest.Read(root);
+            if (info.ProgramVersion != typeof(App).Assembly.GetName().Version?.ToString(4))
                 throw new InvalidDataException("程序版本与 build-info 不一致。");
             var commit = typeof(App).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
                 .SingleOrDefault(attribute => attribute.Key == "GgeaReleaseCommit")?.Value;
-            if (string.IsNullOrEmpty(commit) || commit != info.RootElement.GetProperty("commit").GetString())
+            var identity = System.Diagnostics.FileVersionInfo.GetVersionInfo(Path.Combine(root, "GGEA.ReleaseIdentity.dll"));
+            if (identity.FileVersion != info.Version) throw new InvalidDataException("发行版本与 build-info 不一致。");
+            if (identity.ProductVersion != info.Commit || string.IsNullOrEmpty(commit) || commit != info.ProgramCommit)
                 throw new InvalidDataException("程序构建提交与 build-info 不一致。");
             // 语言资源已迁入核心程序集；单文件产物必须能通过真实核心类型读取嵌入资源。
             if (Localization.L.Translate("设置", "ja") != "設定")

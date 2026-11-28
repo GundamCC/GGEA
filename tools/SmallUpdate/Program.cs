@@ -63,6 +63,9 @@ void Generate(byte[] previousManifest, Func<string, byte[]> readBase)
         throw new InvalidDataException("Expected an older release");
     var oldFiles = old.RootElement.GetProperty("files");
     var nextFiles = target.RootElement.GetProperty("files");
+    if (target.RootElement.TryGetProperty("templateEngine", out var engine) &&
+        engine.GetString() is { Length: 64 } id && old.RootElement.TryGetProperty("templateEngine", out var before) && before.GetString() == id)
+        WriteSmallIndex(previousManifest, oldFiles, nextFiles, readBase);
     foreach (var entry in entries.EnumerateObject())
     {
         var name = entry.Name;
@@ -80,6 +83,34 @@ void Generate(byte[] previousManifest, Func<string, byte[]> readBase)
             Save($".{previous.GetString()}.{nextHash}.copy.br", patch);
     }
 
+}
+
+// 旧版和新版的程序相同时，小索引仅传目标清单的改动与变化文件的位置，图片直接从正式 ZIP 读取。
+void WriteSmallIndex(byte[] baseline, JsonElement previous, JsonElement next, Func<string, byte[]> readBase)
+{
+    var changed = new Dictionary<string, JsonElement>();
+    var patches = new Dictionary<string, object>();
+    foreach (var entry in entries.EnumerateObject())
+    {
+        var name = entry.Name;
+        var oldHash = previous.TryGetProperty(name, out var old) ? old.GetString() : null;
+        if (oldHash == next.GetProperty(name).GetString()) continue;
+        changed.Add(name, entry.Value);
+        if (changed.Count > 64) return;
+        // 说明和设置常常只改一行；可以直接从已校验的旧文本重建。
+        if (oldHash is null || entry.Value.GetProperty("size").GetInt64() > 1024 * 1024 ||
+            !(name == "GGEA.ReleaseIdentity.dll" || name.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))) continue;
+        var bytes = readBase(name);
+        if (bytes.Length > 1024 * 1024 || Hash(bytes) != oldHash) continue;
+        var patch = MakePatch(bytes, File.ReadAllBytes(Path.Combine(targetRoot, name)));
+        if (patch.Length <= 4096 && patch.Length < entry.Value.GetProperty("compressed").GetInt64())
+            patches[name] = new { source = oldHash, bytes = patch };
+    }
+    var descriptor = new { schema = 1, archiveHash = index.RootElement.GetProperty("archiveHash").GetString(),
+        manifestSize = manifest.Length, manifestHash = Hash(manifest), manifestPatch = MakePatch(baseline, manifest),
+        entries = changed, patches };
+    var payload = Compress(JsonSerializer.SerializeToUtf8Bytes(descriptor));
+    if (payload.Length < 64 * 1024) Save("." + Hash(baseline) + ".small.br", payload);
 }
 
 static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();

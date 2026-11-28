@@ -22,6 +22,7 @@ public sealed record UpdateRelease(Version Version, string Notes, string Package
     public string SourceId { get; init; } = "github";
     public string SourceName { get; init; } = "GitHub";
     public IReadOnlyCollection<string> AllowedHosts { get; init; } = UpdateHttpTransport.GitHubHosts;
+    internal Dictionary<string, UpdateRangeIndex> SmallIndexes { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     internal IReadOnlyList<UpdateCopyPatch> CopyPatches { get; init; } = [];
     public UpdateBlockAsset? UpdaterBlocks { get; init; }
     public UpdateBlockAsset? Blocks { get; init; }

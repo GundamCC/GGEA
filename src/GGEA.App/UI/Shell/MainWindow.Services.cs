@@ -245,7 +245,7 @@ public partial class MainWindow
 
     /// <summary>略过与主界面恢复共享本地取证限频和轮转槽位，重建服务也不清空状态。</summary>
     private RecognitionEvidence GetRecognitionEvidence()
-        => _recognitionEvidence ??= new RecognitionEvidence(Path.Combine(AppContext.BaseDirectory, "logs", "recognition"), _logger!);
+        => _recognitionEvidence ??= new RecognitionEvidence(Path.Combine(GGEA.App.Config.ConfigService.UserDirectory, "logs", "recognition"), _logger!);
 
     /// <summary>导航与推图返回确认共用主界面配置；检测器只观察，不能主动点击或恢复页面。</summary>
     private MainScreenDetector CreateMainScreenDetector()

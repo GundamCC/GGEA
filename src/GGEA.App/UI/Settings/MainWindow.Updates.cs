@@ -1,5 +1,4 @@
 using GGEA.App.Localization;
-using System.Windows.Threading;
 using System.Windows;
 using System.Windows.Automation;
 using System.IO;
@@ -10,19 +9,50 @@ namespace GGEA.App.UI;
 
 public partial class MainWindow
 {
-    /// <summary>更新交接后禁止新业务；关闭仍通过窗口任务收尾和插件释放流程。</summary>
-    private bool _updatePending;
 
     // 每次检查独立持有客户端，窗口关闭时仍由任务生命周期取消。测试可注入受控的发布源响应。
     internal Func<Action<UpdateSourceStatus>, OnlineUpdateClient> OpenUpdateClient { get; set; } =
-        report => new OnlineUpdateClient(AppContext.BaseDirectory, report);
+        report => new OnlineUpdateClient(UpdateLauncher.ContentRoot, report);
 
     private async Task MonitorUpdatesAsync()
     {
         await CheckStartupUpdateAsync();
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(30));
         while (await timer.WaitForNextTickAsync(_windowTasks.Token))
-            if (_config.AutomaticUpdates && !_updatePending) await CheckStartupUpdateAsync();
+            if (_config.AutomaticUpdates) await CheckStartupUpdateAsync();
+    }
+
+    // 其他窗口也可完成后台更新。仅在本窗口任务空闲时切换目录、刷新控件和识图缓存。
+    private async Task MonitorInstalledVersionAsync()
+    {
+        var root = UpdateLauncher.UserRoot;
+        var marker = GGEA.Updater.UpdateFiles.SafePath(root, ".ggea-update/active.json");
+        DateTime seen = DateTime.MinValue;
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+        while (await timer.WaitForNextTickAsync(_windowTasks.Token))
+        {
+            var stamp = File.GetLastWriteTimeUtc(marker);
+            if (stamp == seen) continue;
+            using var lease = TryBeginHostOperation(false);
+            if (lease is null) continue;
+            try
+            {
+                var selected = await Task.Run(() => VersionStore.SelectedDirectory(root, verifyProgram: true), _windowTasks.Token);
+                if (!Path.TrimEndingDirectorySeparator(selected).Equals(Path.TrimEndingDirectorySeparator(UpdateLauncher.ContentRoot), StringComparison.OrdinalIgnoreCase))
+                {
+                    var old = GGEA.Updater.UpdateManifest.ReadInstallation(UpdateLauncher.ContentRoot);
+                    var next = GGEA.Updater.UpdateManifest.Read(selected);
+                    if (UpdateLauncher.Adopt(selected, next, GGEA.Updater.UpdateInstaller.CanApplyLiveData(old, next)))
+                        RefreshLiveData();
+                }
+                seen = stamp;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                _logger?.Warn(ex.Message);
+                seen = stamp;
+            }
+        }
     }
 
     internal void RefreshLiveData()
@@ -61,7 +91,7 @@ public partial class MainWindow
             if (_windowTasks.IsStopping || _startupUpdate is null) return;
             _logger.Info(L.Format($"发现新版本 v{_startupUpdate.Version}，可在设置中下载更新。"));
             RefreshUpdateBadge();
-            if (!_config.AutomaticUpdates || UpdateLauncher.InstallationUnavailableReason(AppContext.BaseDirectory) is not null) return;
+            if (!_config.AutomaticUpdates || UpdateLauncher.InstallationUnavailableReason(UpdateLauncher.ContentRoot) is not null) return;
             if (((App)Application.Current).UpdateDownloadUnavailableReason() is { } reason)
             {
                 _logger.Info(reason);
@@ -75,7 +105,7 @@ public partial class MainWindow
             {
                 // 下载、复用和重建暂存包不占用设备。只在交接独立更新器时持有窗口执行权。
                 package = await Task.Run(() => client.DownloadAsync(update, new Progress<double>(), pending.Token), pending.Token);
-                while (!_updatePending && _config.AutomaticUpdates)
+                while (_config.AutomaticUpdates)
                 {
                     pending.Token.ThrowIfCancellationRequested();
                     using var lease = TryBeginHostOperation(false);
@@ -86,9 +116,8 @@ public partial class MainWindow
                             RefreshLiveData();
                             break;
                         }
-                        ((App)Application.Current).InstallOnExit(package, update.Version);
-                        package = null;
-                        _logger.Info(L.Text("更新已就绪，退出后安装，下次打开即可使用。"));
+
+                        _logger.Info(L.Format($"v{UpdateLauncher.PreparedVersion} 已安装，下次打开 GGEA 即可使用。"));
                         break;
                     }
                     _waitingForIdle = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -131,17 +160,9 @@ public partial class MainWindow
     private void SaveUpdatePreference(bool enabled)
     {
         UpdatePreferences.SaveAutomaticUpdates(enabled,
-            Path.Combine(AppContext.BaseDirectory, "config", "ggea.config.json"));
+            Path.Combine(GGEA.App.Config.ConfigService.UserDirectory, "config", "ggea.config.json"));
         _config.AutomaticUpdates = enabled;
         if (!enabled) _automaticDownload?.Cancel();
     }
 
-    /// <summary>事件先释放执行租约，随后正常关闭，保证设备任务和 插件 完成收尾。</summary>
-    private void CloseForUpdate()
-    {
-        _updatePending = true;
-        _startupUpdate = null;
-        UpdateBusyState();
-        _ = Dispatcher.BeginInvoke(Close, DispatcherPriority.ApplicationIdle);
-    }
 }

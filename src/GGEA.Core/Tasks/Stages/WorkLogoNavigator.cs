@@ -47,7 +47,7 @@ public sealed class WorkLogoNavigator : IWorkLogoNavigator
         _allowDownload = allowDownload;
         _menuEntry = menuEntry ?? new StageMenuEntryService(automation, log);
         _time = timeProvider ?? TimeProvider.System;
-        _evidence = evidence ?? new RecognitionEvidence(System.IO.Path.Combine(AppContext.BaseDirectory,
+        _evidence = evidence ?? new RecognitionEvidence(System.IO.Path.Combine(GGEA.App.Config.ConfigService.UserDirectory,
             "logs", "recognition"), log);
     }
 

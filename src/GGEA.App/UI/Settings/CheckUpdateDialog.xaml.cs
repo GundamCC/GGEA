@@ -16,7 +16,7 @@ public partial class CheckUpdateDialog : Window
     public UpdateRelease? Release { get; private set; }
 
     public CheckUpdateDialog(bool allowInstall, IGgeaLog log)
-        : this(log, QueryAsync, allowInstall ? UpdateLauncher.InstallationUnavailableReason(AppContext.BaseDirectory)
+        : this(log, QueryAsync, allowInstall ? UpdateLauncher.InstallationUnavailableReason(UpdateLauncher.ContentRoot)
             : L.Text("请完成首次设置后再安装更新。")) { }
 
     internal CheckUpdateDialog(IGgeaLog log, Func<CancellationToken, Task<UpdateRelease?>> check, string? installRestriction)
@@ -31,7 +31,7 @@ public partial class CheckUpdateDialog : Window
 
     private static async Task<UpdateRelease?> QueryAsync(CancellationToken token)
     {
-        using var client = new OnlineUpdateClient(AppContext.BaseDirectory);
+        using var client = new OnlineUpdateClient(UpdateLauncher.ContentRoot);
         return await client.CheckAsync(UpdateLauncher.CurrentVersion, token);
     }
 

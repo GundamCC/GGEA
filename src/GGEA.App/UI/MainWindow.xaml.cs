@@ -61,7 +61,7 @@ public partial class MainWindow : Window
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
         await RunWindowTaskAsync(() => Window_LoadedCoreAsync(sender, e));
-        await RunWindowTaskAsync(MonitorUpdatesAsync);
+        await Task.WhenAll(RunWindowTaskAsync(MonitorUpdatesAsync), RunWindowTaskAsync(MonitorInstalledVersionAsync));
     }
 
     /// <summary>可等待的事件业务，确保关闭窗口包含其异常处理和 finally 收尾。</summary>
@@ -72,7 +72,7 @@ public partial class MainWindow : Window
 
         try
         {
-            var baseDir = AppContext.BaseDirectory;
+            var baseDir = ConfigService.UserDirectory;
 
             // 初始化日志与配置
             _logger = new GgeaLogger(Path.Combine(baseDir, "logs"));
@@ -100,7 +100,7 @@ public partial class MainWindow : Window
             ((App)Application.Current).SetTheme(_config.IsDarkMode);
             UpdateThemeButton();
             _plugins = new Plugins.PluginManager(baseDir, _logger);
-            await _plugins.InitializeAsync(typeof(App).Assembly.GetName().Version!, Localization.L.Language, _windowTasks.Token);
+            await _plugins.InitializeAsync(Updates.UpdateLauncher.CurrentVersion, Localization.L.Language, _windowTasks.Token);
             if (!_config.AdbDiscoveryCompleted)
             {
                 _logger.Info(L.Text("首次启动：正在检索本机模拟器 ADB…"));

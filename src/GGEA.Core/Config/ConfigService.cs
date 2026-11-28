@@ -13,13 +13,24 @@ namespace GGEA.App.Config;
 public sealed class ConfigService
 {
     // 主窗口持有设备执行互斥锁，在启动或保存设置、旧服务释放后替换；运行中的任务不切换语言。
+    public static string UserDirectory { get; private set; } = AppContext.BaseDirectory;
+    public static string ContentDirectory { get; private set; } = AppContext.BaseDirectory;
+    private static IReadOnlyDictionary<string, string>? _originalFiles;
+
+    public static void SelectDirectories(string userDirectory, string contentDirectory, IReadOnlyDictionary<string, string>? originalFiles)
+    {
+        UserDirectory = userDirectory;
+        ContentDirectory = contentDirectory;
+        _originalFiles = originalFiles;
+        Resources = new ResourceResolver(UserDirectory, Resources.Language, ContentDirectory, _originalFiles);
+    }
     public static ResourceResolver Resources { get; private set; } = new(AppContext.BaseDirectory, "zh-CN");
 
     /// <summary>仅由应用组合根在没有运行任务时应用语言，之后重建所有持有模板缓存的服务。</summary>
     public static void ApplyResourceLanguage(AppConfig config)
     {
         GameProfiles.Normalize(config);
-        Resources = new ResourceResolver(AppContext.BaseDirectory, config.GameLanguage);
+        Resources = new ResourceResolver(UserDirectory, config.GameLanguage, ContentDirectory, _originalFiles);
     }
 
     private readonly IGgeaLog _log;
