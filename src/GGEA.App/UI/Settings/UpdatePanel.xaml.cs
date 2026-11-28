@@ -50,7 +50,8 @@ public partial class UpdatePanel : UserControl
             if (!UpdateRequested && _preparedPackage is not null)
                 UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(_preparedPackage)!);
         };
-        if (available is not null)
+        if (Application.Current is App { HasUpdateForExit: true }) EndUpdateOperation();
+        else if (available is not null)
         {
             ShowAvailableUpdate(available);
             EndUpdateOperation();
@@ -162,7 +163,13 @@ public partial class UpdatePanel : UserControl
             UpdateStatusText.Text = L.Text("更新已生效，可以继续使用。");
             return;
         }
-        if (confirmSwitch && MessageBox.Show(Window.GetWindow(this), L.Text("将关闭 GGEA 并安装更新，完成后自动启动。\n\n已保存的设置会保留；尚未保存的设置不会保存。是否继续？"),
+        if (!confirmSwitch)
+        {
+            ((App)Application.Current).InstallOnExit(package, _availableUpdate.Version);
+            _downloadSession = new(); // 所有权已转交，关设置页时不得删除。
+            return;
+        }
+        if (MessageBox.Show(Window.GetWindow(this), L.Text("将关闭 GGEA 并安装更新，完成后自动启动。\n\n已保存的设置会保留；尚未保存的设置不会保存。是否继续？"),
                 L.Text("重启并安装"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         UpdateStatusText.Text = L.Text("下载与校验完成，正在启动更新器并准备重启…");
         await ((App)Application.Current).StartUpdateAsync(package, _availableUpdate!.Version.ToString(4), false, cancellationToken);
@@ -202,12 +209,14 @@ public partial class UpdatePanel : UserControl
     {
         _updateCancellation = null;
         if (_updateClosed) return;
-        CheckUpdateButton.IsEnabled = true;
+        bool queued = Application.Current is App { HasUpdateForExit: true };
+        if (queued) UpdateStatusText.Text = L.Text("更新已就绪，退出后安装，下次打开即可使用。");
+        CheckUpdateButton.IsEnabled = !queued;
         AutomaticMode.IsEnabled = ReminderMode.IsEnabled = true;
         CancelUpdateButton.Visibility = Visibility.Collapsed;
         UpdateProgress.Visibility = Visibility.Collapsed;
         DownloadUpdateButton.Content = _preparedPackage is null ? L.Text("下载更新") : L.Text("应用更新");
-        DownloadUpdateButton.Visibility = _availableUpdate is null ? Visibility.Collapsed : Visibility.Visible;
+        DownloadUpdateButton.Visibility = queued || _availableUpdate is null ? Visibility.Collapsed : Visibility.Visible;
         DownloadUpdateButton.IsEnabled = _allowUpdateInstall && _availableUpdate is not null &&
             UpdateLauncher.InstallationUnavailableReason(AppContext.BaseDirectory) is null;
     }

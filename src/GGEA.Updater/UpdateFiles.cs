@@ -132,6 +132,34 @@ public static class UpdateFiles
         return OpenLock(root, "installation.lock", exclusive: true);
     }
 
+    /// <summary>只清理本功能创建的下载工作区；不递归跟随任何链接。</summary>
+    public static void DeleteDownload(string workspace)
+    {
+        try
+        {
+            var directory = new DirectoryInfo(workspace);
+            if (!Regex.IsMatch(directory.Name, "^download-[a-f0-9]{32}$") || directory.Parent?.Name != UpdateFiles.StateDirectory)
+                throw new InvalidDataException("无效的下载清理目录。");
+            DeleteTree(directory);
+        }
+        catch (IOException) { /* 文件占用时保留缓存，不影响原安装和取消结果。 */ }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    /// <summary>逐层检查链接后删除文件，避免递归枚举进入目录联接。</summary>
+    private static void DeleteTree(DirectoryInfo directory)
+    {
+        if (!directory.Exists) return;
+        UpdateFiles.RejectLinks(directory.FullName);
+        foreach (var item in directory.EnumerateFileSystemInfos())
+        {
+            UpdateFiles.RejectLinks(item.FullName);
+            if (item is DirectoryInfo child) DeleteTree(child);
+            else item.Delete();
+        }
+        directory.Delete();
+    }
+
     internal static FileStream OpenLock(string root, string name, bool exclusive)
     {
         var path = SafePath(root, StateDirectory + "/" + name);

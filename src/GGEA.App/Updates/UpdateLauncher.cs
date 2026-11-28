@@ -66,7 +66,7 @@ public static class UpdateLauncher
     }
 
     /// <summary>从固定位置复制已验证更新器；恢复模式保留之前的独立副本以避开半更新文件。</summary>
-    public static async Task StartAsync(string root, string? package, string? version, bool recover, CancellationToken cancellationToken)
+    public static async Task StartAsync(string root, string? package, string? version, bool recover, CancellationToken cancellationToken, bool keepClosed = false)
     {
         var runner = UpdateFiles.SafePath(root, UpdateFiles.RunnerName);
         if (!recover)
@@ -78,7 +78,7 @@ public static class UpdateLauncher
         }
         if (!File.Exists(runner)) throw new IOException(L.Text("独立恢复程序缺失，请保留 .ggea-update 中的备份并重新下载正式完整包。"));
         var request = new UpdateRequest(Path.GetFullPath(root), package, version, Environment.ProcessId,
-            Process.GetCurrentProcess().StartTime.ToUniversalTime().Ticks, recover);
+            Process.GetCurrentProcess().StartTime.ToUniversalTime().Ticks, recover, keepClosed);
         var requestPath = UpdateFiles.SafePath(root, ".ggea-update/request.json");
         var ready = UpdateFiles.SafePath(root, ".ggea-update/ready");
         File.Delete(ready);

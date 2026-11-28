@@ -6,7 +6,7 @@ namespace GGEA.Updater;
 
 /// <summary>本地主程序与独立更新进程的交接记录；不包含任意命令、脚本或网络地址。</summary>
 public sealed record UpdateRequest(string TargetDirectory, string? PackageDirectory, string? Version,
-    int ParentProcessId, long ParentStartTimeUtcTicks, bool RecoverOnly);
+    int ParentProcessId, long ParentStartTimeUtcTicks, bool RecoverOnly, bool KeepClosed = false);
 
 /// <summary>自包含更新进程，从安装目录的 runner 副本运行，主程序退出后才取得写入所有权。</summary>
 internal static class Program
@@ -54,6 +54,13 @@ internal static class Program
                 else UpdateInstaller.Install(target, request.PackageDirectory!, request.Version!, UpdateInstaller.VerifyExecutable);
             }
             Log(target, request.RecoverOnly ? "旧版恢复完成。" : $"更新至 {request.Version} 完成。");
+            // 用户主动退出时保持关闭，下次自行打开即使用已验证的新程序。
+            if (request.KeepClosed && !request.RecoverOnly)
+            {
+                try { UpdateFiles.DeleteDownload(Path.GetDirectoryName(request.PackageDirectory!)!); }
+                catch (InvalidDataException ex) { Log(target, ex.Message); }
+                return 0;
+            }
             // 成功后再启动主程序；重启失败不假报安装失败，也不重复覆盖已验证的新版。
             try { Process.Start(new ProcessStartInfo(UpdateFiles.SafePath(target, "GGEA.exe")) { WorkingDirectory = target, UseShellExecute = false }); }
             catch (Exception ex) { Show($"文件更新已完成，请手动启动 GGEA.exe。\n{ex.Message}"); }

@@ -40,6 +40,23 @@ public partial class App : Application
 
     private Updater.RunningInstallation? _installation;
 
+    // 暂存包归应用持有，设置页关闭不会丢失；只有正常退出才交给独立更新器。
+    private (string Package, Version Version, string ManifestHash)? _onExitUpdate;
+    internal bool HasUpdateForExit => _onExitUpdate.HasValue;
+
+    internal void InstallOnExit(string package, Version version)
+    {
+        if (_onExitUpdate is { } previous && previous.Version >= version)
+        {
+            if (previous.Package != package) Updates.UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(package)!);
+            return;
+        }
+        var hash = Updater.UpdateFiles.Hash(Updater.UpdateFiles.SafePath(package, "build-info.json"));
+        var superseded = _onExitUpdate;
+        _onExitUpdate = (package, version, hash);
+        if (superseded is { } old) Updates.UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(old.Package)!);
+    }
+
     internal string? UpdateDownloadUnavailableReason() => _installation is null
         ? L.Text("当前目录不支持在线安装。")
         : _installation.CanStartDownload() ? null : L.Text("请先关闭同一目录中的其他 GGEA 窗口，再重试更新。");
@@ -49,13 +66,18 @@ public partial class App : Application
             Updates.UpdateLauncher.TryApplyTemplatesAsync(_installation, AppContext.BaseDirectory, package, version, token);
 
     /// <summary>在当前安装的独占保护下向更新器交接，失败时恢复当前窗口的共享运行状态。</summary>
-    internal async Task StartUpdateAsync(string? package, string? version, bool recover, CancellationToken ct)
+    internal async Task StartUpdateAsync(string? package, string? version, bool recover, CancellationToken ct, bool keepClosed = false)
     {
         if (_installation is null) throw new InvalidOperationException(L.Text("当前目录不支持在线安装。"));
         try
         {
             await _installation.StartUpdateAsync(() =>
-                Updates.UpdateLauncher.StartAsync(AppContext.BaseDirectory, package, version, recover, ct));
+                Updates.UpdateLauncher.StartAsync(AppContext.BaseDirectory, package, version, recover, ct, keepClosed));
+            if (!keepClosed && _onExitUpdate is { } pending)
+            {
+                _onExitUpdate = null;
+                if (pending.Package != package) Updates.UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(pending.Package)!);
+            }
         }
         catch (IOException ex) when ((ex.HResult & 0xffff) == 32)
         {
@@ -136,6 +158,24 @@ public partial class App : Application
     {
         // 原生截图助手与主窗口共用此入口；必须在 CLR ProcessExit 前释放图像线程。
         Vision.ImageCodecThread.Shutdown();
+        if (_onExitUpdate is { } update)
+        {
+            try
+            {
+                if (Updater.UpdateFiles.Hash(Updater.UpdateFiles.SafePath(update.Package, "build-info.json")) != update.ManifestHash)
+                    throw new InvalidDataException("暂存更新的清单已改变。");
+                // 退出期间 Dispatcher 不再泵送消息，交接在后台等待，独占锁仍由本进程持有。
+                Task.Run(() => StartUpdateAsync(update.Package, update.Version.ToString(4), false,
+                    CancellationToken.None, keepClosed: true)).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                try { File.AppendAllText(Updater.UpdateFiles.SafePath(AppContext.BaseDirectory, ".ggea-update/update.log"),
+                    $"{DateTimeOffset.Now:u} 退出时未能安装 v{update.Version}：{ex.Message}{Environment.NewLine}"); }
+                catch (Exception logError) when (logError is IOException or UnauthorizedAccessException) { }
+                Updates.UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(update.Package)!);
+            }
+        }
         _installation?.Dispose();
         base.OnExit(e);
     }

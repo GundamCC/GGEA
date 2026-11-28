@@ -46,7 +46,7 @@ public partial class MainWindow
     /// <summary>每轮检查独立完成，不持有设备执行权；关闭时由窗口任务生命周期取消并等待。</summary>
     private async Task CheckStartupUpdateAsync()
     {
-        if (_logger is null || _windowTasks.IsStopping) return;
+        if (_logger is null || _windowTasks.IsStopping || ((App)Application.Current).HasUpdateForExit) return;
         using var client = OpenUpdateClient(status =>
         {
             if (status.IsWarning) _logger.Warn(status.Message);
@@ -83,9 +83,9 @@ public partial class MainWindow
                             RefreshLiveTemplates();
                             break;
                         }
-                        await ((App)Application.Current).StartUpdateAsync(package, update.Version.ToString(4), false, pending.Token);
-                        package = null; // 已交给独立更新器。
-                        CloseForUpdate();
+                        ((App)Application.Current).InstallOnExit(package, update.Version);
+                        package = null;
+                        _logger.Info(L.Text("更新已就绪，退出后安装，下次打开即可使用。"));
                         break;
                     }
                     _waitingForIdle = new(TaskCreationOptions.RunContinuationsAsynchronously);
