@@ -63,6 +63,18 @@ void Generate(byte[] previousManifest, Func<string, byte[]> readBase)
         throw new InvalidDataException("Expected an older release");
     var oldFiles = old.RootElement.GetProperty("files");
     var nextFiles = target.RootElement.GetProperty("files");
+    if (old.RootElement.TryGetProperty("program", out var oldProgram) &&
+        target.RootElement.TryGetProperty("program", out var newProgram) &&
+        oldProgram.GetProperty("commit").GetString() == newProgram.GetProperty("commit").GetString())
+    {
+        // 同一程序构建身份必须逐字节一致，防止构建机的仓库信息混入纯素材更新。
+        var names = oldFiles.EnumerateObject().Select(f => f.Name).Union(nextFiles.EnumerateObject().Select(f => f.Name));
+        foreach (var name in names.Where(n => n != "GGEA.ReleaseIdentity.dll" &&
+                     (n.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) || n.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))))
+            if (!oldFiles.TryGetProperty(name, out var prior) || !nextFiles.TryGetProperty(name, out var current) ||
+                prior.GetString() != current.GetString())
+                throw new InvalidDataException("Content-only release changed a program binary: " + name);
+    }
     if (target.RootElement.TryGetProperty("templateEngine", out var engine) &&
         engine.GetString() is { Length: 64 } id && old.RootElement.TryGetProperty("templateEngine", out var before) && before.GetString() == id)
         WriteSmallIndex(previousManifest, oldFiles, nextFiles, readBase);

@@ -3,4 +3,10 @@
     <!-- 发布快照目录每次不同；统一编译器记录的源码路径，使未改动的程序集可以直接复用。 -->
     <PathMap>$(MSBuildThisFileDirectory)=/_/</PathMap>
   </PropertyGroup>
+  <!-- 固定快照没有 .git。禁止 SDK 向上发现发布工具的仓库，并把外层提交或地址写入程序集。 -->
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory).release-source.json')">
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+    <EnableSourceLink>false</EnableSourceLink>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
 </Project>
