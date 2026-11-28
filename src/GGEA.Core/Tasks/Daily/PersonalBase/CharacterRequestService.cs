@@ -10,7 +10,7 @@ public sealed record CharacterRequestResult(int Accepted, int Reported, IReadOnl
 /// <summary>按本轮解锁栏位逐人承接。按委托类型核对交付、强化或开发条件，结算后再处理下一栏。</summary>
 public sealed class CharacterRequestService(AutomationService automation, IGgeaLog log, OnnxTextRecognizer? ocr = null, DeliveryProtection? protection = null, DevelopRequest? development = null) : IDisposable
 {
-    internal Func<string, DeliveryTarget, Func<bool>, CancellationToken, Task<bool>>? RestockFromList { get; init; }
+    internal Func<string, DevelopmentTarget, Func<bool>, CancellationToken, Task<bool>>? RestockFromList { get; init; }
     internal Func<string, DeliveryOffer, Func<bool>, CancellationToken, Task<ObtainResult>>? RestockFromMethods { get; init; }
     internal SortieRequestService? Sortie { get; init; }
     private const string Root = "resources/templates/base/character_requests/";
@@ -90,14 +90,14 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                     var initialKind = detail.Title.Kind;
                     if (arrival.Kind == ArrivalKind.List)
                     {
-                        if (initialKind is not (RequestKind.Funding or RequestKind.Development or RequestKind.UnitDelivery or RequestKind.Sortie)) continue;
+                        if (initialKind is not (RequestKind.Funding or RequestKind.Development or RequestKind.UnitDelivery or RequestKind.Sortie or RequestKind.Strength)) continue;
                         var list = await WaitForListAsync(serial, ct);
                         if ((list.ActiveMask & (1 << slot)) == 0) continue;
                         await automation.TapAsync(serial, 427 + 535 * slot, 410, ct);
                         detail = await WaitAsync(serial, f => ReadDetail(f, ct), ct) ?? throw Unknown();
                     }
                     else detail = arrival.Detail!;
-                    if (initialKind is (RequestKind.Development or RequestKind.UnitDelivery or RequestKind.Sortie) && detail.Title.Kind != initialKind) throw Unknown();
+                    if (initialKind is (RequestKind.Development or RequestKind.UnitDelivery or RequestKind.Sortie or RequestKind.Strength) && detail.Title.Kind != initialKind) throw Unknown();
                     if (initialKind == RequestKind.Funding &&
                         (detail.Title.Kind != initialKind || detail.Action != Control.Deliver)) throw Unknown();
                 }
@@ -198,34 +198,19 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                 }
                 else if (detail.Title.Kind == RequestKind.Strength)
                 {
-                    var offer = await WaitOfferAsync(serial, ct);
+                    var (offer, failure) = await RunStrengthAsync(serial, slot, ct);
                     detail = offer.Detail;
-                    if (offer.Request is null)
-                        failures.Add(L.Format($"第 {slot + 1} 栏强化委托未能与表格核对"));
-                    if (offer.Request is { } request)
+                    if (failure is not null)
                     {
-                        if (detail.Action == Control.Challenge && request.Progress < request.Offer.Amount)
-                        {
-                            await TapAsync(serial, detail.Button, ct);
-                            var success = await _upgrade!.ApplyFromFilteredListAsync(serial, request.Offer.Amount - request.Progress, ct);
-                            var returned = await WaitOfferAsync(serial, ct);
-                            if (returned.Request?.Offer.Id != request.Offer.Id) throw Unknown();
-                            detail = returned.Detail;
-                            request = returned.Request;
-                            if (!success)
-                            {
-                                failures.Add(L.Format($"{request.Name}：可用强化材料不足"));
-                                log.Warn(failures[^1]);
-                            }
-                            else if (detail.Action != Control.Report || request.Progress != request.Offer.Amount) throw Unknown();
-                        }
-                        if (detail.Action == Control.Report && request.Progress == request.Offer.Amount)
-                        {
-                            await TapAsync(serial, detail.Button, ct);
-                            await FinishReportAsync(serial, slot, ct);
-                            reported++;
-                            continue;
-                        }
+                        failures.Add(failure);
+                        log.Warn(failure);
+                    }
+                    else
+                    {
+                        await TapAsync(serial, detail.Button, ct);
+                        await FinishReportAsync(serial, slot, ct);
+                        reported++;
+                        continue;
                     }
                 }
                 await TapAsync(serial, detail.Back, ct);
@@ -234,10 +219,55 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
             return new CharacterRequestResult(accepted, reported, failures);
         }, ct);
 
+    private async Task<(OfferScreen Screen, string? Failure)> RunStrengthAsync(string serial, int slot, CancellationToken ct)
+    {
+        var refresh = RequestProductionAttempt.RefreshPeriod;
+        var screen = await WaitOfferAsync(serial, ct);
+        if (screen.Request is not { } original)
+            return (screen, L.Format($"第 {slot + 1} 栏强化委托未能与表格核对"));
+        var restocked = false;
+        while (screen.Detail.Action == Control.Challenge && screen.Request!.Progress < original.Offer.Amount)
+        {
+            if (refresh != RequestProductionAttempt.RefreshPeriod) throw Unknown();
+            await TapAsync(serial, screen.Detail.Button, ct);
+            var remaining = original.Offer.Amount - screen.Request.Progress;
+            var result = await _upgrade!.ApplyFromFilteredListAsync(serial, remaining, ct);
+            screen = await SameOfferAsync();
+            if (result == UpgradeOutcome.Applied) break;
+            if (result == UpgradeOutcome.NoMaterials) return (screen, L.Format($"{original.Name}：可用强化材料不足"));
+            if (screen.Detail.Action != Control.Challenge || screen.Request != original) throw Unknown();
+            if (restocked || RestockFromList is null || DevelopmentRequestIndex.ForStrength(original) is not { } target)
+                return (screen, L.Format($"{original.Name}：首台已满级，无法继续强化"));
+
+            // 从原栏位进入开发；回到列表后重新识别同一委托，才允许再次点击挑战。
+            await TapAsync(serial, screen.Detail.Back, ct);
+            await RequireActiveSlotAsync(serial, slot, ct);
+            log.Info(L.Format($"升序首台已满级，准备补开发作品 {target.Route.SeriesId} 的基准机体 {target.UnitId}。"));
+            var attempt = RequestProductionAttempt.ForStrength(serial, slot, original, refresh);
+            var made = await RestockFromList(serial, target, attempt.Reserve, ct);
+            await RequireActiveSlotAsync(serial, slot, ct);
+            await automation.TapAsync(serial, 427 + 535 * slot, 410, ct);
+            screen = await SameOfferAsync();
+            if (screen.Detail.Action != Control.Challenge || screen.Request != original) throw Unknown();
+            if (!made) return (screen, L.Format($"{original.Name}：未能补开发系列基准机体"));
+            restocked = true;
+        }
+        if (screen.Detail.Action != Control.Report || screen.Request!.Progress != original.Offer.Amount) throw Unknown();
+        return (screen, null);
+
+        async Task<OfferScreen> SameOfferAsync()
+        {
+            var current = await WaitOfferAsync(serial, ct);
+            if (refresh != RequestProductionAttempt.RefreshPeriod || current.Request?.RoleId != original.RoleId ||
+                current.Request.Offer != original.Offer) throw Unknown();
+            return current;
+        }
+    }
+
     // 返回详情表示本栏仍未完成。只有确认交付已发送才进入领奖，补开发本身不计为完成。
     private async Task<(Detail? Remaining, bool FirstDevelopmentRequired)> DeliverOrRestockAsync(string serial, int slot, Detail detail, DeliveryOffer offer, CancellationToken ct)
     {
-        var attempt = DeliveryProductionAttempt.Start(serial, slot, offer);
+        var attempt = RequestProductionAttempt.Start(serial, slot, offer);
         var guards = protection ?? new DeliveryProtection();
         var inventory = new UnitDeliveryService(automation, ocr!, guards, offer.MinimumLevel);
         // 库存筛选返回详情后按钮可能变化，以下分支使用最新核对的状态。
@@ -262,9 +292,9 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
             var target = DevelopmentRequestIndex.ForDelivery(offer, guards);
             if (target is null || RestockFromList is null) return (detail, false);
             await TapAsync(serial, detail.Back, ct);
-            await RequireSlotAsync();
+            await RequireActiveSlotAsync(serial, slot, ct);
             made = await RestockFromList(serial, target, attempt.Reserve, ct);
-            await RequireSlotAsync();
+            await RequireActiveSlotAsync(serial, slot, ct);
             await automation.TapAsync(serial, 427 + 535 * slot, 410, ct);
             detail = await WaitSameDeliveryAsync(serial, offer, ct);
         }
@@ -274,11 +304,12 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
         await TapAsync(serial, detail.Button, ct);
         return (await inventory.SubmitAsync(serial, ct) ? null : await WaitSameDeliveryAsync(serial, offer, ct), false);
 
-        async Task RequireSlotAsync()
-        {
-            var list = await WaitForListAsync(serial, ct);
-            if ((list.ActiveMask & (1 << slot)) == 0) throw Unknown();
-        }
+    }
+
+    private async Task RequireActiveSlotAsync(string serial, int slot, CancellationToken ct)
+    {
+        var list = await WaitForListAsync(serial, ct);
+        if ((list.ActiveMask & (1 << slot)) == 0) throw Unknown();
     }
 
     private async Task<Detail> WaitSameDeliveryAsync(string serial, DeliveryOffer expected, CancellationToken ct) =>
@@ -305,7 +336,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
         await WaitAsync(serial, frame =>
         {
             var detail = ReadDetail(frame, ct);
-            if (detail is null || detail.Action == Control.Accept || detail.Title.Kind != RequestKind.Strength) return null;
+            if (detail is not { Title.Kind: RequestKind.Strength, Action: Control.Challenge or Control.Report }) return null;
             return new OfferScreen(detail, _catalog!.Read(frame, detail.Title.Region, ct));
         }, ct) ?? throw Unknown();
 

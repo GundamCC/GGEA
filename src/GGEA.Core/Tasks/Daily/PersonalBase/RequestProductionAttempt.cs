@@ -4,12 +4,19 @@ using System.Text;
 
 namespace GGEA.App.Tasks;
 
-/// <summary>在第一次消费点击前记下设备、栏位及委托。游戏已扣费但结果丢失时，重跑仍可查库存交付。</summary>
-internal sealed class DeliveryProductionAttempt(string serial, int slot, DeliveryOffer offer, long refresh,
+/// <summary>在第一次消费点击前记下设备、栏位及委托。结果丢失后允许重新检查库存或首台等级，同一委托不重复扣费。</summary>
+internal sealed class RequestProductionAttempt(string serial, int slot, string key, long refresh,
     string directory)
 {
+    internal RequestProductionAttempt(string serial, int slot, DeliveryOffer offer, long refresh, string directory)
+        : this(serial, slot, FormattableString.Invariant($"{offer.RoleId}/{offer.Number}/{offer.UnitId}"), refresh, directory) { }
+
+    internal static RequestProductionAttempt ForStrength(string serial, int slot, StrengthRequest request, long refresh) =>
+        new(serial, slot, $"strength/{request.RoleId}/{request.Offer.Id}", refresh,
+            Path.Combine(AppContext.BaseDirectory, "logs", "character-requests"));
+
     internal static long RefreshPeriod => DateTimeOffset.UtcNow.ToUnixTimeSeconds() / (8 * 3600);
-    internal static DeliveryProductionAttempt Start(string serial, int slot, DeliveryOffer offer) =>
+    internal static RequestProductionAttempt Start(string serial, int slot, DeliveryOffer offer) =>
         new(serial, slot, offer, RefreshPeriod, Path.Combine(AppContext.BaseDirectory, "logs", "character-requests"));
 
     internal bool Reserve()
@@ -18,7 +25,7 @@ internal sealed class DeliveryProductionAttempt(string serial, int slot, Deliver
         var device = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(serial)));
         Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, $"{device}.{slot}.txt");
-        var entry = FormattableString.Invariant($"{refresh}/{offer.RoleId}/{offer.Number}/{offer.UnitId}");
+        var entry = FormattableString.Invariant($"{refresh}/{key}");
         using var file = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         using var reader = new StreamReader(file, Encoding.UTF8, leaveOpen: true);
         if (reader.ReadToEnd() == entry) return false;

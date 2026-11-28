@@ -5,6 +5,8 @@ using GGEA.App.Vision;
 
 namespace GGEA.App.Tasks;
 
+internal enum UpgradeOutcome { Applied, NoMaterials, FirstUnitAtCap }
+
 /// <summary>从挑战打开的已筛选强化列表进入首台低等级单位，结束后依原路径返回调用方。</summary>
 internal sealed class UnitUpgradeService(AutomationService automation, OnnxTextRecognizer ocr)
 {
@@ -19,15 +21,41 @@ internal sealed class UnitUpgradeService(AutomationService automation, OnnxTextR
     private readonly TemplateImages _filter = new("resources/templates/upgrade/filter_on.png");
     private readonly TemplateImages _back = new("resources/templates/common/back.png");
 
-    internal async Task<bool> ApplyFromFilteredListAsync(string serial, int amount, CancellationToken ct)
+    internal async Task<UpgradeOutcome> ApplyFromFilteredListAsync(string serial, int amount, CancellationToken ct)
     {
         await SelectFirstUnitAsync(serial, ct);
-        await TapWhenAsync(serial, frame => OnUnit(frame, ct) ? _lvButton.Match(_matcher, frame, .93,
-            new Roi(1525, 292, 310, 115), ct) : null, "未能确认单位资料及 LV 强化按钮。", ct);
-        var success = await _materials.ApplyAsync(serial, amount, ct);
-        await TapWhenAsync(serial, frame => OnUnit(frame, ct) ? Back(frame, ct) : null, "未能确认单位资料的返回按钮。", ct);
+        var unit = await StableObservation.WaitAsync(async () => ReadUnit(await automation.CaptureScreenAsync(serial, ct), ct),
+            (a, b) => a == b, GameTiming.RecognitionTimeoutMs, ct)
+            ?? throw new InvalidOperationException(L.Text("未能核对单位资料的当前等级、等级上限及按钮。"));
+        UpgradeOutcome outcome;
+        if (unit.Current == unit.Maximum)
+        {
+            await automation.TapAsync(serial, unit.Button.CenterX, unit.Button.CenterY, ct);
+            outcome = UpgradeOutcome.FirstUnitAtCap;
+        }
+        else
+        {
+            await automation.TapAsync(serial, unit.Button.CenterX, unit.Button.CenterY, ct);
+            outcome = await _materials.ApplyAsync(serial, amount, ct) ? UpgradeOutcome.Applied : UpgradeOutcome.NoMaterials;
+            await TapWhenAsync(serial, frame => OnUnit(frame, ct) ? Back(frame, ct) : null, "未能确认单位资料的返回按钮。", ct);
+        }
         await TapWhenAsync(serial, frame => OnList(frame, ct) ? Back(frame, ct) : null, "未能确认强化列表的返回按钮。", ct);
-        return success;
+        return outcome;
+    }
+
+    internal sealed record UnitLevel(int Current, int Maximum, Roi Button);
+
+    // 单位资料显示强化前的实际等级。两个数字分别右对齐，不读取材料预览中的预计等级。
+    internal UnitLevel? ReadUnit(ScreenImage frame, CancellationToken ct)
+    {
+        if (!OnUnit(frame, ct)) return null;
+        var current = UpgradeNumbers.Read(ocr, frame, new(1330, 309, 100, 59), false, ct, out _);
+        var maximum = UpgradeNumbers.Read(ocr, frame, new(1448, 326, 56, 42), false, ct, out _);
+        if (!int.TryParse(current, NumberStyles.None, CultureInfo.InvariantCulture, out var level) ||
+            !int.TryParse(maximum, NumberStyles.None, CultureInfo.InvariantCulture, out var cap) ||
+            level <= 0 || level > cap) return null;
+        var button = level == cap ? Back(frame, ct) : _lvButton.Match(_matcher, frame, .93, new(1525, 292, 310, 115), ct);
+        return button is null ? null : new(level, cap, button.Region);
     }
 
     // 委托挑战已限定系列，并默认按 LV 排序。仅在降序时反转方向。

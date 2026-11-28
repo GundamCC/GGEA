@@ -4,6 +4,8 @@
 
 开发、采集或调整游戏识别素材时，先阅读 [游戏识别素材开发指南](docs/template-assets.md)。
 
+修改角色要求功能或其共用的强化、开发路径时，遵循[角色要求开发约束](docs/character-requests.md)。
+
 开发任务导航、阶段等待和重试时，遵循[任务阶段恢复](docs/global-screen-handling.md#任务阶段恢复)。
 
 补充约定：

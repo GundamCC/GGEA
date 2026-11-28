@@ -6633,6 +6633,16 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
+      "path": "tests/GGEA.Tests/Fixtures/Upgrade/unit_levels.png",
+      "sha256": "7711b6366d75f6f71ac3c2f74f31b7e4e9f334d01d71b45174bc1489a198119c",
+      "width": 180,
+      "height": 132,
+      "category": "test-fixture",
+      "source": "Unit level rows from native 1920x1080 LDPlayer and MuMu captures; crop (1328,306,180,66)",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
       "path": "tests/GGEA.Tests/Fixtures/Upgrade/filtered_ld720.png",
       "sha256": "8ccb9e38fa9268be5413a504988927be5d0cd44e3b6f6b196152547610c1b965",
       "width": 1280,

@@ -109,20 +109,32 @@ public partial class CharacterRequestPageTests
     }
 
     [Fact]
+    public void StrengthBaselineUsesOfferSeriesEvenWithoutDeliveryRoute()
+    {
+        var offer = new StrengthOffer("1121900010101", "新机动战记高达W 无尽的华尔兹", 1);
+        var request = new StrengthRequest("1219000101", "希罗·尤尔 (EW版)", offer, 0);
+        var target = Assert.IsType<DevelopmentTarget>(DevelopmentRequestIndex.ForStrength(request));
+        Assert.Equal(("1211000300", "2190", "121901", 1, 4000),
+            (target.UnitId, target.Route.SeriesId, target.Route.DiagramId, target.Route.Tab, target.Route.Capital));
+        Assert.Null(target.Route.Level);
+        Assert.Null(DevelopmentRequestIndex.ForStrength(request with { RoleId = "1210000100" }));
+    }
+
+    [Fact]
     public void Delivery_ValidatesCostLevelAndDuplicateProduction()
     {
         var v = new DeliveryOffer("1175000100", "V高达", 1) { RoleId = "1175000100", Number = 5 };
-        var route = Assert.IsType<DeliveryTarget>(DevelopmentRequestIndex.ForDelivery(v, new())).Route;
+        var route = Assert.IsType<DevelopmentTarget>(DevelopmentRequestIndex.ForDelivery(v, new())).Route;
         Assert.Equal(("1750", 55, 27000), (route.SeriesId, route.Level, route.Capital));
         Assert.Null(DevelopmentRequestIndex.ForDelivery(v with { MinimumLevel = 56 }, new()));
         Assert.Null(DevelopmentRequestIndex.ForDelivery(v with { UnitId = "0" }, new()));
         var dir = Directory.CreateTempSubdirectory();
         try
         {
-            var period = DeliveryProductionAttempt.RefreshPeriod;
-            Assert.True(new DeliveryProductionAttempt("device", 1, v, period, dir.FullName).Reserve());
-            Assert.False(new DeliveryProductionAttempt("device", 1, v, period, dir.FullName).Reserve());
-            Assert.False(new DeliveryProductionAttempt("device", 0, v, period - 1, dir.FullName).Reserve());
+            var period = RequestProductionAttempt.RefreshPeriod;
+            Assert.True(new RequestProductionAttempt("device", 1, v, period, dir.FullName).Reserve());
+            Assert.False(new RequestProductionAttempt("device", 1, v, period, dir.FullName).Reserve());
+            Assert.False(new RequestProductionAttempt("device", 0, v, period - 1, dir.FullName).Reserve());
         }
         finally { dir.Delete(true); }
     }

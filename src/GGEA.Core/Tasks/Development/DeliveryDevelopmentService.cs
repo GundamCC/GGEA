@@ -12,13 +12,14 @@ internal sealed partial class DeliveryDevelopmentService(AutomationService autom
     private const string Root = "resources/templates/develop/delivery/";
     private readonly TemplateMatcher _matcher = new();
     private readonly TemplateImages _detail = new(Root + "unit_detail.png");
+    private readonly TemplateImages _capitalOnly = new("resources/templates/develop/capital_only.png");
     private readonly TemplateImages _preview = new(Root + "preview.png");
     private readonly TemplateImages _cancel = new(Root + "cancel.png");
     private static readonly Roi DetailArea = new(0, 0, 650, 117), PreviewArea = new(840, 40, 242, 110);
     private sealed record Button(Roi Area);
     private sealed record Price(bool CanDevelop);
 
-    internal async Task<bool> TryProduceAsync(string serial, DeliveryTarget target, DevelopRequest request, Func<bool> reserve, CancellationToken ct)
+    internal async Task<bool> TryProduceAsync(string serial, DevelopmentTarget target, DevelopRequest request, Func<bool> reserve, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.DevelopTitleTemplatePath))
             request = request with { DevelopTitleTemplatePath = ConfigService.ResolvePath("resources/templates/develop/title_develop.png") };
@@ -41,7 +42,8 @@ internal sealed partial class DeliveryDevelopmentService(AutomationService autom
         {
             var unit = await develop.FindOnRoadmapAsync(serial, ConfigService.ResolvePath(target.Template), "",
                 request.MaxDragsPerDirection, request.DragDurationMs, request.Threshold,
-                request.DevelopTitleTemplatePath, request.TitleThreshold, ct);
+                request.DevelopTitleTemplatePath, request.TitleThreshold, ct,
+                preferLeftEdge: target.Route.Level is null);
             if (unit is not null)
             {
                 await automation.TapAsync(serial, unit.CenterX, unit.CenterY, ct);
@@ -55,7 +57,7 @@ internal sealed partial class DeliveryDevelopmentService(AutomationService autom
         return made;
     }
 
-    private async Task<bool> FromUnitDetailAsync(string serial, DeliveryTarget target, DevelopRequest request,
+    private async Task<bool> FromUnitDetailAsync(string serial, DevelopmentTarget target, DevelopRequest request,
         DevelopService develop, Func<bool> reserve, CancellationToken ct)
     {
         var bulk = new TemplateImages(request.DevelopAllTemplatePath);
@@ -73,7 +75,7 @@ internal sealed partial class DeliveryDevelopmentService(AutomationService autom
         var price = await WaitAsync(serial, frame => ReadPreview(frame, target.Route, ct) is { } allowed
             ? new Price(allowed) : null, ct);
         if (price?.CanDevelop != true)
-            log.Info(L.Text("补开发预览的等级、数量、总价或余额不符合交付条件。"));
+            log.Info(L.Text("补开发预览未满足本次委托的开发条件。"));
         if (price?.CanDevelop == true)
         {
             var result = await develop.ConfirmAsync(serial, request, reserve, ct);
@@ -85,15 +87,17 @@ internal sealed partial class DeliveryDevelopmentService(AutomationService autom
         return false;
     }
 
-    internal bool? ReadPreview(ScreenImage frame, DeliveryRoute route, CancellationToken ct)
+    internal bool? ReadPreview(ScreenImage frame, ProductionRoute route, CancellationToken ct)
     {
         if (!Visible(_preview, frame, PreviewArea, ct)) return null;
         var count = ReadNumber(frame, new(1424, 809, 54, 55), ct);
         var cost = ReadNumber(frame, new(1450, 658, 395, 54), ct);
+        if (count is null || cost is null) return null;
+        if (count != "1" || !UpgradeNumbers.TryReadPair(cost, out var used, out _) || used != route.Capital) return false;
+        if (route.Level is null)
+            return Visible(_capitalOnly, frame, new(1160, 376, 560, 95), ct);
         var level = UpgradeNumbers.Read(ocr, frame, new(168, 333, 82, 34), false, ct, out _);
-        if (count is null || cost is null || level is null) return null;
-        return count == "1" && level == FormattableString.Invariant($"LV{route.Level}") &&
-            UpgradeNumbers.TryReadPair(cost, out var used, out _) && used == route.Capital;
+        return level is null ? null : level == FormattableString.Invariant($"LV{route.Level}");
     }
 
     private string? ReadNumber(ScreenImage frame, Roi area, CancellationToken ct) =>

@@ -54,6 +54,30 @@ public sealed class UpgradeListTests
         Assert.Null(new UnitUpgradeService(automation, ocr).FindFirstUnit(frame, default));
     }
 
+    [Theory]
+    [InlineData(0, 70, 70)]
+    [InlineData(1, 1, 60)]
+    public void UnitDetailReadsTwoNumericLevelsBeforeChoosingButton(int sample, int current, int cap)
+    {
+        var pixels = TestImageFactory.CreateBgra(1920, 1080, 20);
+        DismantleEntryTests.Paste(pixels, "resources/templates/upgrade/title_unit_info.png", 217, 18);
+        DismantleEntryTests.Paste(pixels, "resources/templates/common/back.png", 40, 14);
+        DismantleEntryTests.Paste(pixels, "resources/templates/upgrade/button_lv_upgrade.png", 1590, 315);
+        var levels = ImageCodec.DecodePng(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures/Upgrade/unit_levels.png")));
+        for (int y = 0; y < 66; y++)
+            Buffer.BlockCopy(levels.Bgra, (sample * 66 + y) * 180 * 4, pixels,
+                ((306 + y) * 1920 + 1328) * 4, 180 * 4);
+        var frame = new ScreenImage { Width = 1920, Height = 1080, Bgra = pixels };
+        using var ocr = new OnnxTextRecognizer();
+        using var automation = new AutomationService(new FakeAdbService([]), new TemplateMatcher(), new TestLog());
+        var upgrade = new UnitUpgradeService(automation, ocr);
+        var result = Assert.IsType<UnitUpgradeService.UnitLevel>(upgrade.ReadUnit(frame, default));
+        Assert.Equal((current, cap), (result.Current, result.Maximum));
+        Assert.Equal(current == cap, result.Button.CenterX < 220);
+        for (int y = 326; y < 368; y++) Array.Clear(pixels, (y * 1920 + 1448) * 4, 56 * 4);
+        Assert.Null(upgrade.ReadUnit(frame, default));
+    }
+
     // 两个正例来自独立实机帧，仅保留右下角按钮以隔离背景和模板来源。
     private static byte[] ListFrame(string direction)
     {
