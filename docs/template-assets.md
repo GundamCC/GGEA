@@ -48,12 +48,8 @@
 | `button_deliver.png` | 1540, 800, 170, 110 | 已承接的交付委托详情右下角「交付」文字，MuMu 两帧均为 1.000，承接、挑战、报告画面均低于 0.93 |
 | `title_deliver_unit.png`、`title_confirm_delivery.png` | 详情标题、弹窗顶部 | 编号用数字 OCR，普通单机交付从 `resources/common/data/delivery_requests.json` 读取角色、编号、目标机体 ID 和最低等级。使用 `tools/export-delivery-requests.py 工作簿 输出文件` 再生成 |
 | `button_submit_delivery.png`、`button_cancel_delivery.png`、`delivery_selected_one.png` | 弹窗底部与库存卡片右上角 | 比对当帧目标缩略图，读取卡片 LV 与星级区。保护突破机体时要求星级条整行呈空白底色。提交前复核同卡蓝色序号、数量 1/1 和启用按钮 |
-| `dialog_skip.png` | 1686, 26, 153, 80 | 与通信框共同核实角色对话，推进时点击画面中央 |
 | `title_delivery_complete.png` | 765, 287, 390, 168 | 交付后的结算，继续确认领取奖励并返回角色列表 |
 | `button_challenge.png` | 1540, 800, 170, 110 | 详情右下角「挑战」文字，标记已承接 |
-| `dialog_com_frame.png` | 245, 126, 185, 98 | 通信框左上角，阈值 0.92 |
-| `dialog_advance.png` | 415, 729, 1230, 195 | 当前台词末尾的蓝色向下箭头 |
-| `dialog_panel_corner.png` | 244, 886, 41, 59 | 对话框左下边线，与右上「略过」同时出现时可推进台词，避免立绘遮挡通信框纹理 |
 | `title_funding.png` | 1340, 225, 300, 80 | 固定四字「调度资金」，不包含编号。MuMu 原图裁剪 (1403,246,135,35)，承接前及承接后的独立帧 ≥0.999，强化、机体交付与委托开发均 <0.76 |
 | `capital_label.png` | 631, 543, 193, 74 | 资金确认框的 CAPITAL 标签。复用「确认交付」标题与启用的蓝色「交付」按钮，核对详情进度分母与确认框数量 |
 | `title_weekly_reward.png`、`weekly_tap_to_next.png` | 每周报酬横幅、底部中央 | 领取委托奖励后，同帧确认标题与继续提示。标题只比较白色字形，以避开金色粒子 |

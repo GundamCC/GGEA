@@ -22,18 +22,14 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
     private readonly ScreenImage _acceptLabel = LoadAcceptLabel();
     private readonly TemplateImages _challenge = new(Root + "button_challenge.png");
     private readonly TemplateImages _report = new(Root + "button_report.png");
-    private readonly TemplateImages _dialogFrame = new(Root + "dialog_com_frame.png");
-    private readonly TemplateImages _panelCorner = new(Root + "dialog_panel_corner.png");
-    private readonly TemplateImages _skip = new(Root + "dialog_skip.png");
-    private readonly TemplateImages _dialogAdvance = new(Root + "dialog_advance.png");
     private readonly TemplateImages _complete = new(Root + "title_report_complete.png");
+    private readonly TemplateImages _deliveryComplete = new(Root + "title_delivery_complete.png");
     private readonly TemplateImages _reward = new(Root + "title_claim_result.png");
     private readonly TemplateImages _ok = new("resources/templates/dialog/button_ok.png");
     private readonly TemplateImages _next = new(Root + "button_next_character.png");
     private readonly TemplateImages _info = new(Root + "button_request_info.png");
     private readonly TemplateImages _deliver = new(Root + "button_deliver.png");
     private readonly TemplateImages _obtain = new(Root + "button_obtain.png");
-    private readonly TemplateImages _deliveryComplete = new(Root + "title_delivery_complete.png");
     private readonly TemplateImages _developmentTitle = new(Root + "title_development.png");
     private readonly TemplateImages _sortieTitle = new(Root + "title_sortie_request.png");
     private readonly TemplateImages _strengthTitle = new(Root + "title_strengthen_troops.png");
@@ -45,7 +41,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
     private readonly TemplateImages _back = new("resources/templates/common/back.png");
 
     private enum Control { Accept, Challenge, Report, Deliver, Obtain }
-    private enum ArrivalKind { List, Dialogue, Detail, Complete, Reward, WeeklyReward }
+    private enum ArrivalKind { List, Advance, Detail, Reward, WeeklyReward }
     private enum RequestKind { Unknown, Funding, Strength, UnitDelivery, Development, Sortie }
     private readonly record struct Title(RequestKind Kind, Roi Region);
     private sealed record Detail(Control Action, Roi Back, Roi Button, Title Title, int? Amount);
@@ -315,15 +311,16 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
     private async Task FinishReportAsync(string serial, int slot, CancellationToken ct, bool delivering = false)
     {
         await FollowDialogueAsync(serial, reporting: true, ct, delivering);
-        var list = await WaitForListAsync(serial, ct);
-        if ((list.ActiveMask & (1 << slot)) != 0) throw Unknown();
+        // 已返回列表后只观察栏位刷新，不能再点击中央的第二栏。
+        if (await WaitAsync(serial, frame =>
+            _page.ReadList(frame, ct) is { } list && slot < list.Count && (list.ActiveMask & (1 << slot)) == 0
+                ? list : null, ct) is null) throw Unknown();
     }
 
-    // 报告结算遮罩后面仍可能看见上一句台词；先识别结算，确认新页面后才继续。
+    // 只在已确认的承接、报告或交付之后推进。角色页优先停止，奖励按钮优先于背景台词。
     private async Task<Arrival> FollowDialogueAsync(string serial, bool reporting, CancellationToken ct, bool delivering = false)
     {
         var deadline = Environment.TickCount64 + 2 * GameTiming.RecognitionTimeoutMs;
-        var closedComplete = false;
         var closedReward = false;
         var closedWeekly = false;
         while (Environment.TickCount64 < deadline)
@@ -333,7 +330,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
             {
                 if (reporting)
                 {
-                    if (closedReward && _weeklyReward.Match(_matcher, frame, .94, new(801, 329, 314, 103), ct) is not null &&
+                    if (_weeklyReward.Match(_matcher, frame, .94, new(801, 329, 314, 103), ct) is not null &&
                         _weeklyNext.Match(_matcher, frame, .94, new(806, 916, 307, 82), ct) is not null)
                         return closedWeekly ? null : new Arrival(ArrivalKind.WeeklyReward);
                     if (_reward.Match(_matcher, frame, .93, new Roi(823, 29, 275, 122), ct) is not null)
@@ -341,23 +338,19 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                         var ok = _ok.Match(_matcher, frame, .87, new Roi(744, 908, 440, 152), ct);
                         return !closedReward && ok is not null ? new Arrival(ArrivalKind.Reward, Button: ok.Region) : null;
                     }
-                    if ((delivering ? _deliveryComplete : _complete).Match(_matcher, frame, .93, new Roi(765, 287, 390, 168), ct) is not null)
-                        return closedComplete ? null : new Arrival(ArrivalKind.Complete);
+                    // 完成横幅可能遮在角色页标题之上，先推进结算再等待返回。
+                    if ((delivering ? _deliveryComplete : _complete).Match(_matcher, frame, .93, new(765, 287, 390, 168), ct) is not null)
+                        return new Arrival(ArrivalKind.Advance);
                 }
                 if (_page.HasTitle(frame, ct))
                 {
                     if (_page.ReadList(frame, ct) is not null)
-                        return !reporting || closedComplete || closedReward ? new Arrival(ArrivalKind.List) : null;
+                        return new Arrival(ArrivalKind.List);
                     var detail = ReadDetail(frame, ct);
                     return !reporting && detail is { Action: not Control.Accept } ? new Arrival(ArrivalKind.Detail, detail) : null;
                 }
-                if (closedComplete || closedReward) return null;
-                var skip = _skip.Match(_matcher, frame, .96, new(1686, 26, 153, 80), ct) is not null;
-                if (skip && _panelCorner.Match(_matcher, frame, .96, new(244, 886, 41, 59), ct) is not null)
-                    return new Arrival(ArrivalKind.Dialogue);
-                return _dialogFrame.Match(_matcher, frame, .92, new(245, 126, 185, 98), ct) is not null &&
-                    (skip || _dialogAdvance.Match(_matcher, frame, .93, new(415, 729, 1230, 195), ct) is not null)
-                    ? new Arrival(ArrivalKind.Dialogue) : null;
+                // 台词、结算横幅和下次委托预告都由中央点击推进；无需判断内容或等待箭头出现。
+                return new Arrival(ArrivalKind.Advance);
             }, ct, budget);
             if (state is null || Environment.TickCount64 >= deadline) break;
             if (state.Kind is ArrivalKind.List or ArrivalKind.Detail) return state;
@@ -374,7 +367,6 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
             else
             {
                 await automation.TapAsync(serial, 960, 540, ct);
-                if (state.Kind == ArrivalKind.Complete) closedComplete = true;
             }
         }
         throw Unknown();

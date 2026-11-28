@@ -48,7 +48,7 @@ public partial class CharacterRequestPageTests
     }
 
     [Fact]
-    public async Task AcceptFromListAsync_AdvancesOnlyConfirmedDialogueAndLeavesChallengeUntouched()
+    public async Task AcceptFromListAsync_AdvancesWithoutDialogueMarkersAndStopsOnChallenge()
     {
         var list = Encode(CreateList(true, false, true));
         var detail = Empty();
@@ -59,24 +59,12 @@ public partial class CharacterRequestPageTests
         var accept = Encode(detail);
         PasteTemplate(detail, "button_challenge.png", 1584, 837);
         var challenge = Encode(detail);
-        var dialogue = Empty();
-        PasteTemplate(dialogue, "dialog_com_frame.png", 262, 145);
-        var incomplete = Encode(dialogue);
-        PasteTemplate(dialogue, "dialog_advance.png", 741, 836);
-        var first = Encode(dialogue);
-        dialogue = Empty();
-        PasteTemplate(dialogue, "dialog_com_frame.png", 262, 145);
-        PasteTemplate(dialogue, "dialog_advance.png", 779, 839);
-        var second = Encode(dialogue);
-
+        var transition = Encode(Empty());
         var adb = new FakeAdbService(list);
-        var pendingFrames = 0;
         adb.ScreenshotProvider = () => adb.Taps.Count switch
         {
             1 => accept,
-            2 when pendingFrames++ < 2 => incomplete,
-            2 => first,
-            3 => second,
+            2 or 3 => transition,
             4 or 6 => challenge,
             _ => list
         };
@@ -158,9 +146,13 @@ public partial class CharacterRequestPageTests
         }
         steps.Add((deliver, (1623, 857)));
         steps.Add((confirm, (1151, 848)));
+        // 两帧没有台词控件的过场与后续预告都只需点中央，即使已领取奖励也应继续。
+        var interlude = Encode(Empty());
+        steps.Add((interlude, (960, 540)));
         steps.Add((Encode(complete), (960, 540)));
         steps.Add((Encode(reward), (960, 995)));
         if (weekly) steps.Add((Encode(milestone), (960, 950)));
+        steps.Add((interlude, (960, 540)));
         var adb = new FakeAdbService(list);
         adb.ScreenshotProvider = () => adb.Taps.Count < steps.Count ? steps[adb.Taps.Count].Screen : finished;
         var log = new TestLog();
