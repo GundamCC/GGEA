@@ -7,6 +7,10 @@ namespace GGEA.Updater;
 /// <summary>读取现有正式发布清单，不另建版本来源或依赖可变的文件名猜测安装身份。</summary>
 public sealed record UpdateManifest(string Version, string Commit, IReadOnlyDictionary<string, string> Files)
 {
+    public string ProgramVersion { get; init; } = Version;
+    public string ProgramCommit { get; init; } = Commit;
+    public string? TemplateEngine { get; init; }
+
     /// <summary>本地普通包没有正式清单；只读取版本，不猜测旧文件归属，升级时保留未知文件。</summary>
     public static UpdateManifest ReadInstallation(string root)
     {
@@ -45,7 +49,19 @@ public sealed record UpdateManifest(string Version, string Commit, IReadOnlyDict
                 throw new InvalidDataException("发布文件摘要或路径集合无效。");
         }
         if (!files.ContainsKey("GGEA.exe")) throw new InvalidDataException("发布包缺少主程序。");
-        return new UpdateManifest(version, commit, files);
+        var programVersion = version;
+        var programCommit = commit;
+        if (item.TryGetProperty("program", out var program))
+        {
+            programVersion = program.GetProperty("version").GetString() ?? "";
+            programCommit = program.GetProperty("commit").GetString() ?? "";
+            if (UpdateFiles.ParseVersion(programVersion) > UpdateFiles.ParseVersion(version) ||
+                !Regex.IsMatch(programCommit, "^[a-f0-9]{40}$")) throw new InvalidDataException("程序构建身份无效。");
+        }
+        return new UpdateManifest(version, commit, files) {
+            ProgramVersion = programVersion, ProgramCommit = programCommit,
+            TemplateEngine = item.TryGetProperty("templateEngine", out var engine) ? engine.GetString() : null
+        };
     }
 
     /// <summary>下载后验证完整默认包；安装后仅跳过明确属于用户的可变数据。</summary>

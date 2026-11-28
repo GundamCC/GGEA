@@ -435,7 +435,7 @@ public sealed partial class MasterLeagueService
                 }
             }
             var stage = await _automation.MatchImageAsync(screen, ConfigService.ResolvePath(StageMenuEntryService.TitleTemplate),
-                new WaitOptions { Region = RecognitionRegion.PageTitle, Threshold = .85, AllowGlobalContinuation = false }, ct);
+                new WaitOptions { Roi = StageMenuEntryService.TitleRegion, Threshold = .85, AllowGlobalContinuation = false }, ct);
             if (stage is not null)
             {
                 state.Phase = LeaguePhase.Reading;

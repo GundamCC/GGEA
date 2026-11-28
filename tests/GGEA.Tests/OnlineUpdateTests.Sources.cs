@@ -9,6 +9,39 @@ namespace GGEA.Tests;
 
 public sealed partial class OnlineUpdateTests
 {
+    [Fact]
+    public async Task ManualCheckReusesVersionAlreadyDiscoveredByThisInstallation()
+    {
+        using var temp = new TempDirectory();
+        var installed = new Version(1, 4, 25, 1);
+        using var background = new OnlineUpdateClient(temp.Path, handler: new ReplyHandler(request =>
+            JsonReply(request.RequestUri!.AbsoluteUri == UpdateSourceStore.DiscoveryUrl ? Catalog() : ReleaseJson("1.4.26.0"))));
+        using var settings = new OnlineUpdateClient(temp.Path, handler: new ReplyHandler(_ =>
+            throw new InvalidOperationException("Unexpected repeat request")));
+        var release = await background.CheckAsync(installed, default);
+        Assert.NotNull(release);
+        Assert.Same(release, await settings.CheckAsync(installed, default));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => settings.CheckAsync(installed, new CancellationToken(true)));
+    }
+
+    [Fact]
+    public async Task GitHubRateLimitKeepsServerRetryTimeWhenNoMirrorIsAvailable()
+    {
+        using var temp = new TempDirectory();
+        var reset = DateTimeOffset.Parse("2026-11-28T02:39:36Z");
+        using var client = new OnlineUpdateClient(temp.Path, handler: new ReplyHandler(request =>
+        {
+            if (request.RequestUri!.AbsoluteUri == UpdateSourceStore.DiscoveryUrl) return JsonReply(Catalog());
+            var reply = new HttpResponseMessage(HttpStatusCode.Forbidden);
+            reply.Headers.Add("X-RateLimit-Remaining", "0");
+            reply.Headers.Add("X-RateLimit-Reset", reset.ToUnixTimeSeconds().ToString());
+            return reply;
+        }));
+        var ex = await Assert.ThrowsAsync<GitHubRateLimitException>(() => client.CheckAsync(new Version(1, 4, 25, 1), default));
+        Assert.Equal(HttpStatusCode.Forbidden, ex.StatusCode);
+        Assert.Contains(reset.ToLocalTime().ToString("HH:mm:ss"), ex.Message);
+    }
+
     /// <summary>新客户端只访问主仓库的固定入口；尚无正式版必须报告失败，不能伪报已经最新。</summary>
     [Fact]
     public async Task Sources_MigrationUsesMainRepository_AndMissingReleaseIsNotSuccess()

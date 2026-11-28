@@ -103,7 +103,7 @@ public static class UpdateFiles
     }
 
     /// <summary>同卷暂存并刷盘后替换单个文件，避免断电留下被截断的 EXE；整套版本仍由事务记录恢复。</summary>
-    public static void CopyAtomically(string source, string destination, string installation)
+    public static void CopyAtomically(string source, string destination, string installation, string? retiredImage = null)
     {
         RejectLinks(source);
         RejectLinks(destination);
@@ -117,7 +117,10 @@ public static class UpdateFiles
                 output.Flush(true);
             }
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            File.Move(temporary, destination, true);
+            if (retiredImage is not null && File.Exists(destination))
+                File.Replace(temporary, destination, retiredImage);
+            else
+                File.Move(temporary, destination, true);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
@@ -127,6 +130,34 @@ public static class UpdateFiles
     {
         using var transition = OpenLock(root, "handoff.lock", exclusive: true);
         return OpenLock(root, "installation.lock", exclusive: true);
+    }
+
+    /// <summary>只清理本功能创建的下载工作区；不递归跟随任何链接。</summary>
+    public static void DeleteDownload(string workspace)
+    {
+        try
+        {
+            var directory = new DirectoryInfo(workspace);
+            if (!Regex.IsMatch(directory.Name, "^download-[a-f0-9]{32}$") || directory.Parent?.Name != UpdateFiles.StateDirectory)
+                throw new InvalidDataException("无效的下载清理目录。");
+            DeleteTree(directory);
+        }
+        catch (IOException) { /* 文件占用时保留缓存，不影响原安装和取消结果。 */ }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    /// <summary>逐层检查链接后删除文件，避免递归枚举进入目录联接。</summary>
+    private static void DeleteTree(DirectoryInfo directory)
+    {
+        if (!directory.Exists) return;
+        UpdateFiles.RejectLinks(directory.FullName);
+        foreach (var item in directory.EnumerateFileSystemInfos())
+        {
+            UpdateFiles.RejectLinks(item.FullName);
+            if (item is DirectoryInfo child) DeleteTree(child);
+            else item.Delete();
+        }
+        directory.Delete();
     }
 
     internal static FileStream OpenLock(string root, string name, bool exclusive)

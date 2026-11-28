@@ -35,7 +35,7 @@ public partial class MainWindow
     /// <summary>设置仍可在插件故障后访问；执行互斥、关窗和更新闸门保持一致。</summary>
     private DeviceExecutionGate.Lease? TryBeginHostOperation(bool logRoutineChecks = true)
     {
-        if (_windowTasks.IsStopping || _busy || _updatePending) return null;
+        if (_windowTasks.IsStopping || _busy) return null;
         var lease = _executionGate.TryEnter(() =>
         {
             _executionMonitor?.EndSession();
@@ -72,7 +72,7 @@ public partial class MainWindow
     /// <summary>忙状态只消费会话所有权，内部操作结束不得解除外层会话。</summary>
     private void UpdateBusyState()
     {
-        var busy = _updatePending || _executionGate.IsHeld || _windowTasks.IsStopping || _starting || _dailyRunning || _autoFarmRunning || _scoutRunning || _ballFactoryRunning || _autoProgressRunning;
+        var busy = _executionGate.IsHeld || _windowTasks.IsStopping || _starting || _dailyRunning || _autoFarmRunning || _scoutRunning || _ballFactoryRunning || _autoProgressRunning;
         _busy = busy;
         if (!busy) _waitingForIdle?.TrySetResult();
         SettingsButton.IsEnabled = !busy;

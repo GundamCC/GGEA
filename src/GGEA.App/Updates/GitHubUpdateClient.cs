@@ -54,7 +54,10 @@ public sealed class GitHubUpdateClient : IDisposable
             AssetUri(checksum, downloadRoot, name + ".sha256"), ReadDigest(zip))
         {
             Delta = ReadDelta(assets, downloadRoot, version, current, size),
-            Index = ReadIndex(assets, downloadRoot, name),
+            Index = ReadIndex(assets, downloadRoot, name + ".index.json.br", brotli: true)
+                ?? ReadIndex(assets, downloadRoot, name + ".index.json", brotli: false),
+            SmallIndexes = ReadSmallIndexes(assets, downloadRoot, name),
+            CopyPatches = ReadCopyPatches(assets, downloadRoot, name),
             Blocks = ReadBlocks(assets, downloadRoot, name + ".blocks"),
             UpdaterBlocks = ReadBlocks(assets, downloadRoot, name + ".updater.blocks")
         };
@@ -71,15 +74,47 @@ public sealed class GitHubUpdateClient : IDisposable
     }
 
     // GitHub API 的附件摘要认证索引，索引中的 ZIP 摘要再绑定已核对的完整包。
-    private static UpdateRangeIndex? ReadIndex(JsonElement[] assets, string downloadRoot, string packageName)
+    private static UpdateRangeIndex? ReadIndex(JsonElement[] assets, string downloadRoot, string name, bool brotli)
     {
-        var name = packageName + ".index.json";
         var asset = assets.SingleOrDefault(a => a.GetProperty("name").GetString() == name &&
             a.GetProperty("state").GetString() == "uploaded");
         if (asset.ValueKind == JsonValueKind.Undefined || ReadDigest(asset) is not { } hash) return null;
         var size = asset.GetProperty("size").GetInt64();
         if (size is <= 0 or > 16 * 1024 * 1024) throw new InvalidDataException("更新索引大小无效。");
-        return new(AssetUri(asset, downloadRoot, name), hash, (int)size);
+        return new(AssetUri(asset, downloadRoot, name), hash, (int)size) { Brotli = brotli };
+    }
+
+    private static Dictionary<string, UpdateRangeIndex> ReadSmallIndexes(JsonElement[] assets, string root, string package)
+    {
+        var found = new Dictionary<string, UpdateRangeIndex>(StringComparer.OrdinalIgnoreCase);
+        foreach (var asset in assets)
+        {
+            var name = asset.GetProperty("name").GetString() ?? "";
+            if (!name.StartsWith(package + ".", StringComparison.Ordinal) || !name.EndsWith(".small.br", StringComparison.Ordinal) ||
+                name.Length != package.Length + 1 + 64 + ".small.br".Length) continue;
+            var key = name.Substring(package.Length + 1, 64);
+            if (UpdateSourceCatalog.IsHash(key) && ReadIndex(assets, root, name, true) is { Size: <= 65536 } index)
+                found.Add(key, index);
+        }
+        return found;
+    }
+
+    private static List<UpdateCopyPatch> ReadCopyPatches(JsonElement[] assets, string root, string package)
+    {
+        var patches = new List<UpdateCopyPatch>();
+        foreach (var asset in assets)
+        {
+            var name = asset.GetProperty("name").GetString() ?? "";
+            if (!name.StartsWith(package + ".", StringComparison.Ordinal) || !name.EndsWith(".copy.br", StringComparison.Ordinal)) continue;
+            var parts = name[(package.Length + 1)..].Split('.');
+            if (parts.Length != 4 || !UpdateSourceCatalog.IsHash(parts[0]) || !UpdateSourceCatalog.IsHash(parts[1]) ||
+                asset.GetProperty("state").GetString() != "uploaded" || ReadDigest(asset) is not { } digest) continue;
+            var size = asset.GetProperty("size").GetInt64();
+            if (size is <= 0 or > FileCopyPatch.MaximumPatchBytes) throw new InvalidDataException("文件差异附件大小无效。");
+            patches.Add(new(parts[1].ToLowerInvariant(), parts[0].ToLowerInvariant(),
+                AssetUri(asset, root, name), (int)size, digest));
+        }
+        return patches;
     }
 
     /// <summary>差异附件尚未发布完整或不比全量包小则直接使用全量包；已发布的附件仍须通过地址和摘要校验。</summary>

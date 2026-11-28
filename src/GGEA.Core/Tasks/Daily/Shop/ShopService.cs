@@ -200,7 +200,7 @@ public sealed class ShopService
         try
         {
             // 证据与普通日志放在同一程序目录下，避免反馈时遗漏用户数据目录中的截图。
-            var directory = Path.Combine(AppContext.BaseDirectory, "logs", "shop");
+            var directory = Path.Combine(GGEA.App.Config.ConfigService.UserDirectory, "logs", "shop");
             Directory.CreateDirectory(directory);
             var prefix = Path.Combine(directory, $"{DateTime.UtcNow:yyyyMMdd-HHmmssfff}-{Guid.NewGuid():N}");
             if (png is not null) File.WriteAllBytes(prefix + ".png", png);

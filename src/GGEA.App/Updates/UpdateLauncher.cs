@@ -10,7 +10,52 @@ namespace GGEA.App.Updates;
 /// <summary>检查当前安装是否适合更新，并把安装所有权交给独立的自包含进程。</summary>
 public static class UpdateLauncher
 {
-    public static Version CurrentVersion => typeof(App).Assembly.GetName().Version!;
+    private static UpdateManifest? _activeData;
+    public static Version CurrentVersion => _activeData is null
+        ? typeof(App).Assembly.GetName().Version! : Version.Parse(_activeData.Version);
+
+    internal static string UserRoot { get; } = VersionStore.RootOf(AppContext.BaseDirectory);
+    internal static string ContentRoot => Config.ConfigService.ContentDirectory;
+    internal static Version? PreparedVersion { get; private set; }
+
+    private static FileStream? _contentLease;
+
+    internal static void SelectContent(string directory)
+    {
+        var root = UserRoot;
+        var original = !Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar).Equals(
+            Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase) &&
+            File.Exists(UpdateFiles.SafePath(root, "build-info.json")) ? UpdateManifest.Read(root).Files : null;
+        if (File.Exists(UpdateFiles.SafePath(directory, "build-info.json")))
+            _activeData = UpdateManifest.Read(directory);
+        var lease = VersionStore.Hold(root, directory);
+        Config.ConfigService.SelectDirectories(root, directory, original);
+        Interlocked.Exchange(ref _contentLease, lease)?.Dispose();
+    }
+
+    internal static async Task<bool> ApplyAsync(string package, string version, CancellationToken token)
+    {
+        if (InstallationUnavailableReason(ContentRoot) is { } reason) throw new InvalidOperationException(reason);
+        var old = UpdateManifest.ReadInstallation(ContentRoot);
+        var next = UpdateManifest.Read(package);
+        var live = UpdateInstaller.CanApplyLiveData(old, next);
+        var directory = await Task.Run(() => VersionStore.Publish(UserRoot, package, version, UpdateInstaller.VerifyExecutable, token), token);
+        return Adopt(directory, next, live);
+    }
+
+    internal static bool Adopt(string directory, UpdateManifest next, bool live)
+    {
+        if (!live)
+        {
+            PreparedVersion = Version.Parse(next.Version);
+            return false;
+        }
+        VersionStore.ApplyUserDefaults(UserRoot, directory);
+        SelectContent(directory);
+        _activeData = next;
+        PreparedVersion = null;
+        return true;
+    }
 
     /// <summary>开发目录允许检查，但不允许在线覆盖源码构建产物。</summary>
     public static string? InstallationUnavailableReason(string root)
@@ -32,7 +77,7 @@ public static class UpdateLauncher
             var manifest = UpdateManifest.Read(root);
             var commit = typeof(App).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
                 .SingleOrDefault(a => a.Key == "GgeaReleaseCommit")?.Value;
-            if (manifest.Version != CurrentVersion.ToString(4) || manifest.Commit != commit)
+            if (manifest.Version != CurrentVersion.ToString(4) || manifest.ProgramCommit != commit || manifest.ProgramVersion != typeof(App).Assembly.GetName().Version!.ToString(4))
                 return L.Text("当前程序与发布清单不一致，请重新下载正式完整包。");
             if (!manifest.Files.TryGetValue("GGEA.Updater.exe", out var hash) ||
                 UpdateFiles.Hash(UpdateFiles.SafePath(root, "GGEA.Updater.exe")) != hash.ToLowerInvariant())
@@ -44,7 +89,7 @@ public static class UpdateLauncher
     }
 
     /// <summary>从固定位置复制已验证更新器；恢复模式保留之前的独立副本以避开半更新文件。</summary>
-    public static async Task StartAsync(string root, string? package, string? version, bool recover, CancellationToken cancellationToken)
+    public static async Task StartAsync(string root, string? package, string? version, bool recover, CancellationToken cancellationToken, bool keepClosed = false)
     {
         var runner = UpdateFiles.SafePath(root, UpdateFiles.RunnerName);
         if (!recover)
@@ -56,7 +101,7 @@ public static class UpdateLauncher
         }
         if (!File.Exists(runner)) throw new IOException(L.Text("独立恢复程序缺失，请保留 .ggea-update 中的备份并重新下载正式完整包。"));
         var request = new UpdateRequest(Path.GetFullPath(root), package, version, Environment.ProcessId,
-            Process.GetCurrentProcess().StartTime.ToUniversalTime().Ticks, recover);
+            Process.GetCurrentProcess().StartTime.ToUniversalTime().Ticks, recover, keepClosed);
         var requestPath = UpdateFiles.SafePath(root, ".ggea-update/request.json");
         var ready = UpdateFiles.SafePath(root, ".ggea-update/ready");
         File.Delete(ready);

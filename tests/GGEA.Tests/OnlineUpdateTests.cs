@@ -143,6 +143,35 @@ public sealed partial class OnlineUpdateTests
         else Assert.Equal("1.1.10.0", UpdatePackage.Extract(archive, destination, "1.1.10.0").Version);
     }
 
+    [Fact]
+    public void ChangedDefaultsKeepUserEditsAndMergeNewNamedProfiles()
+    {
+        using var temp = new TempDirectory();
+        var target = Path.Combine(temp.Path, "installed");
+        var next = Path.Combine(temp.Path, "next");
+        const string old = """{"speed":1,"custom":1,"profiles":[{"name":"A","limit":3},{"name":"removed"}]}""";
+        const string newer = """{"speed":2,"custom":2,"profiles":[{"name":"A","limit":4},{"name":"B"}]}""";
+        const string personal = """{"speed":1,"custom":9,"profiles":[{"name":"A","limit":7},{"name":"mine"}]}""";
+        CreatePackage(target, "1.4.25.0", old);
+        CreatePackage(next, "1.4.25.1", newer);
+        PublishedDefaults.Remember(target, target);
+        var path = Path.Combine(target, "config/ap_consumption_profiles.json");
+        File.WriteAllText(path, personal);
+        Assert.Throws<IOException>(() => UpdateInstaller.Install(target, next, "1.4.25.1", dir =>
+        {
+            if (dir == target) throw new IOException("Reject candidate");
+        }));
+        Assert.Equal(personal, File.ReadAllText(path));
+        UpdateInstaller.Install(target, next, "1.4.25.1", _ => { });
+        using var json = JsonDocument.Parse(File.ReadAllText(path));
+        var root = json.RootElement;
+        Assert.Equal(2, root.GetProperty("speed").GetInt32());
+        Assert.Equal(9, root.GetProperty("custom").GetInt32());
+        var profiles = root.GetProperty("profiles").EnumerateArray().ToArray();
+        Assert.Equal(new[] { "A", "mine", "B" }, profiles.Select(item => item.GetProperty("name").GetString()));
+        Assert.Equal(7, profiles[0].GetProperty("limit").GetInt32());
+    }
+
     /// <summary>用户配置、AP 方案和坐标保留；旧程序文件按清单删除，额外私人文件不触碰。</summary>
     [Fact]
     public void Install_PreservesUserData_RemovesOnlyObsoleteManagedFiles()
@@ -257,9 +286,12 @@ public sealed partial class OnlineUpdateTests
             Task Handoff() { handedOff = true; return Task.CompletedTask; }
             using (var second = new RunningInstallation(temp.Path))
             {
+                Assert.False(first.CanStartDownload());
+                Assert.False(second.CanStartDownload());
                 await Assert.ThrowsAsync<IOException>(() => first.StartUpdateAsync(Handoff));
                 Assert.False(handedOff);
             }
+            Assert.True(first.CanStartDownload());
             Assert.Throws<IOException>(() => UpdateFiles.AcquireLock(temp.Path));
             await Assert.ThrowsAsync<OperationCanceledException>(() =>
                 first.StartUpdateAsync(() => Task.FromException(new OperationCanceledException())));

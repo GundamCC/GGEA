@@ -84,8 +84,12 @@ internal sealed class UpdateHttpTransport : IDisposable
                 continue;
             }
             if (response.IsSuccessStatusCode) return response;
+            using var failed = response;
             var status = response.StatusCode;
-            response.Dispose();
+            if (uri.Host == "api.github.com" && (status == HttpStatusCode.TooManyRequests ||
+                (status == HttpStatusCode.Forbidden && (response.Headers.RetryAfter is not null ||
+                 (response.Headers.TryGetValues("X-RateLimit-Remaining", out var remaining) && remaining.Contains("0"))))))
+                throw new GitHubRateLimitException(response);
             throw new HttpRequestException(status switch
             {
                 HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests => L.Text("更新源暂时限制了请求，请稍后重试。"),
@@ -98,4 +102,20 @@ internal sealed class UpdateHttpTransport : IDisposable
 
     /// <summary>所有请求结束后释放连接。</summary>
     public void Dispose() { if (_traffic is null) _http.Dispose(); }
+}
+
+/// <summary>保留限流原因与本地重试时间，让协调器用完可用来源后向界面报告。</summary>
+internal sealed class GitHubRateLimitException(HttpResponseMessage response)
+    : HttpRequestException(Describe(response), null, response.StatusCode)
+{
+    private static string Describe(HttpResponseMessage response)
+    {
+        var retry = response.Headers.RetryAfter;
+        DateTimeOffset? at = retry?.Date ?? (DateTimeOffset.UtcNow + retry?.Delta);
+        if (at is null && response.Headers.TryGetValues("X-RateLimit-Reset", out var values) &&
+            long.TryParse(values.FirstOrDefault(), out var seconds) && seconds is >= 0 and <= 253402300799)
+            at = DateTimeOffset.FromUnixTimeSeconds(seconds);
+        return at is { } time ? L.Format($"GitHub 的更新查询已达到请求上限，请在本地时间 {time.ToLocalTime():HH:mm:ss} 后重试。")
+            : L.Text("GitHub 的更新查询已达到请求上限，请稍后重试。");
+    }
 }

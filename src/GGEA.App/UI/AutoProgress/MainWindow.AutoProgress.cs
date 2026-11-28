@@ -251,8 +251,10 @@ public partial class MainWindow
                 ? new[] { FierceEnemyUnit.Latest }.Concat(FierceEnemyUnit.Load())
                     .Select(unit => new AutoProgressTarget(null, unit)).ToArray()
                 : _hardStages.Where(work => work.Id != 1).Select(work => new AutoProgressTarget(work, null)).ToArray();
+            var selectedKey = (AutoProgressView.AutoProgressWorkCombo.SelectedItem as AutoProgressTarget)?.Key;
             AutoProgressView.AutoProgressWorkCombo.ItemsSource = targets;
-            AutoProgressView.AutoProgressWorkCombo.SelectedItem = history || isEvent ? targets.FirstOrDefault() : targets.MaxBy(item => item.MainWork?.Id ?? item.Enemy!.Id);
+            AutoProgressView.AutoProgressWorkCombo.SelectedItem = targets.FirstOrDefault(item => item.Key == selectedKey)
+                ?? (history || isEvent ? targets.FirstOrDefault() : targets.MaxBy(item => item.MainWork?.Id ?? item.Enemy!.Id));
             AutoProgressView.AutoProgressAddButton.IsEnabled = !_busy && targets.Length > 0;
             AutoProgressView.AutoProgressStatusText.Text = history ? L.Text("历史作品先推进关卡；勾选攻略 BOSS 时继续六关并复核双 100%。") : L.Text("添加目标后点击开始推图。");
         }

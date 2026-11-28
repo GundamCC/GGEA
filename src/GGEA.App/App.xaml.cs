@@ -38,16 +38,25 @@ public partial class App : Application
         IsDarkMode = nextDarkMode;
     }
 
+    private FileStream? _programLease;
     private Updater.RunningInstallation? _installation;
 
+    internal bool HasUpdateForExit => Updates.UpdateLauncher.PreparedVersion is not null;
+
+    internal string? UpdateDownloadUnavailableReason() => _installation is null ? L.Text("当前目录不支持在线安装。") : null;
+
+    internal Task<bool> TryApplyLiveDataAsync(string package, string version, CancellationToken token) =>
+        Updates.UpdateLauncher.ApplyAsync(package, version, token);
+
     /// <summary>在当前安装的独占保护下向更新器交接，失败时恢复当前窗口的共享运行状态。</summary>
-    internal async Task StartUpdateAsync(string? package, string? version, bool recover, CancellationToken ct)
+    internal async Task StartUpdateAsync(string? package, string? version, bool recover, CancellationToken ct, bool keepClosed = false)
     {
         if (_installation is null) throw new InvalidOperationException(L.Text("当前目录不支持在线安装。"));
         try
         {
             await _installation.StartUpdateAsync(() =>
-                Updates.UpdateLauncher.StartAsync(AppContext.BaseDirectory, package, version, recover, ct));
+                Updates.UpdateLauncher.StartAsync(AppContext.BaseDirectory, package, version, recover, ct, keepClosed));
+
         }
         catch (IOException ex) when ((ex.HResult & 0xffff) == 32)
         {
@@ -73,10 +82,35 @@ public partial class App : Application
 
         // 创建窗口前确定语言；日志目录不可写时仍给出本机语言提示，不进入未初始化的主窗口。
         L.Initialize(null);
+        var program = new DirectoryInfo(AppContext.BaseDirectory).FullName;
+        var root = Updates.UpdateLauncher.UserRoot;
         try
         {
-            using var startupLog = new Logging.GgeaLogger(Path.Combine(AppContext.BaseDirectory, "logs"));
-            StartupConfig = new Config.ConfigService(startupLog).Load(Path.Combine(AppContext.BaseDirectory, "config", "ggea.config.json"));
+            var selected = Updates.VersionStore.SelectedDirectory(root, verifyProgram: true);
+            if (!StringComparer.OrdinalIgnoreCase.Equals(Path.TrimEndingDirectorySeparator(program), Path.TrimEndingDirectorySeparator(selected)))
+            {
+                var launch = new System.Diagnostics.ProcessStartInfo(Updater.UpdateFiles.SafePath(selected, "GGEA.exe"))
+                    { WorkingDirectory = root, UseShellExecute = false };
+                foreach (var arg in e.Args) launch.ArgumentList.Add(arg);
+                System.Diagnostics.Process.Start(launch);
+                Shutdown();
+                return;
+            }
+            _programLease = Updates.VersionStore.Hold(root, program);
+            Updates.VersionStore.ApplyUserDefaults(root, selected);
+            Updates.UpdateLauncher.SelectContent(selected);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, L.Text("GGEA 在线更新"), MessageBoxButton.OK, MessageBoxImage.Error);
+            Shutdown(1);
+            return;
+        }
+
+        try
+        {
+            using var startupLog = new Logging.GgeaLogger(Path.Combine(root, "logs"));
+            StartupConfig = new Config.ConfigService(startupLog).Load(Path.Combine(root, "config", "ggea.config.json"));
             StartupConfig.UiLanguage = UiLanguages.Resolve(StartupConfig.UiLanguage, System.Globalization.CultureInfo.CurrentUICulture);
             L.Initialize(StartupConfig.UiLanguage);
         }
@@ -94,7 +128,7 @@ public partial class App : Application
         {
             try
             {
-                _installation = new Updater.RunningInstallation(AppContext.BaseDirectory);
+                _installation = new Updater.RunningInstallation(root);
                 if (File.Exists(Updater.UpdateFiles.SafePath(AppContext.BaseDirectory, Updater.UpdateFiles.JournalName)))
                 {
                     if (MessageBox.Show(L.Text("上次更新未完成，需先恢复旧版再使用。是否现在恢复？"), L.Text("GGEA 更新恢复"),
@@ -119,6 +153,7 @@ public partial class App : Application
             return;
         }
 
+        if (_installation is not null) Updater.PublishedDefaults.Remember(root, program);
         base.OnStartup(e);
     }
 
@@ -127,6 +162,7 @@ public partial class App : Application
     {
         // 原生截图助手与主窗口共用此入口；必须在 CLR ProcessExit 前释放图像线程。
         Vision.ImageCodecThread.Shutdown();
+        _programLease?.Dispose();
         _installation?.Dispose();
         base.OnExit(e);
     }

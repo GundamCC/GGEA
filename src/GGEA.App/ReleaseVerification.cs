@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using GGEA.App.Vision;
+using GGEA.App.Config;
 using OpenCvSharp;
 
 namespace GGEA.App;
@@ -21,12 +22,14 @@ internal static class ReleaseVerification
                 throw new InvalidDataException("发布包缺少运行库安装脚本。");
             if (RuntimeDependencies.Check(root) is { } failure)
                 throw new InvalidDataException($"原生依赖检查失败：{failure.Library} / {failure.Kind} / {failure.Detail}");
-            using var info = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "build-info.json")));
-            if (info.RootElement.GetProperty("version").GetString() != typeof(App).Assembly.GetName().Version?.ToString(4))
+            var info = GGEA.Updater.UpdateManifest.Read(root);
+            if (info.ProgramVersion != typeof(App).Assembly.GetName().Version?.ToString(4))
                 throw new InvalidDataException("程序版本与 build-info 不一致。");
             var commit = typeof(App).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
                 .SingleOrDefault(attribute => attribute.Key == "GgeaReleaseCommit")?.Value;
-            if (string.IsNullOrEmpty(commit) || commit != info.RootElement.GetProperty("commit").GetString())
+            var identity = System.Diagnostics.FileVersionInfo.GetVersionInfo(Path.Combine(root, "GGEA.ReleaseIdentity.dll"));
+            if (identity.FileVersion != info.Version) throw new InvalidDataException("发行版本与 build-info 不一致。");
+            if (identity.ProductVersion != info.Commit || string.IsNullOrEmpty(commit) || commit != info.ProgramCommit)
                 throw new InvalidDataException("程序构建提交与 build-info 不一致。");
             // 语言资源已迁入核心程序集；单文件产物必须能通过真实核心类型读取嵌入资源。
             if (Localization.L.Translate("设置", "ja") != "設定")
@@ -37,6 +40,21 @@ internal static class ReleaseVerification
                 {
                     using var document = JsonDocument.Parse(File.ReadAllText(file));
                 }
+            }
+            // 目录与 Logo 一起验收，防止当前窗口切到新目录后才发现作品素材漏发。
+            var history = HistoryStageCatalog.Load(ConfigService.ResolvePath("resources/history_stages.json"));
+            var main = JsonSerializer.Deserialize<HardStagesData>(File.ReadAllText(ConfigService.ResolvePath("resources/hard_stages.json")));
+            if (main is null || main.HardStages.Count == 0 || main.HardStages.Any(w => w.Id <= 0 ||
+                string.IsNullOrWhiteSpace(w.Work) || w.HardCount is < 1 or > 5 || w.SideStories < 0) ||
+                main.HardStages.Select(w => w.Id).Distinct().Count() != main.HardStages.Count)
+                throw new InvalidDataException("主线作品目录无效。");
+            foreach (var name in main.HardStages.Concat(history.Works).Select(w => w.Screenshot).Distinct())
+            {
+                if (string.IsNullOrWhiteSpace(name) || Path.GetFileName(name) != name)
+                    throw new InvalidDataException("作品 Logo 文件名无效。");
+                var path = ConfigService.ResolvePath(Path.Combine(AppConfig.DefaultWorkLogoDirectory, name));
+                using var logo = Cv2.ImDecode(File.ReadAllBytes(path), ImreadModes.Unchanged);
+                if (logo.Empty()) throw new InvalidDataException($"无法解码作品 Logo：{name}");
             }
             var images = Directory.GetFiles(Path.Combine(root, "resources"), "*.png", SearchOption.AllDirectories);
             if (images.Length == 0) throw new InvalidDataException("发布包没有模板。");

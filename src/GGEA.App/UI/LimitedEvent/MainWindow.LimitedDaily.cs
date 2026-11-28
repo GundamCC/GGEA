@@ -24,16 +24,22 @@ public partial class MainWindow
             .FirstOrDefault(item => Equals(item.Content, choice.Difficulty.ToString()));
     }
 
-    private void RestoreLimitedDaily()
+    private void ReloadLimitedActivities()
     {
         try
         {
+            var selected = (LimitedActivity.SelectedItem as LimitedEventDefinition)?.Id;
             _limitedActivities = LimitedEventDefinition.Load();
             LimitedActivity.ItemsSource = _limitedActivities;
-            LimitedActivity.SelectedItem = _limitedActivities.FirstOrDefault();
+            LimitedActivity.SelectedItem = _limitedActivities.FirstOrDefault(activity => activity.Id == selected) ?? _limitedActivities.FirstOrDefault();
             if (_limitedActivities.Length == 0) LimitedStatus.Text = L.Text("当前没有可用的限时活动。");
         }
         catch (Exception ex) { LimitedStatus.Text = ex.Message; _logger?.Warn(ex.Message); }
+    }
+
+    private void RestoreLimitedDaily()
+    {
+        ReloadLimitedActivities();
         if (_config.LimitedEventDaily is not { } saved) return;
         try
         {

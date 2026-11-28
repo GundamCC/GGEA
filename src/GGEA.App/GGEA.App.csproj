@@ -26,6 +26,16 @@
     <ProjectReference Include="..\GGEA.Plugin.Abstractions\GGEA.Plugin.Abstractions.csproj" />
   </ItemGroup>
 
+  <!-- 交付时独立保存产品程序集。改动少量代码或版本号时，更新器可以直接复用其余字节。 -->
+  <Target Name="SeparateProductAssemblies" BeforeTargets="_ComputeFilesToBundle" DependsOnTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Update="@(ResolvedFileToPublish)"
+          Condition="'%(ResolvedFileToPublish.RelativePath)' == 'GGEA.dll' Or '%(ResolvedFileToPublish.RelativePath)' == 'GGEA.Core.dll' Or '%(ResolvedFileToPublish.RelativePath)' == 'GGEA.Plugin.Abstractions.dll' Or '%(ResolvedFileToPublish.RelativePath)' == 'GGEA.Updater.dll'">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
   <!-- 所有发布入口统一携带自包含更新器，用户机器无需 SDK/PowerShell。 -->
   <Target Name="PublishOnlineUpdater" AfterTargets="Publish">
     <PropertyGroup>

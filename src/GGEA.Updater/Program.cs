@@ -6,7 +6,7 @@ namespace GGEA.Updater;
 
 /// <summary>本地主程序与独立更新进程的交接记录；不包含任意命令、脚本或网络地址。</summary>
 public sealed record UpdateRequest(string TargetDirectory, string? PackageDirectory, string? Version,
-    int ParentProcessId, long ParentStartTimeUtcTicks, bool RecoverOnly);
+    int ParentProcessId, long ParentStartTimeUtcTicks, bool RecoverOnly, bool KeepClosed = false);
 
 /// <summary>自包含更新进程，从安装目录的 runner 副本运行，主程序退出后才取得写入所有权。</summary>
 internal static class Program
@@ -51,9 +51,16 @@ internal static class Program
             using (UpdateFiles.AcquireLock(target))
             {
                 if (request.RecoverOnly) UpdateInstaller.Recover(target);
-                else UpdateInstaller.Install(target, request.PackageDirectory!, request.Version!, VerifyExecutable);
+                else UpdateInstaller.Install(target, request.PackageDirectory!, request.Version!, UpdateInstaller.VerifyExecutable);
             }
             Log(target, request.RecoverOnly ? "旧版恢复完成。" : $"更新至 {request.Version} 完成。");
+            // 用户主动退出时保持关闭，下次自行打开即使用已验证的新程序。
+            if (request.KeepClosed && !request.RecoverOnly)
+            {
+                try { UpdateFiles.DeleteDownload(Path.GetDirectoryName(request.PackageDirectory!)!); }
+                catch (InvalidDataException ex) { Log(target, ex.Message); }
+                return 0;
+            }
             // 成功后再启动主程序；重启失败不假报安装失败，也不重复覆盖已验证的新版。
             try { Process.Start(new ProcessStartInfo(UpdateFiles.SafePath(target, "GGEA.exe")) { WorkingDirectory = target, UseShellExecute = false }); }
             catch (Exception ex) { Show($"文件更新已完成，请手动启动 GGEA.exe。\n{ex.Message}"); }
@@ -79,22 +86,6 @@ internal static class Program
             return null;
         }
         catch (ArgumentException) { return null; }
-    }
-
-    /// <summary>复用程序既有离线发布自检，不启动窗口、ADB、游戏或任务；超时只终止自检子进程。</summary>
-    private static void VerifyExecutable(string directory)
-    {
-        var start = new ProcessStartInfo(UpdateFiles.SafePath(directory, "GGEA.exe"))
-        { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = directory };
-        start.ArgumentList.Add("--verify-release");
-        using var process = Process.Start(start) ?? throw new IOException("无法启动新版自检。");
-        if (!process.WaitForExit(120000))
-        {
-            process.Kill(entireProcessTree: true);
-            process.WaitForExit();
-            throw new IOException("新版自检超时。");
-        }
-        if (process.ExitCode != 0) throw new IOException("新版启动自检失败，更新不能继续。");
     }
 
     /// <summary>日志失败不能掩盖原安装错误。</summary>

@@ -35,9 +35,28 @@ public sealed class UpdatePackageDownloader
     public async Task<string> DownloadAsync(UpdateRelease update, string installation, IProgress<double> progress, CancellationToken cancellationToken)
     {
         var hasManifest = File.Exists(UpdateFiles.SafePath(installation, "build-info.json"));
-        if (!hasManifest || update.Index is null)
-            _http.Trace(hasManifest ? "跳过按需下载：来源未提供可用索引。" : "跳过增量下载：本机缺少版本清单。");
-        if (update.Index is { } index && hasManifest)
+        // 按需重建只信任目标索引中的文件和块摘要；只有旧版差异 ZIP 需要正式基线清单。
+        if (hasManifest && update.SmallIndexes.Count != 0)
+        {
+            var local = UpdateFiles.SafePath(installation, "build-info.json");
+            if (new FileInfo(local).Length <= 8 * 1024 * 1024 && update.SmallIndexes.TryGetValue(UpdateFiles.Hash(local), out var small))
+            {
+                try
+                {
+                    return await Task.Run(() => RangePackageDownload.PrepareAsync(_http, update, small, installation, progress,
+                        cancellationToken, smallIndex: true), cancellationToken);
+                }
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested &&
+                    ex is UpdateBaseUnavailableException or HttpRequestException or OperationCanceledException)
+                {
+                    _http.Trace("继续按目标文件清单复用本机文件。");
+                    progress.Report(0);
+                }
+            }
+        }
+        if (update.Index is null)
+            _http.Trace("跳过按需下载：来源未提供可用索引。");
+        if (update.Index is { } index)
         {
             try
             {
@@ -51,6 +70,9 @@ public sealed class UpdatePackageDownloader
                 progress.Report(0);
             }
         }
+        // 从这个协议版本起，临时断线或发布附件不全只能重试增量，不能悄悄拉取整个 ZIP。
+        if (update.IncrementalOnly)
+            throw new HttpRequestException(L.Text("增量更新暂时无法下载，请稍后在此重试。"));
         if (update.Delta is { } delta && hasManifest)
         {
             var differential = update with
@@ -79,7 +101,7 @@ public sealed class UpdatePackageDownloader
     private async Task<string> DownloadPackageAsync(UpdateRelease update, string installation, IProgress<double> progress,
         CancellationToken cancellationToken, string? baseVersion = null)
     {
-        var workspace = UpdateFiles.SafePath(installation, ".ggea-update/download-" + Guid.NewGuid().ToString("N"));
+        var workspace = UpdateFiles.SafePath(VersionStore.RootOf(installation), ".ggea-update/download-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workspace);
         try
         {
@@ -129,33 +151,7 @@ public sealed class UpdatePackageDownloader
         }
     }
 
-    /// <summary>只清理本功能创建的下载工作区；不递归跟随任何链接。</summary>
-    public static void DeleteDownload(string workspace)
-    {
-        try
-        {
-            var directory = new DirectoryInfo(workspace);
-            if (!Regex.IsMatch(directory.Name, "^download-[a-f0-9]{32}$") || directory.Parent?.Name != UpdateFiles.StateDirectory)
-                throw new InvalidDataException(L.Text("无效的下载清理目录。"));
-            DeleteTree(directory);
-        }
-        catch (IOException) { /* 文件占用时保留缓存，不影响原安装和取消结果。 */ }
-        catch (UnauthorizedAccessException) { }
-    }
-
-    /// <summary>逐层检查链接后删除文件，避免递归枚举进入目录联接。</summary>
-    private static void DeleteTree(DirectoryInfo directory)
-    {
-        if (!directory.Exists) return;
-        UpdateFiles.RejectLinks(directory.FullName);
-        foreach (var item in directory.EnumerateFileSystemInfos())
-        {
-            UpdateFiles.RejectLinks(item.FullName);
-            if (item is DirectoryInfo child) DeleteTree(child);
-            else item.Delete();
-        }
-        directory.Delete();
-    }
+    public static void DeleteDownload(string workspace) => UpdateFiles.DeleteDownload(workspace);
 
     /// <summary>校验文件必须明确绑定精确附件名，不能接受任意摘要文本。</summary>
     public static string ParseChecksum(string text, string name)

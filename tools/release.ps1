@@ -23,7 +23,12 @@ try {
     Expand-Archive -LiteralPath $archive -DestinationPath $source
     # 对刚导出的源码建立摘要证据，publish 在构建前后核验，防止快照被中途修改。
     . (Join-Path $source 'tools/release-info.ps1')
-    [ordered]@{ commit = $revision; files = Get-ReleaseInventory $source } |
+    $identity = [ordered]@{ commit = $revision; files = Get-ReleaseInventory $source }
+    $resolver = Get-Command Get-ProgramIdentity -CommandType Function -ErrorAction SilentlyContinue
+    if ($resolver -and [IO.Path]::GetFullPath($resolver.ScriptBlock.File) -eq [IO.Path]::GetFullPath((Join-Path $source 'tools/release-info.ps1'))) {
+        $identity.program = Get-ProgramIdentity $root $revision
+    }
+    $identity |
         ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $source '.release-source.json') -Encoding UTF8
     Write-Host "Fixed source commit: $revision"
     Push-Location $source

@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using GGEA.App.Vision;
 
 namespace GGEA.App.Tasks;
@@ -75,7 +75,7 @@ public sealed partial class SortieFlowService
             for (var y = 0; y < roi.Height; y++)
                 Buffer.BlockCopy(screen.Bgra, ((roi.Y + y) * screen.Width + roi.X) * 4,
                     pixels, y * roi.Width * 4, roi.Width * 4);
-            var directory = Path.Combine(AppContext.BaseDirectory, "logs", "auto");
+            var directory = Path.Combine(GGEA.App.Config.ConfigService.UserDirectory, "logs", "auto");
             Directory.CreateDirectory(directory);
             var path = Path.Combine(directory, $"auto-{Environment.ProcessId}-{_autoEvidenceSlot++ % 6 + 1}.png");
             File.WriteAllBytes(path, ImageCodec.EncodePng(pixels, roi.Width, roi.Height));

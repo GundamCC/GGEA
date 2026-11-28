@@ -16,7 +16,7 @@ public partial class CheckUpdateDialog : Window
     public UpdateRelease? Release { get; private set; }
 
     public CheckUpdateDialog(bool allowInstall, IGgeaLog log)
-        : this(log, QueryAsync, allowInstall ? UpdateLauncher.InstallationUnavailableReason(AppContext.BaseDirectory)
+        : this(log, QueryAsync, allowInstall ? UpdateLauncher.InstallationUnavailableReason(UpdateLauncher.ContentRoot)
             : L.Text("请完成首次设置后再安装更新。")) { }
 
     internal CheckUpdateDialog(IGgeaLog log, Func<CancellationToken, Task<UpdateRelease?>> check, string? installRestriction)
@@ -31,7 +31,7 @@ public partial class CheckUpdateDialog : Window
 
     private static async Task<UpdateRelease?> QueryAsync(CancellationToken token)
     {
-        using var client = new OnlineUpdateClient(AppContext.BaseDirectory);
+        using var client = new OnlineUpdateClient(UpdateLauncher.ContentRoot);
         return await client.CheckAsync(UpdateLauncher.CurrentVersion, token);
     }
 
@@ -48,7 +48,7 @@ public partial class CheckUpdateDialog : Window
             CheckSucceeded = true;
             Status.Text = Release is null ? L.Text("已是最新版本") : L.Format($"发现新版本 v{Release.Version}");
             Details.Text = Release is null ? $"GGEA v{UpdateLauncher.CurrentVersion.ToString(4)}" :
-                string.Join("\n", new[] { Release.Notes, _installRestriction }.Where(text => !string.IsNullOrWhiteSpace(text)));
+                string.Join("\n", new[] { Release.DisplayNotes, _installRestriction }.Where(text => !string.IsNullOrWhiteSpace(text)));
             _canInstall = Release is not null && _installRestriction is null;
             ActionButton.Content = L.Text(_canInstall ? "立即更新" : "知道了");
             Dismiss.Visibility = _canInstall ? Visibility.Visible : Visibility.Collapsed;

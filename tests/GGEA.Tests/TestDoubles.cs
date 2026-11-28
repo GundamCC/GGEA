@@ -256,7 +256,7 @@ public sealed class FakeStageNodeRecognizer : IStageNodeRecognizer
 public static class TestImageFactory
 {
     /// <summary>生成带真实关卡菜单标题的合成截图，供入口与后续流程验证使用。</summary>
-    public static byte[] CreateStageMenuPng(int titleX = 210, int titleY = 20)
+    public static byte[] CreateStageMenuPng(int titleX = 44, int titleY = 16)
     {
         var pixels = CreateBgra(1920, 1080, 20);
         PasteStageMenuTitle(pixels, 1920, titleX, titleY);
@@ -264,7 +264,7 @@ public static class TestImageFactory
     }
 
     /// <summary>将随包标题原样贴入测试画面，不用单色块代替用户素材。</summary>
-    public static void PasteStageMenuTitle(byte[] pixels, int screenWidth, int x = 210, int y = 20)
+    public static void PasteStageMenuTitle(byte[] pixels, int screenWidth, int x = 44, int y = 16)
     {
         // 与生产入口共用语言/通用资源解析，兼容已迁移的模板目录。
         var path = GGEA.App.Config.ConfigService.ResolvePath(GGEA.App.Tasks.StageMenuEntryService.TitleTemplate);

@@ -13,7 +13,6 @@ public partial class UpdatePanel : UserControl
 {
     private IGgeaLog? _log;
     /// <summary>安装器就绪后由所属窗口退出，组件不决定应用生命周期。</summary>
-    public event EventHandler? InstallationReady;
 
     /// <summary>构造仅创建控件，不发起网络请求。</summary>
     public UpdatePanel() => InitializeComponent();
@@ -26,17 +25,24 @@ public partial class UpdatePanel : UserControl
     private bool _autoInstallUpdates = true;
     private bool _updateClosed;
     private bool _allowUpdateInstall;
+    internal Func<bool>? AutomaticUpdateInProgress { get; set; }
 
-    /// <summary>只有独立更新器确认就绪后才通知主窗口正常关闭。</summary>
-    public bool UpdateRequested { get; private set; }
+    // 设置窗口持有操作权，后台可继续下载，在设置关闭后才能应用。点击时读取最新状态。
+    private bool ShowAutomaticProgress()
+    {
+        if (AutomaticUpdateInProgress?.Invoke() != true) return false;
+        UpdateStatusText.Text = L.Text("后台正在准备更新。关闭设置后，助手会在空闲时应用。");
+        return true;
+    }
+
 
     /// <summary>显示真实程序集版本；首次初始化期间只允许检查，避免重入主窗口启动链。</summary>
     public void Initialize(IGgeaLog log, bool allowInstall, UpdateRelease? available = null,
-        bool automaticUpdates = false, Action<bool>? saveAutoInstall = null, bool restartAfterDownload = true)
+        bool automaticUpdates = false, Action<bool>? saveAutoInstall = null, bool applyAfterDownload = true)
     {
         _log = log;
         _allowUpdateInstall = allowInstall;
-        _autoInstallUpdates = restartAfterDownload;
+        _autoInstallUpdates = applyAfterDownload;
         AutomaticMode.IsChecked = automaticUpdates;
         ReminderMode.IsChecked = !automaticUpdates;
         _saveAutoInstall = saveAutoInstall;
@@ -47,10 +53,11 @@ public partial class UpdatePanel : UserControl
         {
             _updateClosed = true;
             _updateCancellation?.Cancel();
-            if (!UpdateRequested && _preparedPackage is not null)
+            if (_preparedPackage is not null)
                 UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(_preparedPackage)!);
         };
-        if (available is not null)
+        if (Application.Current is App { HasUpdateForExit: true }) EndUpdateOperation();
+        else if (available is not null)
         {
             ShowAvailableUpdate(available);
             EndUpdateOperation();
@@ -60,7 +67,7 @@ public partial class UpdatePanel : UserControl
     /// <summary>检查不阻塞 WPF；取消、超时、无新版本和服务错误均显示实际结果。</summary>
     private void CheckUpdateButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_updateCancellation is not null) return;
+        if (_updateCancellation is not null || ShowAutomaticProgress()) return;
         var dialog = new CheckUpdateDialog(_allowUpdateInstall, _log!) { Owner = Window.GetWindow(this) };
         var install = dialog.ShowDialog() == true;
         if (_updateClosed || !dialog.CheckSucceeded) return;
@@ -85,8 +92,9 @@ public partial class UpdatePanel : UserControl
         NotesHeading.Visibility = Visibility.Visible;
         SourceStatusText.Text = L.Format($"当前更新来源：{update.SourceName}。");
         UpdateStatusText.Text = L.Format($"发现新版本 v{update.Version}");
-        UpdateNotesText.Text = string.IsNullOrWhiteSpace(update.Notes) ? L.Text("本次发布未填写更新说明。") : update.Notes;
-        var reason = UpdateLauncher.InstallationUnavailableReason(AppContext.BaseDirectory);
+        var notes = update.DisplayNotes;
+        UpdateNotesText.Text = notes.Length == 0 ? L.Text("本次发布未填写更新说明。") : notes;
+        var reason = UpdateLauncher.InstallationUnavailableReason(UpdateLauncher.ContentRoot);
         if (reason is not null) UpdateStatusText.Text += "\n" + reason;
         else if (!_allowUpdateInstall) UpdateStatusText.Text += L.Text("\n请完成首次设置后，再从设置页安装更新。");
     }
@@ -94,12 +102,13 @@ public partial class UpdatePanel : UserControl
     /// <summary>用户点击下载授权本次流程；选项在下载期间锁定，取消或校验失败不会触发自动安装。</summary>
     private async void DownloadUpdateButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_updateCancellation is not null || _availableUpdate is null) return;
+        if (_updateCancellation is not null || ShowAutomaticProgress() || _availableUpdate is null) return;
         if (_preparedPackage is not null) { await InstallPreparedUpdateAsync(); return; }
         using var cancellation = BeginUpdateOperation(L.Text("正在准备更新下载…"));
-        using var client = new OnlineUpdateClient(AppContext.BaseDirectory, ReportSourceStatus);
+        using var client = new OnlineUpdateClient(UpdateLauncher.ContentRoot, ReportSourceStatus);
         var traffic = new UpdateDownloadTraffic();
-        void ShowTraffic() => DownloadAmount.Text = L.Format($"本次已下载 {traffic.Bytes / 1_000_000d:F2} MB");
+        void ShowTraffic() => DownloadAmount.Text = traffic.Bytes < 1_000_000
+            ? L.Format($"本次已下载 {traffic.Bytes / 1000d:F1} KB") : L.Format($"本次已下载 {traffic.Bytes / 1_000_000d:F2} MB");
         UpdateStatusText.Text = "";
         ShowTraffic();
         var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
@@ -107,18 +116,23 @@ public partial class UpdatePanel : UserControl
         timer.Start();
         try
         {
+            if (((App)Application.Current).UpdateDownloadUnavailableReason() is { } reason)
+            {
+                UpdateStatusText.Text = reason;
+                return;
+            }
             await _downloadSession.RunAsync(token => client.DownloadAsync(_availableUpdate, new Progress<double>(), token, traffic),
                 StartPreparedUpdateAsync, _autoInstallUpdates, cancellation.Token);
-            if (!_updateClosed && !UpdateRequested)
-                UpdateStatusText.Text = L.Text("下载完成，可以重启安装。");
+            if (!_updateClosed && _preparedPackage is not null && _availableUpdate is not null)
+                UpdateStatusText.Text = L.Text("下载完成，可以应用更新。");
         }
         catch (OperationCanceledException) { if (!_updateClosed) UpdateStatusText.Text = cancellation.IsCancellationRequested ? L.Text("已取消下载，当前版本未修改。") : L.Text("下载超时或连接中断，请重试。"); }
-        catch (Exception ex) { ReportUpdateFailure(_preparedPackage is null ? L.Text("下载更新") : L.Text("启动更新器"), ex); }
+        catch (Exception ex) { ReportUpdateFailure(_preparedPackage is null ? L.Text("下载更新") : L.Text("应用更新"), ex); }
         finally
         {
             timer.Stop();
             ShowTraffic();
-            if (_updateClosed && !UpdateRequested && _preparedPackage is not null)
+            if (_updateClosed && _preparedPackage is not null)
                 UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(_preparedPackage)!);
             EndUpdateOperation();
         }
@@ -127,30 +141,36 @@ public partial class UpdatePanel : UserControl
     /// <summary>主窗口持有设置执行租约；确认交接后由主窗口走既有关闭清理，禁止直接 Shutdown。</summary>
     private async Task InstallPreparedUpdateAsync()
     {
-        if (MessageBox.Show(Window.GetWindow(this), L.Text("将关闭 GGEA 并安装更新，完成后自动启动。\n\n已保存的设置会保留；尚未保存的设置不会保存。是否继续？"),
-                L.Text("重启并安装"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
-        using var cancellation = BeginUpdateOperation(L.Text("正在启动独立更新器…"));
+        using var cancellation = BeginUpdateOperation(L.Text("正在校验并应用更新…"));
         try
         {
             await StartPreparedUpdateAsync(_preparedPackage!, cancellation.Token);
         }
-        catch (OperationCanceledException) { if (!_updateClosed) UpdateStatusText.Text = L.Text("更新器交接已取消或超时，当前版本未修改。"); }
-        catch (Exception ex) { ReportUpdateFailure(L.Text("启动更新器"), ex); }
+        catch (OperationCanceledException) { if (!_updateClosed) UpdateStatusText.Text = L.Text("应用更新已取消。"); }
+        catch (Exception ex) { ReportUpdateFailure(L.Text("应用更新"), ex); }
         finally { EndUpdateOperation(); }
     }
 
-    /// <summary>自动与手动安装共用交接；主窗口保持租约，更新器就绪后才正常退出。</summary>
+    /// <summary>同一个应用入口处理提醒模式与后台下载，两者都在校验之后公布新版。</summary>
     private async Task StartPreparedUpdateAsync(string package, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (_updateClosed || !_allowUpdateInstall) throw new OperationCanceledException(cancellationToken);
-        UpdateStatusText.Text = L.Text("下载与校验完成，正在启动更新器并准备重启…");
-        await ((App)Application.Current).StartUpdateAsync(package, _availableUpdate!.Version.ToString(4), false, cancellationToken);
-        UpdateRequested = true;
-        InstallationReady?.Invoke(this, EventArgs.Empty);
+        if (await ((App)Application.Current).TryApplyLiveDataAsync(package, _availableUpdate!.Version.ToString(4), cancellationToken))
+        {
+            ((MainWindow)Application.Current.MainWindow).RefreshLiveData();
+            UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(package)!);
+            _availableUpdate = null;
+            _downloadSession = new();
+            UpdateVersionText.Text = L.Format($"当前版本 v{UpdateLauncher.CurrentVersion.ToString(4)}");
+            UpdateStatusText.Text = L.Text("更新已生效，可以继续使用。");
+            return;
+        }
+        UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(package)!);
+        _downloadSession = new();
+        UpdateStatusText.Text = L.Format($"v{UpdateLauncher.PreparedVersion} 已安装，下次打开 GGEA 即可使用。");
     }
 
-    /// <summary>只在保存成功后改变选项；设置窗口取消不撤回已明确即时保存的更新偏好。</summary>
     private void Mode_Click(object sender, RoutedEventArgs e)
     {
         bool enabled = AutomaticMode.IsChecked == true;
@@ -182,27 +202,29 @@ public partial class UpdatePanel : UserControl
     {
         _updateCancellation = null;
         if (_updateClosed) return;
-        CheckUpdateButton.IsEnabled = true;
+        bool queued = Application.Current is App { HasUpdateForExit: true };
+        if (queued) UpdateStatusText.Text = L.Format($"v{UpdateLauncher.PreparedVersion} 已安装，下次打开 GGEA 即可使用。");
+        CheckUpdateButton.IsEnabled = !queued;
         AutomaticMode.IsEnabled = ReminderMode.IsEnabled = true;
         CancelUpdateButton.Visibility = Visibility.Collapsed;
         UpdateProgress.Visibility = Visibility.Collapsed;
-        DownloadUpdateButton.Content = _preparedPackage is null ? L.Text("下载更新") : L.Text("重启并安装");
-        DownloadUpdateButton.Visibility = _availableUpdate is null ? Visibility.Collapsed : Visibility.Visible;
+        DownloadUpdateButton.Content = _preparedPackage is null ? L.Text("下载更新") : L.Text("应用更新");
+        DownloadUpdateButton.Visibility = queued || _availableUpdate is null ? Visibility.Collapsed : Visibility.Visible;
         DownloadUpdateButton.IsEnabled = _allowUpdateInstall && _availableUpdate is not null &&
-            UpdateLauncher.InstallationUnavailableReason(AppContext.BaseDirectory) is null;
+            UpdateLauncher.InstallationUnavailableReason(UpdateLauncher.ContentRoot) is null;
     }
 
     /// <summary>更新失败有重试和手动下载路径，记录 WARN，不改变任务安全状态。</summary>
     private void ReportUpdateFailure(string operation, Exception exception)
     {
         _log?.Warn(L.Format($"{operation}失败：{exception.GetType().Name}"));
-        if (!_updateClosed) UpdateStatusText.Text = L.Format($"{operation}失败：{exception.Message}\n可稍后重试，或打开 GitHub 发布页手动下载。");
+        if (!_updateClosed) UpdateStatusText.Text = L.Format($"{operation}失败：{exception.Message}\n可在此重试。");
     }
 
     /// <summary>显示当前备用源状态，不把空列表伪装成已有可用镜像。</summary>
     private void RefreshSourceSummary()
     {
-        var count = new UpdateSourceStore(AppContext.BaseDirectory).Load().Length;
+        var count = new UpdateSourceStore(UpdateLauncher.UserRoot).Load().Length;
         SourceStatusText.Text = count == 0 ? L.Text("当前更新来源：GitHub。")
             : L.Format($"GitHub 优先 · 已有 {count} 个备用源，连接失败时自动尝试。");
     }
