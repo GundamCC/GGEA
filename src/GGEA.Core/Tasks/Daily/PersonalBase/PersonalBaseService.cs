@@ -90,9 +90,10 @@ public sealed class PersonalBaseService
         }, ct);
 
     // 开发作品列表和主界面都带底部导航，从已核对的页面重新进入个人基地。
-    private async Task OpenRequestsAsync(string serial, UiLayout mainLayout, CancellationToken ct, bool fromHarvest = false)
+    internal async Task OpenRequestsAsync(string serial, UiLayout mainLayout, CancellationToken ct, bool fromHarvest = false)
     {
-        if (!fromHarvest)
+        if (fromHarvest) await ReturnFromCruiseAsync(serial, ct);
+        else
         {
             var navBase = mainLayout.Require("navBase", "主界面布局缺少 navBase 锚点");
             await _automation.TapAsync(serial, navBase.CenterX, navBase.CenterY, ct);
@@ -102,16 +103,49 @@ public sealed class PersonalBaseService
             maxDrags: fromHarvest ? 1 : 16, ct: ct, fromHarvest: fromHarvest);
         if (entry is not null)
         {
-            await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
-            var confirmed = await _battleshipLocator.FindCharacterRequestsWithPanAsync(serial, maxDrags: 0, ct: ct);
-            if (confirmed is not null && Math.Abs(confirmed.CenterX - entry.CenterX) <= 3 &&
-                Math.Abs(confirmed.CenterY - entry.CenterY) <= 3)
-            {
-                await _automation.TapAsync(serial, confirmed.CenterX, confirmed.CenterY, ct);
-                return;
-            }
+            // 定位器已经在当前视野连续三帧确认入口。
+            await _automation.TapAsync(serial, entry.CenterX, entry.CenterY, ct);
+            return;
         }
         throw new InvalidOperationException(L.Text("未能确认个人基地的角色要求入口。"));
+    }
+
+    private sealed record BaseView(Roi? Back);
+
+    // 回收按钮变灰及领取奖励都会结束回收步骤，但巡航详情仍可能留在前台。
+    // 必须在确认地图标题后才把手势交给地图；禁止重复点击仍在转场中的返回按钮。
+    private async Task ReturnFromCruiseAsync(string serial, CancellationToken ct)
+    {
+        const string mapPath = "resources/templates/base/title_personal_base.png";
+        const string cruisePath = "resources/templates/base/battleship_cruise/title_cruise.png";
+        if (!System.IO.File.Exists(GGEA.App.Config.ConfigService.ResolvePath(mapPath)) ||
+            !System.IO.File.Exists(GGEA.App.Config.ConfigService.ResolvePath(cruisePath)))
+            throw new InvalidOperationException(L.Text("未能确认个人基地的角色要求入口。"));
+        var map = new TemplateImages(mapPath);
+        var cruise = new TemplateImages(cruisePath);
+        var back = new TemplateImages("resources/templates/stage/history_back.png");
+        var matcher = new TemplateMatcher();
+        async Task<BaseView?> Observe(bool allowCruise)
+        {
+            var frame = await _automation.CaptureScreenAsync(serial, ct);
+            var mapTitle = map.Match(matcher, frame, .94, new(28, 4, 289, 89), ct);
+            if (mapTitle is not null) return new BaseView(null);
+            if (!allowCruise || cruise.Match(matcher, frame, .94, new(199, 4, 309, 91), ct) is null)
+                return null;
+            var button = back.Match(matcher, frame, .90, new(0, 0, 205, 110), ct);
+            return button is null ? null : new BaseView(button.Region);
+        }
+        Task<BaseView?> Wait(bool allowCruise) => StableObservation.WaitAsync(
+            () => Observe(allowCruise), (a, b) => a == b, GameTiming.RecognitionTimeoutMs, ct);
+        var initial = await Wait(true);
+        if (initial is not null)
+        {
+            if (initial.Back is not { } button) return;
+            _log.Info("已确认战舰巡航详情，点击返回并等待个人基地地图");
+            await _automation.TapAsync(serial, button.CenterX, button.CenterY, ct);
+            if (await Wait(false) is not null) return;
+        }
+        throw new InvalidOperationException(L.Text("未能确认战舰巡航已返回个人基地。"));
     }
 
     /// <summary>

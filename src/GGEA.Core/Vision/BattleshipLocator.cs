@@ -67,13 +67,20 @@ public sealed class BattleshipLocator
             _log.Warn("当前游戏语言缺少角色要求按钮素材");
             return Task.FromResult<TemplateMatchResult?>(null);
         }
-        return FindButtonWithPanAsync(serial, "角色要求", template, null, maxDrags, dragDurationMs, threshold, ct, fromHarvest);
+        return FindButtonWithPanAsync(serial, "角色要求", template, null,
+            fromHarvest ? Math.Min(1, maxDrags) : maxDrags, dragDurationMs, threshold, ct, fromHarvest);
     }
 
     private async Task<TemplateMatchResult?> FindButtonWithPanAsync(
         string serial, string buttonName, string templatePath, string? maskPath,
         int maxDrags, int dragDurationMs, double threshold, CancellationToken ct, bool fromHarvest = false)
     {
+        using var matcher = new ProgressTemplateMatcher();
+        async Task<TemplateMatchResult?> Observe()
+        {
+            var frame = ImageCodec.DecodePng(await _adb.ScreenshotAsync(serial, ct));
+            return matcher.Match(frame, templatePath, new(0, 0, frame.Width, frame.Height), threshold, ct, maskPath);
+        }
         // 大范围拖动：左右各 700px、上下各 500px，并加入四个斜向方向
         var directions = new[]
         {
@@ -85,10 +92,14 @@ public sealed class BattleshipLocator
         {
             ct.ThrowIfCancellationRequested();
 
-            var match = await FindAsync(serial, templatePath, maskPath, threshold, ct);
+            // 每个视野先原地等遮挡移开。最后一个视野留足动画时间，命中仍需连续三帧位置一致。
+            int timeout = attempt == maxDrags ? GameTiming.RecognitionTimeoutMs : GameTiming.RecognitionIntervalMs;
+            var match = await StableObservation.WaitAsync(Observe,
+                (a, b) => Math.Abs(a.CenterX - b.CenterX) <= 3 && Math.Abs(a.CenterY - b.CenterY) <= 3,
+                timeout, ct, requiredFrames: 3);
             if (match is not null)
             {
-                _log.Info($"找到{buttonName}: ({match.CenterX},{match.CenterY})");
+                _log.Info($"连续三帧找到{buttonName}: ({match.CenterX},{match.CenterY})");
                 return match;
             }
 
@@ -97,17 +108,18 @@ public sealed class BattleshipLocator
                 break;
             }
 
-            var (dx, dy) = fromHarvest && attempt == 0 ? (700, 0) : directions[attempt % directions.Length];
+            // 角色要求在舰坞右侧。手指向左拖动画布，视野才会向右移动。
+            var (dx, dy) = fromHarvest ? (-1000, 0) : directions[attempt % directions.Length];
             var sx = 960 - dx / 2;
             var sy = 540 - dy / 2;
             var ex = 960 + dx / 2;
             var ey = 540 + dy / 2;
             _log.Info($"未找到{buttonName}，拖动画面 ({attempt + 1}/{maxDrags})…");
             await _adb.DragAsync(serial, sx, sy, ex, ey, dragDurationMs, ct);
-            await Task.Delay(GameTiming.RecognitionIntervalMs, ct);
+            await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
         }
 
-        _log.Warn($"多次拖动后仍未找到{buttonName}");
+        _log.Warn($"已拖动 {maxDrags} 次，仍未能稳定确认{buttonName}");
         return null;
     }
 

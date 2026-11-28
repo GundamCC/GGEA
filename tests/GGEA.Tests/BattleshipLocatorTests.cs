@@ -22,7 +22,9 @@ public class BattleshipLocatorTests
         File.WriteAllBytes(maskPath, ImageCodec.EncodePng(TestImageFactory.CreateBgra(100, 100, 255), 100, 100));
 
         var fakeAdb = new FakeAdbService(ImageCodec.EncodePng(noHex, 1920, 1080));
-        fakeAdb.EnqueueScreenshots(ImageCodec.EncodePng(withHex, 1920, 1080));
+        var hidden = ImageCodec.EncodePng(noHex, 1920, 1080);
+        var visible = ImageCodec.EncodePng(withHex, 1920, 1080);
+        fakeAdb.ScreenshotProvider = () => fakeAdb.Swipes.Count == 0 ? hidden : visible;
         var locator = new BattleshipLocator(fakeAdb, new TemplateMatcher(), new TestLog());
 
         var match = await locator.FindWithPanAsync(
@@ -73,8 +75,9 @@ public class BattleshipLocatorTests
     {
         var ship = GGEA.App.Config.ConfigService.ResolvePath(new GGEA.App.Config.AppConfig().BattleshipTemplate);
         var adb = new FakeAdbService(File.ReadAllBytes(ship));
-        adb.EnqueueScreenshots(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory,
-            "Fixtures/Base/character_requests_and_training.png")));
+        var hidden = File.ReadAllBytes(ship);
+        var visible = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures/Base/character_requests_and_training.png"));
+        adb.ScreenshotProvider = () => adb.Swipes.Count == 0 ? hidden : visible;
         var locator = new BattleshipLocator(adb, new TemplateMatcher(), new TestLog());
 
         var match = await locator.FindCharacterRequestsWithPanAsync("serial", maxDrags: 1, fromHarvest: fromHarvest);
@@ -82,8 +85,37 @@ public class BattleshipLocatorTests
         Assert.InRange(match.CenterX, 186, 196);
         Assert.InRange(match.CenterY, 31, 41);
         var swipe = Assert.Single(adb.Swipes);
-        Assert.Equal(fromHarvest ? 700 : -700, swipe.X2 - swipe.X1);
+        Assert.Equal(fromHarvest ? -1000 : -700, swipe.X2 - swipe.X1);
         Assert.Empty(adb.Taps);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ObscuredMapButton_RestartsConfirmationWithoutDragging(bool requests)
+    {
+        string path = requests ? "resources/templates/base/character_requests/character_requests.png"
+            : new GGEA.App.Config.AppConfig().BattleshipTemplate;
+        var label = ImageCodec.DecodePng(File.ReadAllBytes(GGEA.App.Config.ConfigService.ResolvePath(path)));
+        byte[] Frame(int? x)
+        {
+            const int width = 700, height = 200;
+            var pixels = TestImageFactory.CreateBgra(width, height, 20);
+            if (x is { } left)
+                for (int row = 0; row < label.Height; row++)
+                    Buffer.BlockCopy(label.Bgra, row * label.Width * 4, pixels, ((40 + row) * width + left) * 4, label.Width * 4);
+            return ImageCodec.EncodePng(pixels, width, height);
+        }
+        var early = Frame(80);
+        var clear = Frame(300);
+        var adb = new FakeAdbService(early);
+        adb.EnqueueScreenshots(early, Frame(null), clear, clear, clear);
+        var locator = new BattleshipLocator(adb, new TemplateMatcher(), new TestLog());
+        var result = requests ? await locator.FindCharacterRequestsWithPanAsync("serial", maxDrags: 0)
+            : await locator.FindWithPanAsync("serial", path, null, maxDrags: 0);
+        Assert.Equal(300, result?.X);
+        Assert.Equal(6, adb.ScreenshotCount);
+        Assert.Empty(adb.Swipes);
     }
 
     /// <summary>测试用临时目录，自动清理。</summary>

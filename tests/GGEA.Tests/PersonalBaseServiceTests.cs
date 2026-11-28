@@ -43,6 +43,53 @@ public class PersonalBaseServiceTests
         }
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    public async Task RequestsAfterHarvest_ConfirmsMapBeforeOneEastwardPan(bool inCruise, bool alreadyVisible)
+    {
+        byte[] Frame(string header, bool visible = false)
+        {
+            const int width = 1920, height = 1080;
+            var pixels = TestImageFactory.CreateBgra(width, height, 20);
+            void Paste(string file, int x, int y)
+            {
+                var path = Path.Combine(AppContext.BaseDirectory, "Fixtures/Base", file + ".png");
+                var image = ImageCodec.DecodePng(File.ReadAllBytes(path));
+                for (var row = 0; row < image.Height; row++)
+                    Buffer.BlockCopy(image.Bgra, row * image.Width * 4, pixels,
+                        ((y + row) * width + x) * 4, image.Width * 4);
+            }
+            Paste(header, 0, 0);
+            if (visible) Paste("character_requests_and_training", 800, 200);
+            return ImageCodec.EncodePng(pixels, width, height);
+        }
+
+        var cruise = Frame("cruise_header");
+        var map = Frame("base_header");
+        var target = Frame("base_header", true);
+        var adb = new FakeAdbService(cruise);
+        int postDragFrames = 0;
+        adb.ScreenshotProvider = () =>
+        {
+            if (inCruise && adb.Taps.Count == 0) return cruise;
+            if (adb.Swipes.Count > 0 && !alreadyVisible && postDragFrames++ < 2) return map;
+            return alreadyVisible || adb.Swipes.Count > 0 ? target : map;
+        };
+        var matcher = new TemplateMatcher();
+        var log = new TestLog();
+        var service = new PersonalBaseService(new AutomationService(adb, matcher, log),
+            new BattleshipLocator(adb, matcher, log), log);
+        await service.OpenRequestsAsync("serial", CreateMainLayout(), default, fromHarvest: true);
+        Assert.Equal(inCruise ? 2 : 1, adb.Taps.Count);
+        if (inCruise) Assert.InRange(adb.Taps[0].X, 60, 170);
+        if (alreadyVisible) Assert.Empty(adb.Swipes);
+        else Assert.Equal((1460, 540, 460, 540, 700), Assert.Single(adb.Swipes));
+        Assert.InRange(adb.Taps[^1].X, 986, 996);
+        Assert.InRange(adb.Taps[^1].Y, 231, 241);
+    }
+
     private static UiLayout CreateMainLayout() => new()
     {
         Anchors = new List<UiAnchor>
@@ -123,8 +170,8 @@ public class PersonalBaseServiceTests
         File.WriteAllBytes(okPath, ImageCodec.EncodePng(TestImageFactory.CreateBgra(160, 70, 180), 160, 70));
 
         var fakeAdb = new FakeAdbService(ImageCodec.EncodePng(screen, 1920, 1080));
-        fakeAdb.EnqueueScreenshots(ImageCodec.EncodePng(screen, 1920, 1080),
-            ImageCodec.EncodePng(reward, 1920, 1080), ImageCodec.EncodePng(screen, 1920, 1080));
+        fakeAdb.EnqueueScreenshots(ImageCodec.EncodePng(screen, 1920, 1080), ImageCodec.EncodePng(screen, 1920, 1080),
+            ImageCodec.EncodePng(screen, 1920, 1080), ImageCodec.EncodePng(reward, 1920, 1080), ImageCodec.EncodePng(screen, 1920, 1080));
         var automation = new AutomationService(fakeAdb, new TemplateMatcher(), new TestLog());
         var locator = new BattleshipLocator(fakeAdb, new TemplateMatcher(), new TestLog());
         var service = new PersonalBaseService(automation, locator, new TestLog());
@@ -257,7 +304,8 @@ public class PersonalBaseServiceTests
         // OK 与灰色回收按钮同时存在，必须优先处理前景弹窗。
         TestImageFactory.PasteBlock(reward, 1920, 160, 70, 870, 945, 180);
         var adb = new FakeAdbService(ImageCodec.EncodePng(baseScreen, 1920, 1080));
-        adb.EnqueueScreenshots(ImageCodec.EncodePng(reward, 1920, 1080));
+        adb.EnqueueScreenshots(ImageCodec.EncodePng(baseScreen, 1920, 1080), ImageCodec.EncodePng(baseScreen, 1920, 1080),
+            ImageCodec.EncodePng(reward, 1920, 1080));
         if (!staysOpen) adb.EnqueueScreenshots(ImageCodec.EncodePng(baseScreen, 1920, 1080));
         var log = new TestLog();
         var service = new PersonalBaseService(new AutomationService(adb, new TemplateMatcher(), log),

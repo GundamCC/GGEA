@@ -12021,6 +12021,46 @@
       "source": "MuMu zh-CN 1920x1080 UI crop",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/title_personal_base.png",
+      "sha256": "222157e8b4f69b568c0b94c156686672dc279baac3c0b95ca267e845946ae969",
+      "width": 259,
+      "height": 60,
+      "category": "recognition-resource",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/battleship_cruise/title_cruise.png",
+      "sha256": "5115f96127e99f1a06d460e267253a215d267d0d6a6b9c7befb2956f0cd17f9c",
+      "width": 270,
+      "height": 64,
+      "category": "recognition-resource",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Base/base_header.png",
+      "sha256": "e250f4b9686b0f3f65270f10206ca3a552b26a7f798c00849a72dfd449c32526",
+      "width": 505,
+      "height": 100,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Base/cruise_header.png",
+      "sha256": "76b7aeed36416fdb11d9f7d57f23c7e719635e23ab4342a0c83eb55a74ab5551",
+      "width": 505,
+      "height": 100,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
     }
   ]
 }

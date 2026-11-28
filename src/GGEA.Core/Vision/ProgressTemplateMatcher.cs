@@ -1,4 +1,5 @@
 using System.IO;
+using GGEA.App.Config;
 using OpenCvSharp;
 
 namespace GGEA.App.Vision;
@@ -14,7 +15,7 @@ public sealed class ProgressTemplateMatcher : IDisposable
         public void Dispose() { Gray.Dispose(); Mask?.Dispose(); }
     }
 
-    private readonly Dictionary<string, Template> _templates = new();
+    private readonly Dictionary<(string Path, string? Mask), Template> _templates = new();
     private byte[]? _lastFrame;
     private byte[] _grayPixels = [];
     private Mat? _gray;
@@ -22,16 +23,20 @@ public sealed class ProgressTemplateMatcher : IDisposable
 
     /// <summary>原生搜索定位最小平方差；只复算一个候选的精确整数 SSD，避免浮点误差改变置信度授权。</summary>
     public TemplateMatchResult? Match(ScreenImage screen, string path, Roi roi, double threshold, CancellationToken ct)
-        => TemplateFallback.Match(path, candidate => MatchSingle(screen, candidate, roi, threshold, ct), ct);
+        => Match(screen, path, roi, threshold, ct, null);
+
+    internal TemplateMatchResult? Match(ScreenImage screen, string path, Roi roi, double threshold, CancellationToken ct,
+        string? maskPath)
+        => TemplateFallback.Match(path, candidate => MatchSingle(screen, candidate, roi, threshold, ct, maskPath), ct);
 
     /// <summary>完整验证当前物理素材，复合条件不得跨候选拼接。</summary>
-    private TemplateMatchResult? MatchSingle(ScreenImage screen, string path, Roi roi, double threshold, CancellationToken ct)
+    private TemplateMatchResult? MatchSingle(ScreenImage screen, string path, Roi roi, double threshold, CancellationToken ct, string? maskPath)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ct.ThrowIfCancellationRequested();
         if (!double.IsFinite(threshold) || threshold < 0 || threshold > 1)
             throw new ArgumentOutOfRangeException(nameof(threshold));
-        var template = Load(path);
+        var template = Load(path, maskPath);
         var left = Math.Max(0, roi.X);
         var top = Math.Max(0, roi.Y);
         var right = Math.Min(screen.Width, roi.X + roi.Width);
@@ -71,18 +76,23 @@ public sealed class ProgressTemplateMatcher : IDisposable
     }
 
     /// <summary>每关只转换一次固定模板；Alpha 小于 128 的像素继续排除，不改变透明素材的授权范围。</summary>
-    private Template Load(string path)
+    private Template Load(string path, string? maskPath)
     {
-        if (_templates.TryGetValue(path, out var template)) return template;
+        if (_templates.TryGetValue((path, maskPath), out var template)) return template;
         var image = ImageCodec.DecodePng(File.ReadAllBytes(path));
+        // 基地可配置独立的白色有效遮罩；未配置时沿用模板自身的透明通道。
+        var external = string.IsNullOrWhiteSpace(maskPath) ? null : ImageCodec.DecodePng(
+            File.ReadAllBytes(ConfigService.Resources.ResolveTemplateCompanion(path, maskPath)));
+        if (external is not null && (external.Width != image.Width || external.Height != image.Height))
+            throw new InvalidDataException("模板遮罩尺寸与素材不符。");
         var pixels = ToGray(image.Bgra, default);
         var valid = new byte[pixels.Length];
         var count = 0;
         for (var i = 0; i < valid.Length; i++)
-            if (image.Bgra[i * 4 + 3] >= 128) { valid[i] = 1; count++; }
+            if (external is null ? image.Bgra[i * 4 + 3] >= 128 : external.Bgra[i * 4 + 2] > 128) { valid[i] = 1; count++; }
         var gray = Mat.FromPixelData(image.Height, image.Width, MatType.CV_8UC1, pixels);
         var mask = count == pixels.Length ? null : Mat.FromPixelData(image.Height, image.Width, MatType.CV_8UC1, valid);
-        return _templates[path] = new(gray, mask, pixels, mask is null ? null : valid, image.Width, image.Height, count);
+        return _templates[(path, maskPath)] = new(gray, mask, pixels, mask is null ? null : valid, image.Width, image.Height, count);
     }
 
     /// <summary>沿用原匹配器的整数灰度权重与舍入，不能用另一种颜色转换悄悄改变分数。</summary>
