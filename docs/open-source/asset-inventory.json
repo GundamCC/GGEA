@@ -12071,6 +12071,116 @@
       "source": "MuMu zh-CN 1920x1080 UI crop",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/character_requests/title_capture_unit.png",
+      "sha256": "86a3419a1a793d5999426bf075f9efead783348874a0c7d685d87858d9509d81",
+      "width": 133,
+      "height": 33,
+      "category": "recognition-resource",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/character_requests/stage_capture_label.png",
+      "sha256": "ef5645dd6e1670f247d1fdc50852a94f5ae492d253a1fc25804ef6671241b7e9",
+      "width": 70,
+      "height": 36,
+      "category": "recognition-resource",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "resources/zh-CN/templates/base/character_requests/reward_capture_label.png",
+      "sha256": "4d81c21c7d9516843e9d00eb455ac2f673ac5cf364deb5a87bab119ff69c21ec",
+      "width": 67,
+      "height": 32,
+      "category": "recognition-resource",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Base/capture_quess_order.png",
+      "sha256": "7595deb02b2bdbae8dd6eca1821395f627b4b8a6e815eb36cbe644f7256c7769",
+      "width": 1774,
+      "height": 540,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Base/capture_reward_two.png",
+      "sha256": "8c45018799f12189805ce1b76a73e6d59de2394e068929299aa0f0c4c4708f75",
+      "width": 1920,
+      "height": 1024,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Base/capture_reward_zero.png",
+      "sha256": "9eb8a5e1479fc6c4ed25eb61995a47299679922e26ce441a7f16ec0138c10bc9",
+      "width": 1920,
+      "height": 1024,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Base/capture_reward_one.png",
+      "sha256": "5df3bed9d37481afcdb683278daf14be2d8a1ec25c6a773a6183887d68963a35",
+      "width": 1835,
+      "height": 1021,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Base/capture_report.png",
+      "sha256": "a07534e9a77070c7232f6de4e8716be088e1ae8aa8ea8aa652cb7f4247efdfec",
+      "width": 1920,
+      "height": 910,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Base/capture_hard3.png",
+      "sha256": "c2f5a75d73a15a13d737ef1b9c32ebf89f398d4e1eb854cd1da54de69bc66019",
+      "width": 1840,
+      "height": 976,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Base/capture_preview.png",
+      "sha256": "c4fe81ac400a9127b85609509ce20110cb3792c9e464c33323ce54268d6341d5",
+      "width": 1507,
+      "height": 930,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Base/capture_returned.png",
+      "sha256": "b0c44afb9010990e509e1a8091ebbd7c08ccf8350c06df810f97f0746fd72722",
+      "width": 1840,
+      "height": 789,
+      "category": "test-fixture",
+      "source": "MuMu zh-CN 1920x1080 UI crop",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
     }
   ]
 }

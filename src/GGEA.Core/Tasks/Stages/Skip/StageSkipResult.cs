@@ -7,6 +7,7 @@ public sealed record StageSkipResult(
     bool IsUnavailable = false,
     bool IsApInsufficient = false)
 {
+    internal int? CapturedUnits { get; init; }
     public int ExecutedCount { get; init; }
     public int? RemainingAp { get; init; }
 

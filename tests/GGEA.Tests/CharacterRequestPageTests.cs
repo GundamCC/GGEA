@@ -1,6 +1,7 @@
 using GGEA.App.Config;
 using GGEA.App.Automation;
 using GGEA.App.Tasks;
+using GGEA.App.UI;
 using GGEA.App.Vision;
 using System.IO;
 
@@ -188,6 +189,49 @@ public partial class CharacterRequestPageTests
         Assert.Equal(1, result.Reported);
         Assert.Empty(result.FailedRoles);
         Assert.Equal(steps.Select(step => step.Tap), adb.Taps);
+    }
+
+    [Fact]
+    public async Task CompletedCaptureReportsFromOriginalSlotWithoutSpendingAp()
+    {
+        var list = CreateList(true, false, true);
+        void MarkCompleted(int slot)
+        {
+            int dx = 535 * slot;
+            for (int y = 604; y < 678; y++) Array.Clear(list.Bgra, (y * 1920 + 191 + dx) * 4, 166 * 4);
+            PasteTemplate(list, "card_refresh.png", 272 + dx, 644);
+        }
+        MarkCompleted(1);
+        var initial = Encode(list);
+        MarkCompleted(0);
+        var done = Encode(list);
+        var detail = Empty();
+        Paste(detail, Path.Combine(AppContext.BaseDirectory, "Fixtures/Base/capture_report.png"), 0, 0);
+        var reward = Empty();
+        PasteTemplate(reward, "title_claim_result.png", 868, 60);
+        var ok = ConfigService.ResolvePath("resources/templates/dialog/button_ok.png");
+        var image = ImageCodec.DecodePng(File.ReadAllBytes(ok));
+        Paste(reward, ok, 960 - image.Width / 2, 995 - image.Height / 2);
+        var frames = new[] { initial, Encode(detail), Encode(reward), done };
+        var adb = new FakeAdbService(initial);
+        adb.ScreenshotProvider = () => frames[Math.Min(adb.Taps.Count, frames.Length - 1)];
+        var log = new TestLog();
+        using var ocr = new OnnxTextRecognizer();
+        using var automation = new AutomationService(adb, new TemplateMatcher(), log, textOcr: ocr);
+        var layout = new UiLayoutService(log).Load(ConfigService.ResolvePath("resources/ui_layout/stage.json"));
+        using var service = new CharacterRequestService(automation, log, ocr)
+        {
+            Sortie = new(automation, new StageService(automation, new FakeStageWorkRecognizer(), log),
+                new StageSkipService(automation, log), layout, [], ocr, log)
+        };
+        var result = await service.RunFromListAsync("replay");
+        Assert.Equal(1, result.Reported);
+        Assert.Empty(result.FailedRoles);
+        Assert.Equal(3, adb.Taps.Count);
+        Assert.Equal((427, 410), adb.Taps[0]);
+        Assert.InRange(adb.Taps[1].X, 1600, 1640);
+        Assert.InRange(adb.Taps[1].Y, 840, 875);
+        Assert.Equal((960, 995), adb.Taps[2]);
     }
 
     [Theory]

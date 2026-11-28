@@ -17,7 +17,7 @@ public sealed class SortieRequestService(AutomationService automation, StageServ
     private readonly TemplateImages _back = new("resources/templates/stage/history_back.png");
     private readonly TemplateMatcher _matcher = new();
 
-    internal async Task<int> RunAsync(string serial, SortieOrder order, CancellationToken ct)
+    internal async Task<int> RunAsync(string serial, SortieOrder order, CancellationToken ct, CaptureRequestBudget? capture = null)
     {
         var key = int.Parse(order.Offer.SeriesId, System.Globalization.CultureInfo.InvariantCulture);
         var file = FormattableString.Invariant($"logo_l_series_{key:D4}.webp");
@@ -34,15 +34,29 @@ public sealed class SortieRequestService(AutomationService automation, StageServ
             while (node is { Kind: WorkStageKind.Hard, Number: int hard, Position: not null } && done < needed)
             {
                 stages.Context.SetWorkStageList(serial, StageMapMode.Main, work.Id, hard);
-                if (node.HasPassed)
+                if (capture is not null && hard > 3)
                 {
-                    var batch = await skip.SkipWithinBudgetAsync(serial, layout, _budget, needed - done, true, ct);
+                    await SelectHardAsync(3);
+                    continue;
+                }
+                if (node.HasPassed && (capture is null || await HasCaptureAsync()))
+                {
+                    var batch = await skip.SkipWithinBudgetAsync(serial, layout, _budget, needed - done, true, ct, capture);
                     if (!batch.Success && !batch.IsUnavailable) throw new InvalidOperationException(batch.Message);
-                    done += batch.ExecutedCount;
-                    if (done == needed || batch.IsApInsufficient || batch.RemainingAp == 0) break;
+                    // 夺取可能一台也不掉，只有结算卡片计入本轮进度。单关耗尽后再换关。
+                    if (batch.Success && capture is not null)
+                    {
+                        var units = batch.CapturedUnits ?? throw Unknown();
+                        done += units;
+                        log.Info(L.Format($"本批略过 {batch.ExecutedCount} 次，奖励页确认夺取 {units} 台。"));
+                    }
+                    else done += batch.ExecutedCount;
+                    if (done >= needed || batch.IsApInsufficient || batch.RemainingAp == 0 || capture?.RemainingAp == 0) break;
+                    if (capture is not null && batch.Success) continue;
                 }
                 if (hard == 1)
                 {
+                    if (capture is not null) break;
                     // 所有 HARD 次数用完时，选中紧邻的普通关卡并核对其编号和已通关状态。
                     var start = StageSlotPlanner.GetViewportStart(work.NormalCount, work.HardCount, hard, work.SideStories);
                     int target = StageSlotPlanner.GetOverallIndex(work.NormalCount, 1, work.SideStories) - 1;
@@ -54,12 +68,9 @@ public sealed class SortieRequestService(AutomationService automation, StageServ
                     if (node?.Position?.OverallIndex != target) throw Unknown();
                     break;
                 }
-                var selected = await stages.SelectHardStageAsync(serial, layout, works, work.Id, hard - 1, ct);
-                if (!selected.Success) throw new InvalidOperationException(selected.Message);
-                node = await stages.ReadRequestNodeAsync(serial, work, ct);
-                if (node?.Kind != WorkStageKind.Hard || node.Number != hard - 1) throw Unknown();
+                await SelectHardAsync(hard - 1);
             }
-            if (done < needed && node is { HasPassed: true, Kind: WorkStageKind.Normal or WorkStageKind.Boss or WorkStageKind.SideStory })
+            if (capture is null && done < needed && node is { HasPassed: true, Kind: WorkStageKind.Normal or WorkStageKind.Boss or WorkStageKind.SideStory })
             {
                 var batch = await skip.SkipWithinBudgetAsync(serial, layout, _budget, needed - done, false, ct);
                 if (!batch.Success && !batch.IsUnavailable) throw new InvalidOperationException(batch.Message);
@@ -67,10 +78,28 @@ public sealed class SortieRequestService(AutomationService automation, StageServ
             }
             var back = await ConfirmWorkAsync();
             await automation.TapAsync(serial, back.CenterX, back.CenterY, ct);
-            log.Info(L.Format($"请求出击本轮完成 {done} 次。"));
+            if (capture is null) log.Info(L.Format($"请求出击本轮完成 {done} 次。"));
             return done;
+
+            async Task SelectHardAsync(int number)
+            {
+                var selected = await stages.SelectHardStageAsync(serial, layout, works, work.Id, number, ct);
+                if (!selected.Success) throw new InvalidOperationException(selected.Message);
+                node = await stages.ReadRequestNodeAsync(serial, work, ct);
+                if (node?.Kind != WorkStageKind.Hard || node.Number != number) throw Unknown();
+            }
         }
         finally { stages.Context.Invalidate(); }
+
+        async Task<bool> HasCaptureAsync()
+        {
+            var seen = await StableObservation.WaitAsync(async () =>
+            {
+                var frame = await automation.CaptureScreenAsync(serial, ct);
+                return _budget.OnStage(frame, ct) ? new StageReward(capture!.OffersCapture(frame, ct)) : null;
+            }, (a, b) => a == b, GameTiming.RecognitionTimeoutMs, ct);
+            return seen?.HasCapture ?? throw Unknown();
+        }
 
         async Task<Roi> ConfirmWorkAsync()
         {
@@ -83,6 +112,8 @@ public sealed class SortieRequestService(AutomationService automation, StageServ
             return result?.Region ?? throw Unknown();
         }
     }
+
+    private sealed record StageReward(bool HasCapture);
 
     // 选关页的 Logo 直接叠在动态作品插图上，只比对完全不透明的原图笔画。
     internal static bool MatchesWork(ScreenImage frame, string logo, CancellationToken ct)

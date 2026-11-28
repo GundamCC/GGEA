@@ -11,7 +11,7 @@ public sealed partial class StageSkipService
     public Task<bool> ConfirmPostSkipAsync(string serial, UiLayout stageLayout, CancellationToken ct = default)
         => ConfirmPostSkipAsync(serial, stageLayout, 0, ct);
 
-    private async Task<bool> ConfirmPostSkipAsync(string serial, UiLayout stageLayout, int acquisitionContinueCount, CancellationToken ct, Func<ScreenImage, CancellationToken, bool>? returned = null)
+    private async Task<bool> ConfirmPostSkipAsync(string serial, UiLayout stageLayout, int acquisitionContinueCount, CancellationToken ct, Func<ScreenImage, CancellationToken, bool>? returned = null, bool captureRewards = false)
     {
         // 结果加载和返回确认分别计时；生产入口保留原 10 秒返回预算，旧调用方的短预算仍兼容。
         var timeoutMs = _options.PostSkipTimeoutMs ?? Math.Min(20000, _options.SkipResultTimeoutMs);
@@ -39,14 +39,15 @@ public sealed partial class StageSkipService
         var countLimit = returned is null ? stageLayout.Require("skipCountLimit", "关卡布局缺少 skipCountLimit 锚点") : null;
         var detectRank = !string.IsNullOrWhiteSpace(_options.PlayerRankUpTemplatePath) &&
             !string.IsNullOrWhiteSpace(_options.PlayerRankUpNextTemplatePath);
-        if (detectRank || _options.ContinueUnitAcquisition)
+        var continueUnits = _options.ContinueUnitAcquisition || captureRewards;
+        if (detectRank || continueUnits)
         {
             var count = returned is null ? LoadPostSkipTemplate(_options.SkipCountLimitTemplatePath) : null;
             var matcher = new TemplateMatcher();
             var deadline = Environment.TickCount64 + Math.Max(0, timeoutMs);
             var nextRankCheck = Environment.TickCount64 + Math.Max(0, _options.PlayerRankUpCheckDelayMs);
             // 返回确认不能比配置的升级轮询更慢，强敌连续展示按确认帧间隔采样。
-            var pollMs = _options.ContinueUnitAcquisition ? GameTiming.ConfirmationIntervalMs
+            var pollMs = continueUnits ? GameTiming.ConfirmationIntervalMs
                 : Math.Clamp(_options.PlayerRankUpPollIntervalMs, GameTiming.ConfirmationIntervalMs, GameTiming.RecognitionIntervalMs);
             var rankUpSeen = false;
             var recovering = false;
@@ -62,7 +63,7 @@ public sealed partial class StageSkipService
                     _log.Warn("略过结果 OK 后返回确认超时，开始一次恢复检查，重新识别升级提示和目标关卡。");
                 }
                 var screen = await _automation.CaptureScreenAsync(serial, ct);
-                var checkRank = rankUpSeen || recovering || _options.ContinueUnitAcquisition || Environment.TickCount64 >= nextRankCheck;
+                var checkRank = rankUpSeen || recovering || continueUnits || Environment.TickCount64 >= nextRankCheck;
                 var state = await Task.Run(() =>
                 {
                     // SSD 对暗色模板可能误命中纯色过渡画面，再核对纹理，防止提前报告成功。
@@ -109,7 +110,7 @@ public sealed partial class StageSkipService
                     continue;
                 }
                 // 强敌奖励可能晚于结果 OK。与结果前共用点击额度，只有新帧确认提示才续期。
-                if (!state.RankUp && _options.ContinueUnitAcquisition && acquisitionContinueCount < 6)
+                if (!state.RankUp && continueUnits && acquisitionContinueCount < 6)
                 {
                     var reward = await Task.Run(() => _automation.TapToNext.Recognize(screen, ct), ct);
                     if (reward is not null)

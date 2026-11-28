@@ -47,12 +47,12 @@ internal sealed class CharacterRequestCatalog(OnnxTextRecognizer ocr)
         return progress.HasValue ? new(offer, progress.Value) : null;
     }
 
-    internal SortieOrder? ReadSortie(ScreenImage frame, Roi title, CancellationToken ct)
+    internal SortieOrder? ReadSortie(ScreenImage frame, Roi title, CancellationToken ct, bool capture = false)
     {
         var suffix = UpgradeNumbers.Read(ocr, frame, new(title.X + title.Width + 1, title.Y - 2, 27, 38), true, ct, out _);
         if (!int.TryParse(suffix, NumberStyles.None, CultureInfo.InvariantCulture, out var number)) return null;
         var role = Identify(frame, ct);
-        var offer = role is null ? null : DevelopmentRequestIndex.FindSortie(role.Id, number);
+        var offer = role is null ? null : DevelopmentRequestIndex.FindSortie(role.Id, number, capture);
         if (offer is null) return null;
         var progress = ReadProgress(frame, offer.Amount, ct);
         return progress.HasValue ? new(offer, progress.Value) : null;

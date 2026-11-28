@@ -87,11 +87,11 @@ internal static class DevelopmentRequestIndex
             ?.DeliveryRoutes?[0];
     }
 
-    internal static SortieOffer? FindSortie(string roleId, int number)
+    internal static SortieOffer? FindSortie(string roleId, int number, bool capture = false)
     {
-        var title = FormattableString.Invariant($"请求出击{number}");
+        var title = (capture ? "夺取单位" : "请求出击") + number.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var offer = Data.Value.Offers.Values.SingleOrDefault(o => o.RoleId == roleId && o.Title == title &&
-            o.Kind == "完成指定系列关卡");
+            o.Kind == (capture ? "夺取指定系列单位" : "完成指定系列关卡"));
         return offer is { SeriesId: not null, Amount: > 0 } ? new(roleId, title, offer.SeriesId, offer.Amount) : null;
     }
 

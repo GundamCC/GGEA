@@ -32,6 +32,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
     private readonly TemplateImages _deliver = new(Root + "button_deliver.png");
     private readonly TemplateImages _obtain = new(Root + "button_obtain.png");
     private readonly TemplateImages _developmentTitle = new(Root + "title_development.png");
+    private readonly TemplateImages _captureTitle = new(Root + "title_capture_unit.png");
     private readonly TemplateImages _sortieTitle = new(Root + "title_sortie_request.png");
     private readonly TemplateImages _strengthTitle = new(Root + "title_strengthen_troops.png");
     private readonly TemplateImages _unitTitle = new(Root + "title_deliver_unit.png");
@@ -43,7 +44,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
 
     private enum Control { Accept, Challenge, Report, Deliver, Obtain }
     private enum ArrivalKind { List, Advance, Detail, Reward, WeeklyReward }
-    private enum RequestKind { Unknown, Funding, Strength, UnitDelivery, Development, Sortie }
+    private enum RequestKind { Unknown, Funding, Strength, UnitDelivery, Development, Sortie, Capture }
     private readonly record struct Title(RequestKind Kind, Roi Region);
     private sealed record Detail(Control Action, Roi Back, Roi Button, Title Title, int? Amount);
     private sealed record Arrival(ArrivalKind Kind, Detail? Detail = null, Roi Button = default);
@@ -90,14 +91,14 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                     var initialKind = detail.Title.Kind;
                     if (arrival.Kind == ArrivalKind.List)
                     {
-                        if (initialKind is not (RequestKind.Funding or RequestKind.Development or RequestKind.UnitDelivery or RequestKind.Sortie or RequestKind.Strength)) continue;
+                        if (initialKind is not (RequestKind.Funding or RequestKind.Development or RequestKind.UnitDelivery or RequestKind.Sortie or RequestKind.Capture or RequestKind.Strength)) continue;
                         var list = await WaitForListAsync(serial, ct);
                         if ((list.ActiveMask & (1 << slot)) == 0) continue;
                         await automation.TapAsync(serial, 427 + 535 * slot, 410, ct);
                         detail = await WaitAsync(serial, f => ReadDetail(f, ct), ct) ?? throw Unknown();
                     }
                     else detail = arrival.Detail!;
-                    if (initialKind is (RequestKind.Development or RequestKind.UnitDelivery or RequestKind.Sortie or RequestKind.Strength) && detail.Title.Kind != initialKind) throw Unknown();
+                    if (initialKind is (RequestKind.Development or RequestKind.UnitDelivery or RequestKind.Sortie or RequestKind.Capture or RequestKind.Strength) && detail.Title.Kind != initialKind) throw Unknown();
                     if (initialKind == RequestKind.Funding &&
                         (detail.Title.Kind != initialKind || detail.Action != Control.Deliver)) throw Unknown();
                 }
@@ -171,9 +172,12 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                         continue;
                     }
                 }
-                else if (detail.Title.Kind == RequestKind.Sortie && Sortie is not null)
+                else if (detail.Title.Kind is RequestKind.Sortie or RequestKind.Capture && Sortie is not null)
                 {
-                    var screen = await WaitSortieAsync(serial, ct);
+                    var kind = detail.Title.Kind;
+                    var capture = kind == RequestKind.Capture;
+                    var refresh = RequestProductionAttempt.RefreshPeriod;
+                    var screen = await WaitSortieAsync(serial, kind, ct);
                     detail = screen.Detail;
                     if (screen.Order is {} order)
                     {
@@ -181,12 +185,14 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                         if (detail.Action == Control.Challenge && completed < order.Offer.Amount)
                         {
                             await TapAsync(serial, detail.Button, ct);
-                            completed += await Sortie.RunAsync(serial, order, ct);
-                            screen = await WaitSortieAsync(serial, ct);
-                            if (screen.Order?.Offer != order.Offer || screen.Order.Progress != completed) throw Unknown();
+                            var gained = await Sortie.RunAsync(serial, order, ct, capture ? new CaptureRequestBudget(refresh) : null);
+                            completed = capture ? Math.Min(order.Offer.Amount, completed + gained) : completed + gained;
+                            screen = await WaitSortieAsync(serial, kind, ct);
+                            if (screen.Order?.Offer != order.Offer || screen.Order.Progress != completed ||
+                                refresh != RequestProductionAttempt.RefreshPeriod) throw Unknown();
                             detail = screen.Detail;
                         }
-                        if (detail.Action == Control.Report && completed == order.Offer.Amount)
+                        if (detail.Action == Control.Report && completed == order.Offer.Amount && refresh == RequestProductionAttempt.RefreshPeriod)
                         {
                             await TapAsync(serial, detail.Button, ct);
                             await FinishReportAsync(serial, slot, ct);
@@ -194,7 +200,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                             continue;
                         }
                     }
-                    failures.Add(L.Format($"第 {slot + 1} 栏请求出击未完成。"));
+                    failures.Add(capture ? L.Format($"第 {slot + 1} 栏夺取单位未完成。") : L.Format($"第 {slot + 1} 栏请求出击未完成。"));
                 }
                 else if (detail.Title.Kind == RequestKind.Strength)
                 {
@@ -320,9 +326,9 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                 _catalog!.ReadDelivery(frame, detail.Title.Region, ct) == expected ? detail : null;
         }, ct) ?? throw Unknown();
 
-    private async Task<SortieScreen> WaitSortieAsync(string serial, CancellationToken ct) =>
-        await WaitAsync(serial, f => ReadDetail(f, ct) is { Title.Kind: RequestKind.Sortie, Action: Control.Challenge or Control.Report } detail
-            ? new SortieScreen(detail, _catalog!.ReadSortie(f, detail.Title.Region, ct)) : null, ct) ?? throw Unknown();
+    private async Task<SortieScreen> WaitSortieAsync(string serial, RequestKind kind, CancellationToken ct) =>
+        await WaitAsync(serial, f => ReadDetail(f, ct) is { Action: Control.Challenge or Control.Report } detail && detail.Title.Kind == kind
+            ? new SortieScreen(detail, _catalog!.ReadSortie(f, detail.Title.Region, ct, kind == RequestKind.Capture)) : null, ct) ?? throw Unknown();
 
     private async Task<DevelopmentScreen> WaitForDevelopmentAsync(string serial, CancellationToken ct) =>
         await WaitAsync(serial, frame =>
@@ -435,6 +441,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
         var area = new Roi(1340, 225, 300, 80);
         if (_fundingTitle.Match(_matcher, frame, .96, area, ct) is { } funds) return new(RequestKind.Funding, funds.Region);
         if (_unitTitle.Match(_matcher, frame, .96, area, ct) is { } unit) return new(RequestKind.UnitDelivery, unit.Region);
+        if (_captureTitle.Match(_matcher, frame, .96, area, ct) is { } capture) return new(RequestKind.Capture, capture.Region);
         if (_sortieTitle.Match(_matcher, frame, .96, area, ct) is { } sortie) return new(RequestKind.Sortie, sortie.Region);
         if (_developmentTitle.Match(_matcher, frame, .96, area, ct) is { } dev) return new(RequestKind.Development, dev.Region);
         if (_strengthTitle.Match(_matcher, frame, .93, area, ct) is { } strength) return new(RequestKind.Strength, strength.Region);

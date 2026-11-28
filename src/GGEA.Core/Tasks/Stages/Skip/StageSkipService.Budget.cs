@@ -12,7 +12,7 @@ public sealed partial class StageSkipService
 
     /// <summary>标准关卡从实际余额和单价计算批次上限。关卡页、弹窗调数及结算各自核对新帧。</summary>
     internal async Task<StageSkipResult> SkipWithinBudgetAsync(string serial, UiLayout layout, StageSkipBudget budget,
-        int needed, bool hard, CancellationToken ct)
+        int needed, bool hard, CancellationToken ct, CaptureRequestBudget? capture = null)
     {
         if (string.IsNullOrWhiteSpace(_options.SkipResultTemplatePath))
             return StageSkipResult.Fail(L.Text("未配置略过结果识别素材，不能用固定等待确认执行结果。"));
@@ -24,6 +24,7 @@ public sealed partial class StageSkipService
             GameTiming.RecognitionTimeoutMs, ct);
         if (before is null) return StageSkipResult.Fail(L.Text("无法确认关卡体力、单次消耗或可用次数。"));
         int count = before.CountFor(needed);
+        if (capture is not null) count = Math.Min(count, capture.RemainingAp / before.Cost);
         if (before.Remaining == 0) return StageSkipResult.Fail("略过不可用（次数上限）", isUnavailable: true);
         if (count == 0) return StageSkipResult.ApInsufficient(L.Text("剩余 AP 不足一次略过。"));
 
@@ -61,6 +62,8 @@ public sealed partial class StageSkipService
             return StageSkipResult.Fail(L.Text("略过次数或 AP 预览未通过核对。"));
 
         _log.Info(L.Format($"本批略过 {count} 次，当前 AP {ap}，每次消耗 {before.Cost}。"));
+        // 夺取委托的 AP 预算只在最终确认后扣除，结果丢失也不重发执行。
+        capture?.Reserve(count * before.Cost);
         await _automation.TapAsync(serial, current.Execute.CenterX, current.Execute.CenterY, ct);
         // 未耗尽时按钮仍亮。确认扣减后的次数，读取结算后的实际体力以涵盖升级回复。
         int? remainingAp = null;
@@ -78,7 +81,8 @@ public sealed partial class StageSkipService
             return LoadPostSkipTemplate(_options.SkipCountLimitTemplatePath).Match(new TemplateMatcher(), f,
                 _options.SkipCountLimitThreshold, layout.Require("skipCountLimit", "关卡布局缺少 skipCountLimit").Roi, token) is not null;
         }
-        var result = await CompleteExecutedSkipCoreAsync(serial, layout, _executionDialog is null ? null : current, ct, Returned);
+        var result = await CompleteExecutedSkipCoreAsync(serial, layout, _executionDialog is null || capture is not null ? null : current, ct, Returned,
+            capture is null ? null : (frame, token) => capture.ReadRewards(frame, count, _automation.GlobalScreens.TextOcr, token));
         return result.Success ? result with { ExecutedCount = count, RemainingAp = remainingAp } : result;
     }
 }

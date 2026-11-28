@@ -24,6 +24,94 @@ public sealed class StageSkipBudgetTests
         Assert.Null(DevelopmentRequestIndex.FindSortie("1175003401", 6));
     }
 
+    [Fact]
+    public void CaptureOrderIsBoundToQuessSeriesAndActualProgress()
+    {
+        var frame = new ScreenImage { Width = 1920, Height = 1080, Bgra = TestImageFactory.CreateBgra(1920, 1080, 0) };
+        Paste(frame, Path.Combine(AppContext.BaseDirectory, "Fixtures/Base/capture_quess_order.png"), 0, 0);
+        using var ocr = new OnnxTextRecognizer();
+        var label = new TemplateImages("resources/templates/base/character_requests/title_capture_unit.png");
+        var title = label.Match(new TemplateMatcher(), frame, .96, new(1340, 225, 300, 80), default);
+        Assert.NotNull(title);
+        var catalog = new CharacterRequestCatalog(ocr);
+        Assert.Equal(new SortieOrder(new("1110000701", "夺取单位3", "1100", 3), 2),
+            catalog.ReadSortie(frame, title.Region, default, capture: true));
+        Assert.Null(catalog.ReadSortie(frame, title.Region, default));
+        Paste(frame, Path.Combine(AppContext.BaseDirectory, "Fixtures/Base/capture_report.png"), 0, 0);
+        Assert.Equal(3, catalog.ReadSortie(frame, title.Region, default, capture: true)?.Progress);
+        Assert.NotNull(new TemplateImages("resources/templates/base/character_requests/button_report.png")
+            .Match(new TemplateMatcher(), frame, .93, new(1540, 800, 170, 110)));
+    }
+
+    [Theory]
+    [InlineData("two", 3, 2)]
+    [InlineData("one", 3, 1)]
+    [InlineData("zero", 1, 0)]
+    public void RewardReadsOnlyGreenCaptureCards(string sample, int skips, int captured)
+    {
+        var frame = new ScreenImage { Width = 1920, Height = 1080, Bgra = TestImageFactory.CreateBgra(1920, 1080, 0) };
+        Paste(frame, Path.Combine(AppContext.BaseDirectory, $"Fixtures/Base/capture_reward_{sample}.png"), 0, 0);
+        using var ocr = new OnnxTextRecognizer();
+        var budget = new CaptureRequestBudget(RequestProductionAttempt.RefreshPeriod);
+        Assert.Equal(captured, budget.ReadRewards(frame, skips, ocr, default));
+        Assert.Null(budget.ReadRewards(frame, skips + 1, ocr, default));
+        if (captured > 0)
+        {
+            // 保留绿底，遮挡卡片标签；未知卡片不能当作零掉落继续消费。
+            for (int y = 368; y < 400; y++) Array.Clear(frame.Bgra, (1920 * y + 130) * 4, 67 * 4);
+            Assert.Null(budget.ReadRewards(frame, skips, ocr, default));
+        }
+    }
+
+    [Fact]
+    public async Task CaptureHardThree_ReturnsTwoUnitsForThreeSkips()
+    {
+        byte[] Frame(string sample)
+        {
+            var frame = new ScreenImage { Width = 1920, Height = 1080, Bgra = TestImageFactory.CreateBgra(1920, 1080, 0) };
+            Paste(frame, Path.Combine(AppContext.BaseDirectory, $"Fixtures/Base/capture_{sample}.png"), 0, 0);
+            return ImageCodec.EncodePng(frame.Bgra, frame.Width, frame.Height);
+        }
+        var frames = new[] { "hard3", "preview", "reward_two", "returned" }.Select(Frame).ToArray();
+        var adb = new FakeAdbService(frames[0]);
+        adb.ScreenshotProvider = () => frames[Math.Min(adb.Taps.Count, frames.Length - 1)];
+        using var ocr = new OnnxTextRecognizer();
+        var matcher = new TemplateMatcher();
+        var log = new TestLog();
+        using var auto = new AutomationService(adb, matcher, log, textOcr: ocr);
+        using var numbers = new OnnxStageNumberRecognizer(ocr);
+        using var nodes = new StageNodeRecognizer(adb, matcher, log,
+            ConfigService.ResolvePath("resources/templates/stage/node_states"), numberRecognizer: numbers);
+        var nav = new StageService(auto, new FakeStageWorkRecognizer(), log, nodeRecognizer: nodes);
+        var skip = new StageSkipService(auto, log, new()
+        {
+            SkipResultTemplatePath = ConfigService.ResolvePath("resources/templates/stage/skip/skip_result.png"),
+            SkipCountLimitTemplatePath = ConfigService.ResolvePath("resources/templates/stage/skip/count_limit.png"),
+            SettleAfterOkMs = 0, SkipResultTimeoutMs = 3500, LateResultRecoveryTimeoutMs = 0
+        });
+        var layout = new UiLayoutService(log).Load(ConfigService.ResolvePath("resources/ui_layout/stage.json"));
+        var work = new HardStageEntry { Id = 4, NormalCount = 5, HardCount = 3, Screenshot = "logo_l_series_1100.webp" };
+        var task = new SortieRequestService(auto, nav, skip, layout, [work], ocr, log);
+        var budget = new CaptureRequestBudget(RequestProductionAttempt.RefreshPeriod);
+        budget.Reserve(60);
+        var order = new SortieOrder(new("1110000701", "夺取单位3", "1100", 3), 0);
+        Assert.Equal(2, await task.RunAsync("replay", order, default, budget));
+        Assert.Equal(0, budget.RemainingAp);
+        Assert.Equal(4, adb.Taps.Count); // 略过、执行、结果 OK、返回委托。
+    }
+
+    [Fact]
+    public void CaptureStopsBeforeSpendingPastLimitOrRefresh()
+    {
+        var budget = new CaptureRequestBudget(RequestProductionAttempt.RefreshPeriod);
+        budget.Reserve(60);
+        Assert.Throws<InvalidOperationException>(() => budget.Reserve(31));
+        Assert.Equal(30, budget.RemainingAp);
+        budget.Reserve(30);
+        Assert.Throws<InvalidOperationException>(() => budget.Reserve(10));
+        Assert.Throws<InvalidOperationException>(() => new CaptureRequestBudget(-1).Reserve(10));
+    }
+
     [Theory]
     [InlineData(20, 10, 3, 5, 2)]
     [InlineData(9, 10, 3, 1, 0)]

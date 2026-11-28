@@ -15,8 +15,10 @@ public sealed partial class StageSkipService
     /// <summary>每次略过独立持有补点预算；观察到离开原弹窗后永久撤销补点资格。</summary>
     private async Task<StageSkipResult> CompleteExecutedSkipCoreAsync(
         string serial, UiLayout stageLayout, SkipExecutionDialog? originalDialog, CancellationToken ct,
-        Func<ScreenImage, CancellationToken, bool>? returned = null)
+        Func<ScreenImage, CancellationToken, bool>? returned = null,
+        Func<ScreenImage, CancellationToken, int?>? readCaptures = null)
     {
+        int? capturedUnits = null;
         var skipCancel = stageLayout.Require("skipDialogCancel", "关卡布局缺少 skipDialogCancel 锚点");
         var resultOk = stageLayout.Require("skipResultOk", "关卡布局缺少 skipResultOk 锚点");
         var resultTitle = string.IsNullOrWhiteSpace(_options.SkipResultTemplatePath)
@@ -37,7 +39,8 @@ public sealed partial class StageSkipService
         else
         {
             // 单位展示可连续出现，使用确认采样频率，避免通用五秒间隔耗尽整段奖励预算。
-            var resultPollMs = _options.ContinueUnitAcquisition
+            var continueUnits = _options.ContinueUnitAcquisition || readCaptures is not null;
+            var resultPollMs = continueUnits
                 ? GameTiming.ConfirmationIntervalMs : GameTiming.RecognitionIntervalMs;
             var resultReady = false;
             var recoveringLateResult = false;
@@ -79,12 +82,23 @@ public sealed partial class StageSkipService
                         ct);
                     if (resultMatch is not null)
                     {
+                        if (readCaptures is not null)
+                        {
+                            var count = readCaptures(screen, ct);
+                            if (count is null || count != capturedUnits)
+                            {
+                                capturedUnits = count;
+                                await DelayWithinBudgetAsync(deadline, GameTiming.ConfirmationIntervalMs, ct);
+                                continue;
+                            }
+                        }
                         if (recoveringLateResult) _log.Info("已确认迟到的 SKIP RESULT，继续结果收尾与返回校验。");
                         resultReady = true;
                         break;
                     }
                 }
 
+                capturedUnits = null;
                 if (apRecoveryClose is not null && await _automation.MatchImageAsync(
                     screen, _options.ApRecoveryPromptTemplatePath,
                     new WaitOptions { Threshold = 0.90, Roi = new Roi((screen.Width - 400) / 2, 0, 400, 550) }, ct) is not null)
@@ -125,7 +139,7 @@ public sealed partial class StageSkipService
                 }
 
                 // 获得单位展示可能先于 SKIP RESULT；结果和 AP 检查优先，不以继续提示代替成功证据。
-                if (_options.ContinueUnitAcquisition && acquisitionContinueCount < 6)
+                if (continueUnits && acquisitionContinueCount < 6)
                 {
                     var next = await Task.Run(() => _automation.TapToNext.Recognize(screen, ct), ct);
                     ct.ThrowIfCancellationRequested();
@@ -205,12 +219,12 @@ public sealed partial class StageSkipService
         await _automation.TapAsync(serial, resultOk.CenterX, resultOk.CenterY, ct);
         await GameTiming.DelayIfPositiveAsync(_options.SettleAfterOkMs, ct);
 
-        if (!await ConfirmPostSkipAsync(serial, stageLayout, acquisitionContinueCount, ct, returned))
+        if (!await ConfirmPostSkipAsync(serial, stageLayout, acquisitionContinueCount, ct, returned, readCaptures is not null))
             return StageSkipResult.Fail(string.IsNullOrWhiteSpace(_options.PostSkipPageTemplatePath)
                 ? "未确认升级提示已关闭并返回目标关卡，已停止后续操作"
                 : "未确认返回强化培育关卡，已停止后续操作");
 
-        return StageSkipResult.Ok("略过执行完成");
+        return StageSkipResult.Ok("略过执行完成") with { CapturedUnits = capturedUnits };
     }
 
     /// <summary>结果等待真正超时后保存最后观察帧和本阶段模板，避免只得到后续主界面恢复的无关候选。</summary>
