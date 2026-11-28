@@ -282,7 +282,7 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
         if (detail.Action == Control.Deliver)
         {
             await TapAsync(serial, detail.Button, ct);
-            if (await inventory.SubmitAsync(serial, ct)) return (null, false);
+            if (await inventory.SubmitAsync(serial, ReopenInventoryAsync, ct)) return (null, false);
             detail = await WaitSameDeliveryAsync(serial, offer, ct);
         }
         bool made;
@@ -310,7 +310,14 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
 
         // 重开库存，只重选一次，仍然执行全部等级与突破保护。
         await TapAsync(serial, detail.Button, ct);
-        return (await inventory.SubmitAsync(serial, ct) ? null : await WaitSameDeliveryAsync(serial, offer, ct), false);
+        return (await inventory.SubmitAsync(serial, ReopenInventoryAsync, ct) ? null : await WaitSameDeliveryAsync(serial, offer, ct), false);
+
+        async Task ReopenInventoryAsync()
+        {
+            var same = await WaitSameDeliveryAsync(serial, offer, ct);
+            if (same.Action != Control.Deliver) throw Unknown();
+            await TapAsync(serial, same.Button, ct);
+        }
 
     }
 

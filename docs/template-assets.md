@@ -47,7 +47,7 @@
 | `title_request_info.png` | 820, 47, 280, 93 | 要求信息弹窗顶部标题 |
 | `button_deliver.png` | 1540, 800, 170, 110 | 已承接的交付委托详情右下角「交付」文字，MuMu 两帧均为 1.000，承接、挑战、报告画面均低于 0.93 |
 | `title_deliver_unit.png`、`title_confirm_delivery.png` | 详情标题、弹窗顶部 | 编号用数字 OCR，普通单机交付从 `resources/common/data/delivery_requests.json` 读取角色、编号、目标机体 ID 和最低等级。使用 `tools/export-delivery-requests.py 工作簿 输出文件` 再生成 |
-| `button_submit_delivery.png`、`button_cancel_delivery.png`、`delivery_selected_one.png` | 弹窗底部与库存卡片右上角 | 比对当帧目标缩略图，读取卡片 LV 与星级区。保护突破机体时要求星级条整行呈空白底色。提交前复核同卡蓝色序号、数量 1/1 和启用按钮 |
+| `button_submit_delivery.png`、`button_cancel_delivery.png` | 弹窗底部 | 在 (1337,799,69,44) 读取交付按钮上方的数量，OCR 区域仅含数字与斜杠。选卡前确认 0/1，选卡后连续两帧确认 1/1 和已启用的交付按钮 |
 | `title_delivery_complete.png` | 765, 287, 390, 168 | 交付后的结算，继续确认领取奖励并返回角色列表 |
 | `button_challenge.png` | 1540, 800, 170, 110 | 详情右下角「挑战」文字，标记已承接 |
 | `title_funding.png` | 1340, 225, 300, 80 | 固定四字「调度资金」，不包含编号。MuMu 原图裁剪 (1403,246,135,35)，承接前及承接后的独立帧 ≥0.999，强化、机体交付与委托开发均 <0.76 |

@@ -53,7 +53,6 @@ public partial class CharacterRequestPageTests
         Fix(frame, "bottom_row", 490, 600);
         var available = Encode(frame);
         Fix(frame, "selected_count", 1337, 799);
-        PasteTemplate(frame, "delivery_selected_one.png", 605, 610);
         PasteTemplate(frame, "button_submit_delivery.png", 1103, 967);
         var selected = Encode(frame);
         frame = Empty();
@@ -108,8 +107,10 @@ public partial class CharacterRequestPageTests
         Assert.Equal(steps.Count, adb.Taps.Count);
     }
 
-    [Fact]
-    public async Task Delivery_ShortFilteredListTapsInsideCardAndConfirmsTheSameSelection()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Delivery_ShortFilteredListChecksOnlyNumericCountAfterChoosingCard(bool preselected)
     {
         var frame = Empty();
         void Fix(string name, int x, int y) => Paste(frame,
@@ -125,15 +126,24 @@ public partial class CharacterRequestPageTests
         Assert.Equal((580, 35, 0), (card.X, card.Level, card.LimitBreaks));
         var available = Encode(frame);
         Fix("selected_count", 1337, 799);
-        PasteTemplate(frame, "delivery_selected_one.png", 605, 514);
         PasteTemplate(frame, "button_submit_delivery.png", 1103, 967);
         var selected = Encode(frame);
         var adb = new FakeAdbService(available);
-        adb.ScreenshotProvider = () => adb.Taps.Count == 1 && adb.Taps[0].X == 580 &&
-            adb.Taps[0].Y is >= 530 and <= 635 ? selected : available;
+        var reopened = false;
+        Task ReopenInventory()
+        {
+            Assert.True(preselected);
+            Assert.InRange(Assert.Single(adb.Taps).X, 729, 820);
+            reopened = true;
+            return Task.CompletedTask;
+        }
+        adb.ScreenshotProvider = () => preselected && !reopened ||
+            adb.Taps.LastOrDefault() is { X: 580, Y: >= 530 and <= 635 } ? selected : available;
         using var auto = new AutomationService(adb, new TemplateMatcher(), new TestLog());
-        Assert.True(await new UnitDeliveryService(auto, ocr, new(), 35).SubmitAsync("test", default));
-        Assert.Equal(2, adb.Taps.Count);
+        Assert.True(await new UnitDeliveryService(auto, ocr, new(), 35).SubmitAsync("test", ReopenInventory, default));
+        Assert.Equal(preselected, reopened);
+        Assert.Equal(preselected ? 3 : 2, adb.Taps.Count);
+        Assert.InRange(adb.Taps[^1].X, 1103, 1199);
         Assert.Empty(adb.Swipes);
 
         // 仅剩带锁卡时，即使关闭等级和突破保护，也不能选中该卡。
@@ -153,7 +163,7 @@ public partial class CharacterRequestPageTests
         var unreadable = new FakeAdbService(Encode(frame));
         using var guarded = new AutomationService(unreadable, new TemplateMatcher(), new TestLog());
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            new UnitDeliveryService(guarded, ocr, new(), 35).SubmitAsync("test", default));
+            new UnitDeliveryService(guarded, ocr, new(), 35).SubmitAsync("test", ReopenInventory, default));
         Assert.Empty(unreadable.Taps);
     }
 

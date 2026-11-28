@@ -9,17 +9,14 @@ internal sealed class UnitDeliveryService(AutomationService automation, OnnxText
 {
     private readonly DeliveryPage _page = new(ocr, protection, minimumLevel);
 
-    internal async Task<bool> SubmitAsync(string serial, CancellationToken ct)
+    internal async Task<bool> SubmitAsync(string serial, Func<Task> reopenInventory, CancellationToken ct)
     {
         var view = await ObserveAsync(serial, ct);
-        // 已满时点击别的单位不会切换。先找到原标记并取消，再从底部重新按当前策略选择。
-        if (view.Count == 1 && view.Badge is null) view = await ScrollToBottomAsync(serial, view, ct);
-        while (view.Count == 1 && view.Badge is null && !view.AtTop)
-            view = await ScrollAsync(serial, view, towardBottom: false, ct);
+        // 弹窗若已选中一台，先重开同一委托的库存，再按本轮等级与突破保护从 0/1 选起。
         if (view.Count == 1)
         {
-            if (view.Badge is not { } old) throw SelectionUnknown();
-            await automation.TapAsync(serial, old.CenterX, old.CenterY, ct);
+            await automation.TapAsync(serial, view.Cancel.CenterX, view.Cancel.CenterY, ct);
+            await reopenInventory();
             view = await ObserveAsync(serial, ct, expectedCount: 0);
         }
 
@@ -42,10 +39,8 @@ internal sealed class UnitDeliveryService(AutomationService automation, OnnxText
         if (view.Candidate is not { } card) return await CancelAsync(serial, view, ct);
 
         await automation.TapAsync(serial, card.X, card.CenterY, ct);
-        view = await ObserveAsync(serial, ct, expectedCount: 1);
-        if (view.Badge is not { } badge || Math.Abs(badge.X - (card.X + 25)) > 5 ||
-            Math.Abs(badge.Y - (card.Top + 5)) > 5 || view.Submit is not { } submit)
-            throw SelectionUnknown();
+        view = await ObserveAsync(serial, ct, expectedCount: 1, accept: v => v.Submit.HasValue);
+        var submit = view.Submit ?? throw SelectionUnknown();
         await automation.TapAsync(serial, submit.CenterX, submit.CenterY, ct);
         return true;
     }

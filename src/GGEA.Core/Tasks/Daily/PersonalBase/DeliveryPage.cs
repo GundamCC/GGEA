@@ -12,7 +12,6 @@ internal sealed class DeliveryPage(OnnxTextRecognizer ocr, DeliveryProtection pr
     private const string Root = "resources/templates/base/character_requests/";
     private readonly TemplateMatcher _matcher = new();
     private readonly TemplateImages _title = new(Root + "title_confirm_delivery.png");
-    private readonly TemplateImages _badge = new(Root + "delivery_selected_one.png");
     private readonly TemplateImages _submit = new(Root + "button_submit_delivery.png");
     private readonly TemplateImages _cancel = new(Root + "button_cancel_delivery.png");
 
@@ -21,7 +20,7 @@ internal sealed class DeliveryPage(OnnxTextRecognizer ocr, DeliveryProtection pr
     {
         public int CenterY => Top + 78;
     }
-    internal sealed record View(int Count, int ThumbTop, int ThumbEnd, Card? Candidate, Roi? Badge, Roi? Submit, Roi Cancel, bool UncertainCards = false)
+    internal sealed record View(int Count, int ThumbTop, int ThumbEnd, Card? Candidate, Roi? Submit, Roi Cancel, bool UncertainCards = false)
     {
         public bool AtBottom => ThumbEnd == -1 || ThumbEnd >= 846;
         public bool AtTop => ThumbTop == -1 || ThumbTop <= 503;
@@ -53,11 +52,10 @@ internal sealed class DeliveryPage(OnnxTextRecognizer ocr, DeliveryProtection pr
         if (pair == "0/1")
         {
             var candidate = FindCard(frame, first >= 0, ct, out var uncertain);
-            return new(0, first, last, candidate, null, null, cancel.Region, uncertain);
+            return new(0, first, last, candidate, null, cancel.Region, uncertain);
         }
-        var badge = _badge.Match(_matcher, frame, .96, new(495, 501, 929, 345), ct);
         var submit = _submit.Match(_matcher, frame, .95, new(1096, 960, 111, 69), ct);
-        return new(1, first, last, null, badge?.Region, submit?.Region, cancel.Region);
+        return new(1, first, last, null, submit?.Region, cancel.Region);
     }
 
     private Card? FindCard(ScreenImage frame, bool scrollable, CancellationToken ct, out bool uncertain)
