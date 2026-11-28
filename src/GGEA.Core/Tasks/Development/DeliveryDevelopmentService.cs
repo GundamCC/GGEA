@@ -22,7 +22,7 @@ internal sealed partial class DeliveryDevelopmentService(AutomationService autom
     {
         if (string.IsNullOrWhiteSpace(request.DevelopTitleTemplatePath))
             request = request with { DevelopTitleTemplatePath = ConfigService.ResolvePath("resources/templates/develop/title_develop.png") };
-        var requests = new CharacterRequestPage();
+        using var requests = new CharacterRequestPage(ocr);
         if (await WaitAsync(serial, f => requests.ReadList(f, ct), ct) is null) throw Unknown();
         var nav = request.MainLayout.Require("navDevelop", "缺少开发入口");
         var bar = request.MainLayout.Require("navBase", "缺少个人基地入口");

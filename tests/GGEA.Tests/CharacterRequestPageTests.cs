@@ -18,7 +18,30 @@ public partial class CharacterRequestPageTests
     public void SlotCount_RequiresPageAndUnambiguousCards(bool locked, bool thirdRank, bool hasTitle, int? expected)
     {
         var screen = CreateList(locked, thirdRank, hasTitle);
-        Assert.Equal(expected, new CharacterRequestPage().ReadSlotCount(screen, default));
+        using var page = new CharacterRequestPage(null);
+        Assert.Equal(expected, page.ReadSlotCount(screen, default));
+    }
+
+    [Fact]
+    public void RankOcr_RequiresAllFourLettersAndFollowsTheirPositionWithinTheCard()
+    {
+        var frame = CreateList(false, true, true);
+        for (int y = 625; y < 650; y++)
+            Array.Clear(frame.Bgra, (y * frame.Width + 254 + 535) * 4, 68 * 4);
+        Paste(frame, Path.Combine(AppContext.BaseDirectory, "Fixtures/Base/rank_ld720.png"), 348 + 535, 639);
+        using var page = new CharacterRequestPage(null);
+        Assert.Equal(new CharacterRequestPage.ListState(3, 7), page.ReadList(frame, default));
+        // 擦掉第二栏最后的 K，另外两栏的完整 RANK 不能替它确认状态。
+        for (int y = 639; y < 664; y++)
+            Array.Clear(frame.Bgra, (y * frame.Width + 348 + 535 + 52) * 4, 16 * 4);
+        Assert.Null(page.ReadList(frame, default));
+        // 填回同一行的 R 形成 RANR，四个形状齐全仍须通过完整单词核对。
+        for (int y = 639; y < 664; y++)
+        {
+            var start = (y * frame.Width + 348 + 535) * 4;
+            Buffer.BlockCopy(frame.Bgra, start, frame.Bgra, start + 53 * 4, 13 * 4);
+        }
+        Assert.Null(page.ReadList(frame, default));
     }
 
     // 初次锁定后即使后续回放显示第三张角色卡，也不扩大已确定的本轮上限。
@@ -40,7 +63,7 @@ public partial class CharacterRequestPageTests
             adb.Taps.Count % 2 == 1 ? detailPng : three;
         var log = new TestLog();
         using var automation = new AutomationService(adb, new TemplateMatcher(), log);
-        var service = new CharacterRequestService(automation, log);
+        using var service = new CharacterRequestService(automation, log);
         Assert.Equal(expected, await service.AcceptFromListAsync("serial"));
         var taps = Enumerable.Range(0, expected)
             .SelectMany(i => new[] { (427 + i * 535, 410), (1623, 857) });
@@ -70,7 +93,8 @@ public partial class CharacterRequestPageTests
         };
         var log = new TestLog();
         using var automation = new AutomationService(adb, new TemplateMatcher(), log);
-        Assert.Equal(1, await new CharacterRequestService(automation, log).AcceptFromListAsync("serial"));
+        using var service = new CharacterRequestService(automation, log);
+        Assert.Equal(1, await service.AcceptFromListAsync("serial"));
         var back = ImageCodec.DecodePng(File.ReadAllBytes(ConfigService.ResolvePath("resources/templates/common/back.png")));
         var backPoint = (40 + back.Width / 2, 14 + back.Height / 2);
         Assert.Equal(new[] { (427, 410), (1623, 857), (960, 540), (960, 540), backPoint,
@@ -84,7 +108,8 @@ public partial class CharacterRequestPageTests
         for (var y = 604; y < 678; y++)
             Array.Clear(frame.Bgra, (y * 1920 + 191) * 4, 166 * 4);
         PasteTemplate(frame, "card_refresh.png", 272, 644);
-        Assert.Equal(new CharacterRequestPage.ListState(2, 2), new CharacterRequestPage().ReadList(frame, default));
+        using var page = new CharacterRequestPage(null);
+        Assert.Equal(new CharacterRequestPage.ListState(2, 2), page.ReadList(frame, default));
     }
 
     [Theory]
@@ -157,7 +182,8 @@ public partial class CharacterRequestPageTests
         adb.ScreenshotProvider = () => adb.Taps.Count < steps.Count ? steps[adb.Taps.Count].Screen : finished;
         var log = new TestLog();
         using var automation = new AutomationService(adb, new TemplateMatcher(), log);
-        var result = await new CharacterRequestService(automation, log, ocr).RunFromListAsync("serial");
+        using var service = new CharacterRequestService(automation, log, ocr);
+        var result = await service.RunFromListAsync("serial");
         Assert.Equal(alreadyAccepted ? 0 : 1, result.Accepted);
         Assert.Equal(1, result.Reported);
         Assert.Empty(result.FailedRoles);
@@ -197,7 +223,7 @@ public partial class CharacterRequestPageTests
         var screen = Empty();
         if (hasTitle) PasteTemplate(screen, "title_character_requests.png", 216, 17);
         for (var slot = 0; slot < (thirdRank ? 3 : 2); slot++)
-            PasteTemplate(screen, "card_request_rank.png", 205 + slot * 535, 621);
+            Paste(screen, Path.Combine(AppContext.BaseDirectory, "Fixtures/Base/rank_ld720.png"), 254 + slot * 535, 625);
         if (locked) Paste(screen, Path.Combine(AppContext.BaseDirectory, "Fixtures/Base/character_third_slot_lock.png"), 1452, 284);
         return screen;
     }

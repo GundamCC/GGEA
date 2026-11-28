@@ -8,14 +8,15 @@ namespace GGEA.App.Tasks;
 public sealed record CharacterRequestResult(int Accepted, int Reported, IReadOnlyList<string> FailedRoles);
 
 /// <summary>按本轮解锁栏位逐人承接。按委托类型核对交付、强化或开发条件，结算后再处理下一栏。</summary>
-public sealed class CharacterRequestService(AutomationService automation, IGgeaLog log, OnnxTextRecognizer? ocr = null, DeliveryProtection? protection = null, DevelopRequest? development = null)
+public sealed class CharacterRequestService(AutomationService automation, IGgeaLog log, OnnxTextRecognizer? ocr = null, DeliveryProtection? protection = null, DevelopRequest? development = null) : IDisposable
 {
     internal Func<string, DeliveryTarget, Func<bool>, CancellationToken, Task<bool>>? RestockFromList { get; init; }
     internal Func<string, DeliveryOffer, Func<bool>, CancellationToken, Task<ObtainResult>>? RestockFromMethods { get; init; }
     internal SortieRequestService? Sortie { get; init; }
     private const string Root = "resources/templates/base/character_requests/";
     private static readonly Roi ActionLabelArea = new(1540, 800, 170, 110);
-    private readonly CharacterRequestPage _page = new();
+    private readonly CharacterRequestPage _page = new(ocr);
+    public void Dispose() => _page.Dispose();
     private readonly TemplateMatcher _matcher = new();
     private readonly CharacterRequestCatalog? _catalog = ocr is null ? null : new(ocr);
     private readonly UnitUpgradeService? _upgrade = ocr is null ? null : new(automation, ocr);

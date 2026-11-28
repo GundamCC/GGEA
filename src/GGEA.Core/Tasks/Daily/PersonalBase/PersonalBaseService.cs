@@ -71,7 +71,7 @@ public sealed class PersonalBaseService
     public Task<CharacterRequestResult> RunCharacterRequestsAsync(string serial, UiLayout mainLayout, OnnxTextRecognizer? ocr, CancellationToken ct = default, DeliveryProtection? protection = null, DevelopRequest? development = null, SortieRequestService? sortie = null, bool fromHarvest = false) =>
         Task.Run(async () =>
         {
-            var service = new CharacterRequestService(_automation, _log, ocr, protection, development)
+            using var service = new CharacterRequestService(_automation, _log, ocr, protection, development)
             {
                 Sortie = sortie,
                 RestockFromMethods = development is null || ocr is null ? null : (device, offer, reserve, token) =>

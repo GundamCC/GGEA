@@ -80,7 +80,7 @@ public partial class CharacterRequestPageTests
         using var ocr = new OnnxTextRecognizer();
         using var auto = new AutomationService(adb, new TemplateMatcher(), log);
         int calls = 0;
-        var service = new CharacterRequestService(auto, log, ocr)
+        using var service = new CharacterRequestService(auto, log, ocr)
         {
             RestockFromMethods = (_, offer, _, _) =>
             {
