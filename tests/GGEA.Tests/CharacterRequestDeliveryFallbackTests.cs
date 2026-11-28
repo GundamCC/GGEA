@@ -15,7 +15,8 @@ public partial class CharacterRequestPageTests
     [InlineData(false, false, true)]
     [InlineData(true, true, true)]
     [InlineData(true, false, true)]
-    public async Task Delivery_ReopensOriginalRoleAndOnlyRetriesInventoryOnce(bool made, bool eligible, bool obtain = false)
+    [InlineData(false, false, true, true)]
+    public async Task Delivery_ReopensOriginalRoleAndOnlyRetriesInventoryOnce(bool made, bool eligible, bool obtain = false, bool firstDevelopmentRequired = false)
     {
         void Fix(ScreenImage f, string name, int x, int y) =>
             Paste(f, Path.Combine(AppContext.BaseDirectory, "Fixtures/Base/delivery_" + name + ".png"), x, y);
@@ -25,7 +26,7 @@ public partial class CharacterRequestPageTests
             for (int y = 604; y < 678; y++) Array.Clear(cards.Bgra, (y * 1920 + 191 + 535 * slot) * 4, 166 * 4);
             PasteTemplate(cards, "card_refresh.png", 272 + 535 * slot, 644);
         }
-        Complete(1);
+        if (!firstDevelopmentRequired) Complete(1);
         var list = Encode(cards);
         Complete(0);
         var finished = Encode(cards);
@@ -65,7 +66,7 @@ public partial class CharacterRequestPageTests
         Paste(frame, ok, 960 - image.Width / 2, 995 - image.Height / 2);
 
         var steps = obtain
-            ? new List<byte[]> { list, unavailable, list, made && eligible ? detail : unavailable }
+            ? new List<byte[]> { list, unavailable, made && eligible ? detail : unavailable }
             : new List<byte[]> { list, detail, empty, detail, list, detail };
         if (made && (!obtain || eligible))
         {
@@ -81,8 +82,17 @@ public partial class CharacterRequestPageTests
         int calls = 0;
         var service = new CharacterRequestService(auto, log, ocr)
         {
+            RestockFromMethods = (_, offer, _, _) =>
+            {
+                Assert.True(obtain);
+                Assert.Equal("1080001600", offer.UnitId);
+                calls++;
+                return Task.FromResult(firstDevelopmentRequired ? ObtainResult.FirstDevelopmentRequired :
+                    made ? ObtainResult.Produced : ObtainResult.Unavailable);
+            },
             RestockFromList = (_, target, _, _) =>
             {
+                Assert.False(obtain);
                 calls++;
                 Assert.Equal(("1080001600", "810", 2, 2000), (target.UnitId, target.Route.SeriesId, target.Route.Tab, target.Route.Capital));
                 return Task.FromResult(made);
@@ -90,7 +100,8 @@ public partial class CharacterRequestPageTests
         };
         var result = await service.RunFromListAsync("test", default);
         if (obtain)
-            Assert.DoesNotContain(adb.Taps.Take(3), tap => tap.X > 1540 && tap.Y > 800);
+            Assert.InRange(adb.Taps[1].X, 1554, 1691);
+        if (firstDevelopmentRequired) Assert.Contains("首次开发", Assert.Single(result.FailedRoles));
         Assert.Equal(1, calls);
         Assert.Equal(eligible ? 1 : 0, result.Reported);
         Assert.Equal(eligible ? 0 : 1, result.FailedRoles.Count);

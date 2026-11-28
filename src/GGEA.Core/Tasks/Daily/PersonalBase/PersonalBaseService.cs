@@ -74,6 +74,9 @@ public sealed class PersonalBaseService
             var service = new CharacterRequestService(_automation, _log, ocr, protection, development)
             {
                 Sortie = sortie,
+                RestockFromMethods = development is null || ocr is null ? null : (device, offer, reserve, token) =>
+                    new DeliveryDevelopmentService(_automation, _log, ocr)
+                        .FromMethodsAsync(device, offer, protection ?? new(), development, reserve, token),
                 RestockFromList = development is null || ocr is null ? null : async (device, target, reserve, token) =>
                 {
                     var production = new DeliveryDevelopmentService(_automation, _log, ocr);

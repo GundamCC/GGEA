@@ -11,6 +11,7 @@ public sealed record CharacterRequestResult(int Accepted, int Reported, IReadOnl
 public sealed class CharacterRequestService(AutomationService automation, IGgeaLog log, OnnxTextRecognizer? ocr = null, DeliveryProtection? protection = null, DevelopRequest? development = null)
 {
     internal Func<string, DeliveryTarget, Func<bool>, CancellationToken, Task<bool>>? RestockFromList { get; init; }
+    internal Func<string, DeliveryOffer, Func<bool>, CancellationToken, Task<ObtainResult>>? RestockFromMethods { get; init; }
     internal SortieRequestService? Sortie { get; init; }
     private const string Root = "resources/templates/base/character_requests/";
     private static readonly Roi ActionLabelArea = new(1540, 800, 170, 110);
@@ -126,7 +127,16 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                     detail = evidence.Detail;
                     if (evidence.Offer is { } delivery)
                     {
-                        var remaining = await DeliverOrRestockAsync(serial, slot, detail, delivery, ct);
+                        var (remaining, firstDevelopmentRequired) = await DeliverOrRestockAsync(serial, slot, detail, delivery, ct);
+                        if (firstDevelopmentRequired)
+                        {
+                            var reason = L.Format($"目标机体「{delivery.Unit}」尚未完成首次开发，已结束角色要求，继续后续任务。");
+                            log.Warn(reason);
+                            failures.Add(reason);
+                            await TapAsync(serial, remaining!.Back, ct);
+                            await WaitForListAsync(serial, ct);
+                            return new CharacterRequestResult(accepted, reported, failures);
+                        }
                         if (remaining is null)
                         {
                             await FinishReportAsync(serial, slot, ct, delivering: true);
@@ -228,31 +238,44 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
         }, ct);
 
     // 返回详情表示本栏仍未完成。只有确认交付已发送才进入领奖，补开发本身不计为完成。
-    private async Task<Detail?> DeliverOrRestockAsync(string serial, int slot, Detail detail, DeliveryOffer offer, CancellationToken ct)
+    private async Task<(Detail? Remaining, bool FirstDevelopmentRequired)> DeliverOrRestockAsync(string serial, int slot, Detail detail, DeliveryOffer offer, CancellationToken ct)
     {
         var attempt = DeliveryProductionAttempt.Start(serial, slot, offer);
         var guards = protection ?? new DeliveryProtection();
         var inventory = new UnitDeliveryService(automation, ocr!, guards, offer.MinimumLevel);
-        // 「获取途径」表示当前不能打开交付库存，直接复用按角色和编号核对过的补开发流程。
+        // 库存筛选返回详情后按钮可能变化，以下分支使用最新核对的状态。
         if (detail.Action == Control.Deliver)
         {
             await TapAsync(serial, detail.Button, ct);
-            if (await inventory.SubmitAsync(serial, ct)) return null;
+            if (await inventory.SubmitAsync(serial, ct)) return (null, false);
             detail = await WaitSameDeliveryAsync(serial, offer, ct);
         }
-        var target = DevelopmentRequestIndex.ForDelivery(offer, guards);
-        if (target is null || RestockFromList is null) return detail;
-        await TapAsync(serial, detail.Back, ct);
-        await RequireSlotAsync();
-        var made = await RestockFromList(serial, target, attempt.Reserve, ct);
-        await RequireSlotAsync();
-        await automation.TapAsync(serial, 427 + 535 * slot, 410, ct);
-        detail = await WaitSameDeliveryAsync(serial, offer, ct);
-        if (!made || detail.Action != Control.Deliver) return detail;
+        bool made;
+        if (detail.Action == Control.Obtain)
+        {
+            if (RestockFromMethods is null) return (detail, false);
+            await TapAsync(serial, detail.Button, ct);
+            var result = await RestockFromMethods(serial, offer, attempt.Reserve, ct);
+            detail = await WaitSameDeliveryAsync(serial, offer, ct);
+            if (result == ObtainResult.FirstDevelopmentRequired) return (detail, true);
+            made = result == ObtainResult.Produced;
+        }
+        else
+        {
+            var target = DevelopmentRequestIndex.ForDelivery(offer, guards);
+            if (target is null || RestockFromList is null) return (detail, false);
+            await TapAsync(serial, detail.Back, ct);
+            await RequireSlotAsync();
+            made = await RestockFromList(serial, target, attempt.Reserve, ct);
+            await RequireSlotAsync();
+            await automation.TapAsync(serial, 427 + 535 * slot, 410, ct);
+            detail = await WaitSameDeliveryAsync(serial, offer, ct);
+        }
+        if (!made || detail.Action != Control.Deliver) return (detail, false);
 
         // 重开库存，只重选一次，仍然执行全部等级与突破保护。
         await TapAsync(serial, detail.Button, ct);
-        return await inventory.SubmitAsync(serial, ct) ? null : await WaitSameDeliveryAsync(serial, offer, ct);
+        return (await inventory.SubmitAsync(serial, ct) ? null : await WaitSameDeliveryAsync(serial, offer, ct), false);
 
         async Task RequireSlotAsync()
         {

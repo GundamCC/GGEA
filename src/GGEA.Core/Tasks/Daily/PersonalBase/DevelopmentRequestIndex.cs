@@ -42,17 +42,22 @@ internal static class DevelopmentRequestIndex
         return entries;
     }
 
-    internal static DeliveryTarget? ForDelivery(DeliveryOffer offer, DeliveryProtection protection)
+    internal static string DeliveryTemplate(string unitId) => Data.Value.Units[unitId].Roadmap;
+
+    internal static DeliveryTarget? ForDelivery(DeliveryOffer offer, DeliveryProtection protection) =>
+        DeliveryTargets(offer, protection).FirstOrDefault();
+
+    internal static IReadOnlyList<DeliveryTarget> DeliveryTargets(DeliveryOffer offer, DeliveryProtection protection)
     {
         var title = FormattableString.Invariant($"交付机体{offer.Number}");
         var link = Data.Value.Offers.Values.SingleOrDefault(o => o.RoleId == offer.RoleId && o.Title == title && o.Kind == "交付机体");
         if (link is not { Amount: 1 } || link.UnitId != offer.UnitId ||
-            !Data.Value.Units.TryGetValue(offer.UnitId, out var unit) || unit.DeliveryRoutes is null) return null;
-        var route = unit.DeliveryRoutes.FirstOrDefault(r => unit.SeriesIds.Contains(r.SeriesId) &&
+            !Data.Value.Units.TryGetValue(offer.UnitId, out var unit) || unit.DeliveryRoutes is null) return [];
+        return unit.DeliveryRoutes.Where(r => unit.SeriesIds.Contains(r.SeriesId) &&
             (link.SeriesId is null || link.SeriesId == r.SeriesId) &&
             r.Tab >= 1 && r.Tab <= r.TabCount && r.Level >= offer.MinimumLevel && r.Capital > 0 &&
-            (!protection.ProtectHighLevel || r.Level < 60));
-        return route is null ? null : new(offer.UnitId, unit.Roadmap, route);
+            (!protection.ProtectHighLevel || r.Level < 60))
+            .Select(route => new DeliveryTarget(offer.UnitId, unit.Roadmap, route)).ToArray();
     }
 
     // 只有配置真正引用随包原生棋子时才根据 ID 选择作品，自定义素材沿用其入口配置。

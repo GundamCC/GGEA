@@ -7,7 +7,7 @@ using GGEA.App.Vision;
 namespace GGEA.App.Tasks;
 
 /// <summary>从角色列表的底部导航进入指定作品。只在已识别的批量预览中开发一台，再退回开发作品列表。</summary>
-internal sealed class DeliveryDevelopmentService(AutomationService automation, IGgeaLog log, OnnxTextRecognizer ocr)
+internal sealed partial class DeliveryDevelopmentService(AutomationService automation, IGgeaLog log, OnnxTextRecognizer ocr)
 {
     private const string Root = "resources/templates/develop/delivery/";
     private readonly TemplateMatcher _matcher = new();
