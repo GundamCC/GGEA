@@ -35,7 +35,7 @@ public partial class MainWindow
         {
             Kind = DailyTaskKind.CharacterRequests,
             Name = L.Text("角色要求（个人基地）"),
-            IsChecked = false,
+            IsChecked = true,
         });
         _dailyTasks.Add(new DailyTaskItem
         {

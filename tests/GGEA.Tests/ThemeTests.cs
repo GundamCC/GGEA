@@ -30,10 +30,12 @@ public sealed class ThemeTests
                 typeof(MainWindow).GetMethod("UpdateFooterText", flags)!.Invoke(window, null);
                 var request = Assert.Single(window.DailyView.DailyTaskList.Items.OfType<GGEA.App.Tasks.DailyTaskItem>(),
                     item => item.Kind == GGEA.App.Tasks.DailyTaskKind.CharacterRequests);
-                Assert.False(request.IsChecked);
-                Assert.False(window.DailyView.DailySelectAllCheckBox.IsChecked);
+                Assert.True(request.IsChecked);
+                Assert.True(window.DailyView.DailySelectAllCheckBox.IsChecked);
                 RenderLocalizationPreview(window, 1064, 660, "character-request-daily");
-                // 下方仍覆盖「其他任务全选，删除未勾选的动态任务后恢复全选」。
+                request.IsChecked = false;
+                Assert.False(window.DailyView.DailySelectAllCheckBox.IsChecked);
+                Assert.Empty(GGEA.App.Tasks.DailyTaskPlanner.BuildExecutionPlan(new[] { request }));
                 request.IsChecked = true;
                 window.LimitedEventTab.IsSelected = true;
                 Assert.Equal("EXPERT", ((ComboBoxItem)window.LimitedDifficulty.SelectedItem).Content);
