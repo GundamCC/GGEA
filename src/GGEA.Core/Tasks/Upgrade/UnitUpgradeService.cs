@@ -50,7 +50,7 @@ internal sealed class UnitUpgradeService(AutomationService automation, OnnxTextR
     {
         if (!OnUnit(frame, ct)) return null;
         var current = UpgradeNumbers.Read(ocr, frame, new(1330, 309, 100, 59), false, ct, out _);
-        var maximum = UpgradeNumbers.Read(ocr, frame, new(1448, 326, 56, 42), false, ct, out _);
+        var maximum = UpgradeNumbers.Read(ocr, frame, new(1448, 320, 60, 50), false, ct, out _);
         if (!int.TryParse(current, NumberStyles.None, CultureInfo.InvariantCulture, out var level) ||
             !int.TryParse(maximum, NumberStyles.None, CultureInfo.InvariantCulture, out var cap) ||
             level <= 0 || level > cap) return null;
@@ -71,7 +71,7 @@ internal sealed class UnitUpgradeService(AutomationService automation, OnnxTextR
         if (!OnList(frame, ct)) return null;
         var filter = _filter.Match(_matcher, frame, .85, new Roi(1610, 846, 130, 113), ct);
         if (filter is null || DismantlePageRecognizer.GetBlueFraction(frame, filter.Region) < .25) return null;
-        var label = _first.Match(_matcher, frame, .90, new Roi(376, 388, 100, 76), ct);
+        var label = _first.Match(_matcher, frame, .90, FirstLevel, ct);
         if (label is not null) return label with { Region = FirstLevel };
 
         // 720p 的窄笔画缩放后可能无法匹配 LV 素材，此时用完整英文等级行确认首卡。

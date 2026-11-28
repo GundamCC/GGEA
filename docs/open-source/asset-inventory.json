@@ -4664,11 +4664,11 @@
     },
     {
       "path": "resources/zh-CN/templates/upgrade/first_card_lv.png",
-      "sha256": "34d8e62b9c5763fad90499fe93f50faab4aced6efa1d1064de775fb9505c542b",
-      "width": 35,
-      "height": 37,
+      "sha256": "5e659cc6a8ac87d5c3767498b790cb9220bfcf184938c6adccc6a7abdf7d125b",
+      "width": 34,
+      "height": 31,
       "category": "recognition-resource",
-      "source": "Game-derived appearance; MuMu zh-CN 1920x1080, crop (399,416,35,37)",
+      "source": "LDPlayer zh-CN 1920x1080; second card LV glyph crop (597,418,34,31), alpha retains strokes and one-pixel contour",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
@@ -6634,11 +6634,21 @@
     },
     {
       "path": "tests/GGEA.Tests/Fixtures/Upgrade/unit_levels.png",
-      "sha256": "7711b6366d75f6f71ac3c2f74f31b7e4e9f334d01d71b45174bc1489a198119c",
+      "sha256": "19feb393232560a368cfd9a3fa35de14d3478006194a9b90769379314a4f2f9b",
       "width": 180,
-      "height": 132,
+      "height": 198,
       "category": "test-fixture",
-      "source": "Unit level rows from native 1920x1080 LDPlayer and MuMu captures; crop (1328,306,180,66)",
+      "source": "Three unit level rows from native 1920x1080 LDPlayer and MuMu captures; crop (1328,306,180,66) for each",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Upgrade/filtered_ld1080_lv1.png",
+      "sha256": "cdab5dae33ea85d41c6edeaf0d07106a4a82e8a45a600f6ed91123b9611f9856",
+      "width": 1920,
+      "height": 1080,
+      "category": "test-fixture",
+      "source": "Independent LDPlayer zh-CN 1920x1080 frame; only list title, first level row, filter and sort controls retained",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "cropped-game-ui"
     },

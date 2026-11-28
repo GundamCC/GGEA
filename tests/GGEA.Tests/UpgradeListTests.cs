@@ -24,10 +24,12 @@ public sealed class UpgradeListTests
         else Assert.Equal((1784, initial == "ascending" ? 901 : 899), Assert.Single(adb.Taps));
     }
 
-    [Fact]
-    public async Task RequestOpensFirstLd720CardWithoutSortFieldText()
+    [Theory]
+    [InlineData("filtered_ld720.png")]
+    [InlineData("filtered_ld1080_lv1.png")]
+    public async Task RequestOpensFirstFilteredCard(string fixture)
     {
-        var png = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "Upgrade", "filtered_ld720.png"));
+        var png = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "Upgrade", fixture));
         var normalized = GameResolution.ReadPng(png).Normalize(png);
         var adb = new FakeAdbService(normalized);
         using var ocr = new OnnxTextRecognizer();
@@ -38,12 +40,14 @@ public sealed class UpgradeListTests
     }
 
     [Theory]
-    [InlineData(140, 7, 102, 53)]
-    [InlineData(250, 273, 73, 32)]
-    [InlineData(1081, 566, 68, 63)]
-    public void RequestRequiresListTitleFirstCardAndFilter(int x, int y, int width, int height)
+    [InlineData("filtered_ld720.png", 140, 7, 102, 53)]
+    [InlineData("filtered_ld720.png", 250, 273, 73, 32)]
+    [InlineData("filtered_ld720.png", 1081, 566, 68, 63)]
+    [InlineData("filtered_ld1080_lv1.png", 381, 417, 95, 34)]
+    [InlineData("filtered_ld1080_lv1.png", 1610, 846, 130, 113)]
+    public void RequestRequiresListTitleFirstCardAndFilter(string fixture, int x, int y, int width, int height)
     {
-        var png = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "Upgrade", "filtered_ld720.png"));
+        var png = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "Upgrade", fixture));
         var native = ImageCodec.DecodePng(png);
         for (var row = y; row < y + height; row++)
             Array.Clear(native.Bgra, 4 * (row * native.Width + x), 4 * width);
@@ -57,6 +61,7 @@ public sealed class UpgradeListTests
     [Theory]
     [InlineData(0, 70, 70)]
     [InlineData(1, 1, 60)]
+    [InlineData(2, 1, 90)]
     public void UnitDetailReadsTwoNumericLevelsBeforeChoosingButton(int sample, int current, int cap)
     {
         var pixels = TestImageFactory.CreateBgra(1920, 1080, 20);
