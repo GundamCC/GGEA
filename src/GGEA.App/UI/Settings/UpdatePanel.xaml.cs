@@ -153,9 +153,9 @@ public partial class UpdatePanel : UserControl
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (_updateClosed || !_allowUpdateInstall) throw new OperationCanceledException(cancellationToken);
-        if (await ((App)Application.Current).TryApplyTemplatesAsync(package, _availableUpdate!.Version.ToString(4), cancellationToken))
+        if (await ((App)Application.Current).TryApplyLiveDataAsync(package, _availableUpdate!.Version.ToString(4), cancellationToken))
         {
-            ((MainWindow)Application.Current.MainWindow).RefreshLiveTemplates();
+            ((MainWindow)Application.Current.MainWindow).RefreshLiveData();
             UpdatePackageDownloader.DeleteDownload(Path.GetDirectoryName(package)!);
             _availableUpdate = null;
             _downloadSession = new();

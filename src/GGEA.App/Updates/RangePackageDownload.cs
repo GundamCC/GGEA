@@ -112,7 +112,6 @@ internal static class RangePackageDownload
                 if (fileBytes != file.Size) throw new InvalidDataException("更新文件不完整。");
             }
             manifest.Verify(package, cancellationToken: token);
-            PublishedDefaults.Remember(installation, package);
             progress.Report(100);
             return package;
         }

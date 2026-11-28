@@ -6,5 +6,6 @@ namespace GGEA.Updater;
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, WriteIndented = true)]
 [JsonSerializable(typeof(UpdateRequest))]
 [JsonSerializable(typeof(UpdateJournal))]
+[JsonSerializable(typeof(System.Text.Json.Nodes.JsonObject))]
 [JsonSerializable(typeof(int))]
 internal partial class UpdateJsonContext : JsonSerializerContext;

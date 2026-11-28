@@ -66,11 +66,18 @@ public partial class MainWindow
     {
         FierceEnemyAssaultView.FierceEnemyDifficultyBox.ItemsSource = Enum.GetValues<FierceEnemyDifficulty>();
         FierceEnemyAssaultView.FierceEnemyDifficultyBox.SelectedIndex = 0;
+        ReloadFierceEnemyUnits();
+    }
+
+    private void ReloadFierceEnemyUnits()
+    {
         try
         {
             var units = FierceEnemyUnit.Load();
-            FierceEnemyAssaultView.FierceEnemyUnitBox.ItemsSource = new[] { FierceEnemyUnit.Latest }.Concat(units).ToArray();
-            FierceEnemyAssaultView.FierceEnemyUnitBox.SelectedItem = units.MaxBy(unit => unit.Id);
+            var selected = (FierceEnemyAssaultView.FierceEnemyUnitBox.SelectedItem as FierceEnemyUnit)?.Id;
+            var choices = new[] { FierceEnemyUnit.Latest }.Concat(units).ToArray();
+            FierceEnemyAssaultView.FierceEnemyUnitBox.ItemsSource = choices;
+            FierceEnemyAssaultView.FierceEnemyUnitBox.SelectedItem = choices.FirstOrDefault(unit => unit.Id == selected) ?? units.MaxBy(unit => unit.Id);
         }
         catch (Exception ex)
         {

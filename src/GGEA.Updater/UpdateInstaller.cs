@@ -27,23 +27,24 @@ public static class UpdateInstaller
         if (process.ExitCode != 0) throw new IOException("新版启动自检失败，更新不能继续。");
     }
 
-    // 源码与依赖身份相同仍须核对发布文件集合。除两个带版本信息的映像外，只接纳可即时重读的模板和说明。
-    public static bool CanApplyTemplates(UpdateManifest old, UpdateManifest next)
+    // 源码与依赖身份相同仍须核对发布文件集合。除两个带版本信息的映像外，只接纳当前引擎能重新加载的数据和素材。
+    public static bool CanApplyLiveData(UpdateManifest old, UpdateManifest next)
     {
         if (old.TemplateEngine is not { Length: 64 } engine || engine != next.TemplateEngine) return false;
         foreach (var name in old.Files.Keys.Union(next.Files.Keys, StringComparer.OrdinalIgnoreCase))
         {
             if (old.Files.TryGetValue(name, out var before) && next.Files.TryGetValue(name, out var after) && before == after) continue;
             if (name is "GGEA.dll" or "GGEA.exe" or "使用说明.txt" or "RELEASE.txt") continue;
-            if (!name.StartsWith("resources/", StringComparison.OrdinalIgnoreCase) ||
-                !name.Contains("/templates/", StringComparison.OrdinalIgnoreCase) ||
-                !name.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) return false;
+            if (name.StartsWith("config/", StringComparison.OrdinalIgnoreCase) &&
+                name.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!name.StartsWith("resources/", StringComparison.OrdinalIgnoreCase)) return false;
+            if (Path.GetExtension(name).ToLowerInvariant() is not (".png" or ".json" or ".svg" or ".jpg" or ".jpeg" or ".webp")) return false;
         }
         return true;
     }
 
     /// <summary>调用方必须持有安装锁并确保主进程退出。自检委托用于真实 EXE 自检及故障回归。</summary>
-    public static string Install(string target, string package, string expectedVersion, Action<string> verifyExecutable, bool liveTemplates = false)
+    public static string Install(string target, string package, string expectedVersion, Action<string> verifyExecutable, bool liveData = false)
     {
         UpdateFiles.RejectLinks(target);
         UpdateFiles.RejectLinks(package);
@@ -55,12 +56,13 @@ public static class UpdateInstaller
         var next = UpdateManifest.Read(package);
         if (next.Version != expectedVersion || UpdateFiles.ParseVersion(next.Version) <= UpdateFiles.ParseVersion(old.Version))
             throw new InvalidDataException("更新包版本不匹配或不是更新版本。");
-        if (liveTemplates && !CanApplyTemplates(old, next)) throw new InvalidDataException("此版本需要切换程序。");
+        if (liveData && !CanApplyLiveData(old, next)) throw new InvalidDataException("此版本需要切换程序。");
         next.Verify(package);
         verifyExecutable(package);
 
+        var settings = PublishedDefaults.ChangedSettings(target, package, old, next);
         var replacements = next.Files.Keys.Append("build-info.json")
-            .Where(path => !UpdateFiles.IsUserFile(path) || !File.Exists(UpdateFiles.SafePath(target, path)))
+            .Where(path => settings.ContainsKey(path) || !UpdateFiles.IsUserFile(path) || !File.Exists(UpdateFiles.SafePath(target, path)))
             // 下载阶段已重建完整包；安装只备份并替换实际变化的文件，减少大模型和运行库的磁盘写入。
             .Where(path => !File.Exists(UpdateFiles.SafePath(target, path)) ||
                 !UpdateFiles.Hash(UpdateFiles.SafePath(target, path)).Equals(
@@ -84,7 +86,7 @@ public static class UpdateInstaller
             var source = UpdateFiles.SafePath(target, relative);
             if (Directory.Exists(source)) throw new IOException($"目标文件被同名目录占用：{relative}");
             if (!File.Exists(source)) { journal.Files.Add(new(relative, false, null)); continue; }
-            if (!liveTemplates || relative is not ("GGEA.dll" or "GGEA.exe"))
+            if (!liveData || relative is not ("GGEA.dll" or "GGEA.exe"))
             {
                 using var probe = new FileStream(source, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
             }
@@ -107,15 +109,18 @@ public static class UpdateInstaller
                 var destination = UpdateFiles.SafePath(target, relative);
                 Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
                 // Windows 可保留旧映像映射到另一个文件名。当前进程继续运行等价代码，新启动的进程读取新版。
-                var retired = liveTemplates && relative is ("GGEA.exe" or "GGEA.dll")
+                var retired = liveData && relative is ("GGEA.exe" or "GGEA.dll")
                     ? UpdateFiles.SafePath(backup, relative + ".mapped") : null;
-                UpdateFiles.CopyAtomically(UpdateFiles.SafePath(package, relative), destination, target, retired);
+                if (settings.TryGetValue(relative, out var merged))
+                    UpdateFiles.WriteJson(destination, merged, UpdateJsonContext.Default.JsonObject);
+                else UpdateFiles.CopyAtomically(UpdateFiles.SafePath(package, relative), destination, target, retired);
             }
             foreach (var relative in removals) File.Delete(UpdateFiles.SafePath(target, relative));
             next.Verify(target, preserveUserFiles: true);
             verifyExecutable(target);
             // 只有完整性与可执行自检通过才解除启动拦截；备份保留供人工找回自定义资源。
             File.Move(pending, UpdateFiles.SafePath(backup, "completed.json"));
+            PublishedDefaults.Remember(target, package);
             return backup;
         }
         catch (Exception installError)

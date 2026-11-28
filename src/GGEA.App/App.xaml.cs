@@ -61,9 +61,9 @@ public partial class App : Application
         ? L.Text("当前目录不支持在线安装。")
         : _installation.CanStartDownload() ? null : L.Text("请先关闭同一目录中的其他 GGEA 窗口，再重试更新。");
 
-    internal Task<bool> TryApplyTemplatesAsync(string package, string version, CancellationToken token) =>
+    internal Task<bool> TryApplyLiveDataAsync(string package, string version, CancellationToken token) =>
         _installation is null ? Task.FromResult(false) :
-            Updates.UpdateLauncher.TryApplyTemplatesAsync(_installation, AppContext.BaseDirectory, package, version, token);
+            Updates.UpdateLauncher.TryApplyLiveDataAsync(_installation, AppContext.BaseDirectory, package, version, token);
 
     /// <summary>在当前安装的独占保护下向更新器交接，失败时恢复当前窗口的共享运行状态。</summary>
     internal async Task StartUpdateAsync(string? package, string? version, bool recover, CancellationToken ct, bool keepClosed = false)
@@ -149,7 +149,7 @@ public partial class App : Application
             return;
         }
 
-        if (_installation is not null) Updates.PublishedDefaults.Remember(AppContext.BaseDirectory, AppContext.BaseDirectory);
+        if (_installation is not null) Updater.PublishedDefaults.Remember(AppContext.BaseDirectory, AppContext.BaseDirectory);
         base.OnStartup(e);
     }
 

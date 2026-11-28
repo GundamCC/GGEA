@@ -25,18 +25,21 @@ public partial class MainWindow
             if (_config.AutomaticUpdates && !_updatePending) await CheckStartupUpdateAsync();
     }
 
-    internal void RefreshLiveTemplates()
+    internal void RefreshLiveData()
     {
         _startupUpdate = null;
         RefreshUpdateBadge();
         _automation?.Dispose();
         _textOcr?.Dispose();
         _textOcr = null;
+        _config = new ConfigService(_logger!).Load(ConfigService.ResolvePath(DefaultConfigFile));
         ConfigService.ApplyResourceLanguage(_config);
+        ReloadLimitedActivities();
+        ReloadFierceEnemyUnits();
         InitializeTaskServices(_logger!);
         RefreshTemplateList();
         UpdateFooterText();
-        _logger?.Info(L.Format($"已应用 v{UpdateLauncher.CurrentVersion} 识别资源。"));
+        _logger?.Info(L.Format($"已应用 v{UpdateLauncher.CurrentVersion} 配置与素材。"));
     }
     private bool _startupUpdateAcknowledged;
     private UpdateRelease? _startupUpdate;
@@ -78,9 +81,9 @@ public partial class MainWindow
                     using var lease = TryBeginHostOperation(false);
                     if (lease is not null)
                     {
-                        if (await ((App)Application.Current).TryApplyTemplatesAsync(package, update.Version.ToString(4), pending.Token))
+                        if (await ((App)Application.Current).TryApplyLiveDataAsync(package, update.Version.ToString(4), pending.Token))
                         {
-                            RefreshLiveTemplates();
+                            RefreshLiveData();
                             break;
                         }
                         ((App)Application.Current).InstallOnExit(package, update.Version);
