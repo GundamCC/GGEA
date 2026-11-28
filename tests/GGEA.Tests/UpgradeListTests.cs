@@ -24,6 +24,36 @@ public sealed class UpgradeListTests
         else Assert.Equal((1784, initial == "ascending" ? 901 : 899), Assert.Single(adb.Taps));
     }
 
+    [Fact]
+    public async Task RequestOpensFirstLd720CardWithoutSortFieldText()
+    {
+        var png = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "Upgrade", "filtered_ld720.png"));
+        var normalized = GameResolution.ReadPng(png).Normalize(png);
+        var adb = new FakeAdbService(normalized);
+        using var ocr = new OnnxTextRecognizer();
+        using var automation = new AutomationService(adb, new TemplateMatcher(), new TestLog());
+        var service = new UnitUpgradeService(automation, ocr);
+        await service.SelectFirstUnitAsync("device", default);
+        Assert.Equal((428, 434), Assert.Single(adb.Taps));
+    }
+
+    [Theory]
+    [InlineData(140, 7, 102, 53)]
+    [InlineData(250, 273, 73, 32)]
+    [InlineData(1081, 566, 68, 63)]
+    public void RequestRequiresListTitleFirstCardAndFilter(int x, int y, int width, int height)
+    {
+        var png = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "Upgrade", "filtered_ld720.png"));
+        var native = ImageCodec.DecodePng(png);
+        for (var row = y; row < y + height; row++)
+            Array.Clear(native.Bgra, 4 * (row * native.Width + x), 4 * width);
+        var masked = ImageCodec.EncodePng(native.Bgra, native.Width, native.Height);
+        var frame = ImageCodec.DecodePng(GameResolution.ReadPng(masked).Normalize(masked));
+        using var ocr = new OnnxTextRecognizer();
+        using var automation = new AutomationService(new FakeAdbService([]), new TemplateMatcher(), new TestLog());
+        Assert.Null(new UnitUpgradeService(automation, ocr).FindFirstUnit(frame, default));
+    }
+
     // 两个正例来自独立实机帧，仅保留右下角按钮以隔离背景和模板来源。
     private static byte[] ListFrame(string direction)
     {

@@ -65,7 +65,7 @@
 
 ## 强化列表的排序方向
 
-各入口共用 `Tasks/Upgrade/UpgradeListService`。在已确认的强化列表上调用 `EnsureDirectionAsync` 可保持或反转当前排序，当前排序字段由游戏保留。列表默认按 LV 排序时，降序优先显示高等级，升序优先显示低等级。右下角相邻的蓝色筛选控件与方向按钮分别定位。
+各入口共用 `Tasks/Upgrade/UpgradeListService`。在已确认的强化列表上调用 `EnsureDirectionAsync` 可保持或反转当前排序，当前排序字段由游戏保留。从「强化部队」委托进入时，游戏默认按 LV 排序。助手通过方向图标确认升序，核对筛选已开启后选择首台机体。若卡片的 LV 标签素材未命中，则用英文及数字 OCR 读取首卡等级行。右下角相邻的蓝色筛选控件与方向按钮分别定位。
 
 两份无文字原图放在 `resources/common/templates/upgrade/`，均为 74×69 的透明 PNG。1920×1080 下，先确认 `upgrade/title_upgrade.png`，再在 (1720, 837, 135, 115) 内使用透明遮罩匹配。MuMu 上各方向两帧的结果如下。
 

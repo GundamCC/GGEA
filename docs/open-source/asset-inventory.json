@@ -4703,16 +4703,6 @@
       "privacyReview": "thumbnail-no-obvious-account-id"
     },
     {
-      "path": "resources/zh-CN/templates/upgrade/sort_key_lv.png",
-      "sha256": "8036db96fd804050547af8791e8576423f3cfcd6f6b917fb4253824398ef147b",
-      "width": 104,
-      "height": 37,
-      "category": "recognition-resource",
-      "source": "Game-derived appearance; MuMu zh-CN 1920x1080, crop (1505,865,104,37)",
-      "redistribution": "pending-owner-confirmation",
-      "privacyReview": "thumbnail-no-obvious-account-id"
-    },
-    {
       "path": "resources/zh-CN/templates/upgrade/title_dismantle.png",
       "sha256": "f99b0f966d7ba359c35814c8867e260c112456e163f922dec0939aa2cea4c0a5",
       "width": 129,
@@ -6641,6 +6631,16 @@
       "source": "Game-derived appearance; original capture/source unconfirmed",
       "redistribution": "pending-owner-confirmation",
       "privacyReview": "thumbnail-no-obvious-account-id"
+    },
+    {
+      "path": "tests/GGEA.Tests/Fixtures/Upgrade/filtered_ld720.png",
+      "sha256": "8ccb9e38fa9268be5413a504988927be5d0cd44e3b6f6b196152547610c1b965",
+      "width": 1280,
+      "height": 720,
+      "category": "test-fixture",
+      "source": "LDPlayer 1280x720; only title, sort direction, filter icon and first card level retained",
+      "redistribution": "pending-owner-confirmation",
+      "privacyReview": "cropped-game-ui"
     },
     {
       "path": "tests/GGEA.Tests/Fixtures/Upgrade/execute.png",
