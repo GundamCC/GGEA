@@ -31,7 +31,8 @@ public partial class SettingsWindow : Window
     /// <summary>主窗口仅在更新器就绪后关闭应用。</summary>
 
     public SettingsWindow(AppConfig config, IGgeaLog log, bool allowUpdateInstall = false,
-        UpdateRelease? availableUpdate = null, Action<bool>? saveUpdatePreference = null, Plugins.PluginManager? plugins = null)
+        UpdateRelease? availableUpdate = null, Action<bool>? saveUpdatePreference = null, Plugins.PluginManager? plugins = null,
+        Func<bool>? automaticUpdateInProgress = null)
     {
         InitializeComponent();
         _config = ConfigService.Snapshot(config);
@@ -40,6 +41,7 @@ public partial class SettingsWindow : Window
         UiLanguageCombo.ItemsSource = GGEA.App.Localization.UiLanguages.All;
         UiLanguageCombo.SelectedItem = GGEA.App.Localization.UiLanguages.All.First(option =>
             option.Id == GGEA.App.Localization.UiLanguages.Resolve(config.UiLanguage, System.Globalization.CultureInfo.CurrentUICulture));
+        Updates.AutomaticUpdateInProgress = automaticUpdateInProgress;
         Updates.Initialize(log, allowUpdateInstall, availableUpdate, config.AutomaticUpdates, enabled =>
         {
             // 仅更新软件更新偏好；其他编辑仍由底部“保存”负责，取消窗口也不会回滚即时偏好。

@@ -33,7 +33,8 @@ public partial class MainWindow
         }
         AcknowledgeStartupUpdate();
         var settings = new SettingsWindow(new ConfigService(_logger).Load(ConfigService.ResolvePath(DefaultConfigFile)), _logger, allowUpdateInstall: true,
-            availableUpdate: _startupUpdate, saveUpdatePreference: SaveUpdatePreference, plugins: _plugins) { Owner = this };
+            availableUpdate: _startupUpdate, saveUpdatePreference: SaveUpdatePreference, plugins: _plugins,
+            automaticUpdateInProgress: () => _automaticDownload is not null) { Owner = this };
         var saved = settings.ShowDialog();
         if (saved != true)
         {

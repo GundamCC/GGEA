@@ -7,6 +7,9 @@ namespace GGEA.App.Updates;
 /// <summary>GitHub 优先的更新协调器：刷新来源缓存，网络失败时有限切换，取消与校验失败立即停止。</summary>
 public sealed class OnlineUpdateClient : IDisposable
 {
+    // 主窗口和设置弹窗各自管理网络客户端；只短暂共享已验证的 GitHub 新版，下载仍重新校验。
+    private static readonly SemaphoreSlim CheckGate = new(1);
+    private static (string Root, Version Current, UpdateRelease Release, long Timestamp)? _recent;
     private readonly UpdateHttpTransport _http;
     private readonly GitHubUpdateClient _github;
     private readonly UpdateSourceStore _sources;
@@ -26,13 +29,33 @@ public sealed class OnlineUpdateClient : IDisposable
     /// <summary>来源发现与版本检查并行；即使本机已是最新版，也会学习远程新增的备用源。</summary>
     public async Task<UpdateRelease?> CheckAsync(Version current, CancellationToken cancellationToken)
     {
+        await CheckGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (_recent is { } recent && recent.Root.Equals(_installation, StringComparison.OrdinalIgnoreCase) &&
+                recent.Current == current && System.Diagnostics.Stopwatch.GetElapsedTime(recent.Timestamp) < TimeSpan.FromMinutes(1))
+                return recent.Release;
+
+            var result = await QueryAsync(current, cancellationToken);
+            if (result?.SourceId == "github")
+                _recent = (_installation, current, result, System.Diagnostics.Stopwatch.GetTimestamp());
+            else
+                _recent = null;
+            return result;
+        }
+        finally { CheckGate.Release(); }
+    }
+
+    private async Task<UpdateRelease?> QueryAsync(Version current, CancellationToken cancellationToken)
+    {
         var discovery = RefreshSourcesAsync(cancellationToken);
         try
         {
             try { return await _github.CheckAsync(current, cancellationToken); }
             catch (Exception ex) when (IsNetworkFailure(ex, cancellationToken))
             {
-                _report?.Invoke(new(L.Text("GitHub 暂时不可访问，正在尝试备用更新源。"), true));
+                _report?.Invoke(new(ex is GitHubRateLimitException ? ex.Message :
+                    L.Text("GitHub 暂时不可访问，正在尝试备用更新源。"), true));
                 await discovery;
                 var sources = _sources.Load();
                 var reachedMirror = false;
@@ -50,6 +73,7 @@ public sealed class OnlineUpdateClient : IDisposable
                     { _report?.Invoke(new(L.Format($"备用源 {source.Name} 暂时不可访问，继续尝试下一来源。"), true)); }
                 }
                 if (reachedMirror) return null;
+                if (ex is GitHubRateLimitException) throw;
                 throw new HttpRequestException(sources.Length == 0
                     ? L.Text("GitHub 无法连接，尚无可用的备用源。请稍后重试，或从官方发布页手动下载。")
                     : L.Text("GitHub 与已配置的备用更新源均无法连接，请稍后重试。"), ex);

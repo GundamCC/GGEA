@@ -25,6 +25,15 @@ public partial class UpdatePanel : UserControl
     private bool _autoInstallUpdates = true;
     private bool _updateClosed;
     private bool _allowUpdateInstall;
+    internal Func<bool>? AutomaticUpdateInProgress { get; set; }
+
+    // 设置窗口持有操作权，后台可继续下载，在设置关闭后才能应用。点击时读取最新状态。
+    private bool ShowAutomaticProgress()
+    {
+        if (AutomaticUpdateInProgress?.Invoke() != true) return false;
+        UpdateStatusText.Text = L.Text("后台正在准备更新。关闭设置后，助手会在空闲时应用。");
+        return true;
+    }
 
 
     /// <summary>显示真实程序集版本；首次初始化期间只允许检查，避免重入主窗口启动链。</summary>
@@ -58,7 +67,7 @@ public partial class UpdatePanel : UserControl
     /// <summary>检查不阻塞 WPF；取消、超时、无新版本和服务错误均显示实际结果。</summary>
     private void CheckUpdateButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_updateCancellation is not null) return;
+        if (_updateCancellation is not null || ShowAutomaticProgress()) return;
         var dialog = new CheckUpdateDialog(_allowUpdateInstall, _log!) { Owner = Window.GetWindow(this) };
         var install = dialog.ShowDialog() == true;
         if (_updateClosed || !dialog.CheckSucceeded) return;
@@ -93,7 +102,7 @@ public partial class UpdatePanel : UserControl
     /// <summary>用户点击下载授权本次流程；选项在下载期间锁定，取消或校验失败不会触发自动安装。</summary>
     private async void DownloadUpdateButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_updateCancellation is not null || _availableUpdate is null) return;
+        if (_updateCancellation is not null || ShowAutomaticProgress() || _availableUpdate is null) return;
         if (_preparedPackage is not null) { await InstallPreparedUpdateAsync(); return; }
         using var cancellation = BeginUpdateOperation(L.Text("正在准备更新下载…"));
         using var client = new OnlineUpdateClient(UpdateLauncher.ContentRoot, ReportSourceStatus);
