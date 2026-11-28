@@ -17,6 +17,11 @@ public sealed class SortieRequestService(AutomationService automation, StageServ
     private readonly TemplateImages _back = new("resources/templates/stage/history_back.png");
     private readonly TemplateMatcher _matcher = new();
 
+    public int CaptureApLimit { get; init; } = AppConfig.DefaultCaptureApLimit;
+
+    internal Task<int> CaptureAsync(string serial, SortieOrder order, long refresh, CancellationToken ct) =>
+        RunAsync(serial, order, ct, new CaptureRequestBudget(refresh, CaptureApLimit));
+
     internal async Task<int> RunAsync(string serial, SortieOrder order, CancellationToken ct, CaptureRequestBudget? capture = null)
     {
         var key = int.Parse(order.Offer.SeriesId, System.Globalization.CultureInfo.InvariantCulture);
@@ -24,82 +29,19 @@ public sealed class SortieRequestService(AutomationService automation, StageServ
         var work = works.SingleOrDefault(w => w.Screenshot == file) ?? throw Unknown();
         var logo = ConfigService.ResolvePath("resources/templates/logo/" + file);
         var needed = order.Offer.Amount - order.Progress;
-        int done = 0;
         stages.Context.Invalidate();
         try
         {
             await ConfirmWorkAsync();
-            var node = await stages.ReadRequestNodeAsync(serial, work, ct);
-            // 已经解锁的较低编号 HARD 可以分摊超过单关日限的委托。
-            while (node is { Kind: WorkStageKind.Hard, Number: int hard, Position: not null } && done < needed)
-            {
-                stages.Context.SetWorkStageList(serial, StageMapMode.Main, work.Id, hard);
-                if (capture is not null && hard > 3)
-                {
-                    await SelectHardAsync(3);
-                    continue;
-                }
-                if (node.HasPassed && (capture is null || await HasCaptureAsync()))
-                {
-                    var batch = await skip.SkipWithinBudgetAsync(serial, layout, _budget, needed - done, true, ct, capture);
-                    if (!batch.Success && !batch.IsUnavailable) throw new InvalidOperationException(batch.Message);
-                    // 夺取可能一台也不掉，只有结算卡片计入本轮进度。单关耗尽后再换关。
-                    if (batch.Success && capture is not null)
-                    {
-                        var units = batch.CapturedUnits ?? throw Unknown();
-                        done += units;
-                        log.Info(L.Format($"本批略过 {batch.ExecutedCount} 次，奖励页确认夺取 {units} 台。"));
-                    }
-                    else done += batch.ExecutedCount;
-                    if (done >= needed || batch.IsApInsufficient || batch.RemainingAp == 0 || capture?.RemainingAp == 0) break;
-                    if (capture is not null && batch.Success) continue;
-                }
-                if (hard == 1)
-                {
-                    if (capture is not null) break;
-                    // 所有 HARD 次数用完时，选中紧邻的普通关卡并核对其编号和已通关状态。
-                    var start = StageSlotPlanner.GetViewportStart(work.NormalCount, work.HardCount, hard, work.SideStories);
-                    int target = StageSlotPlanner.GetOverallIndex(work.NormalCount, 1, work.SideStories) - 1;
-                    if (!StageSlotPlanner.TryGetVisibleSlot(start, target, out var index)) break;
-                    var slot = layout.Require($"stageSlot{index}", "关卡布局缺少普通关卡槽位");
-                    await automation.TapAsync(serial, slot.CenterX, slot.CenterY, ct);
-                    await stages.ConfirmBeforeHardAsync(serial, work, ct);
-                    node = await stages.ReadRequestNodeAsync(serial, work, ct);
-                    if (node?.Position?.OverallIndex != target) throw Unknown();
-                    break;
-                }
-                await SelectHardAsync(hard - 1);
-            }
-            if (capture is null && done < needed && node is { HasPassed: true, Kind: WorkStageKind.Normal or WorkStageKind.Boss or WorkStageKind.SideStory })
-            {
-                var batch = await skip.SkipWithinBudgetAsync(serial, layout, _budget, needed - done, false, ct);
-                if (!batch.Success && !batch.IsUnavailable) throw new InvalidOperationException(batch.Message);
-                done += batch.ExecutedCount;
-            }
+            int done = capture is null
+                ? await RunSortieStagesAsync(serial, work, needed, ct)
+                : await CaptureStagesAsync(serial, work, needed, capture, ct);
             var back = await ConfirmWorkAsync();
             await automation.TapAsync(serial, back.CenterX, back.CenterY, ct);
             if (capture is null) log.Info(L.Format($"请求出击本轮完成 {done} 次。"));
             return done;
-
-            async Task SelectHardAsync(int number)
-            {
-                var selected = await stages.SelectHardStageAsync(serial, layout, works, work.Id, number, ct);
-                if (!selected.Success) throw new InvalidOperationException(selected.Message);
-                node = await stages.ReadRequestNodeAsync(serial, work, ct);
-                if (node?.Kind != WorkStageKind.Hard || node.Number != number) throw Unknown();
-            }
         }
         finally { stages.Context.Invalidate(); }
-
-        async Task<bool> HasCaptureAsync()
-        {
-            var seen = await StableObservation.WaitAsync(async () =>
-            {
-                var frame = await automation.CaptureScreenAsync(serial, ct);
-                return _budget.OnStage(frame, ct) ? new StageReward(capture!.OffersCapture(frame, ct)) : null;
-            }, (a, b) => a == b, GameTiming.RecognitionTimeoutMs, ct);
-            return seen?.HasCapture ?? throw Unknown();
-        }
 
         async Task<Roi> ConfirmWorkAsync()
         {
@@ -113,6 +55,128 @@ public sealed class SortieRequestService(AutomationService automation, StageServ
         }
     }
 
+    private async Task<int> RunSortieStagesAsync(string serial, HardStageEntry work, int needed, CancellationToken ct)
+    {
+        int done = 0;
+        var node = await stages.ReadRequestNodeAsync(serial, work, ct);
+        // 已经解锁的较低编号 HARD 可以分摊超过单关日限的委托。
+        while (node is { Kind: WorkStageKind.Hard, Number: int hard, Position: not null } && done < needed)
+        {
+            stages.Context.SetWorkStageList(serial, StageMapMode.Main, work.Id, hard);
+            if (node.HasPassed)
+            {
+                var batch = await skip.SkipWithinBudgetAsync(serial, layout, _budget, needed - done, true, ct);
+                if (!batch.Success && !batch.IsUnavailable) throw new InvalidOperationException(batch.Message);
+                done += batch.ExecutedCount;
+                if (done == needed || batch.IsApInsufficient || batch.RemainingAp == 0) break;
+            }
+            if (hard == 1)
+            {
+                // 所有 HARD 次数用完时，选中紧邻的普通关卡并核对其编号和已通关状态。
+                var start = StageSlotPlanner.GetViewportStart(work.NormalCount, work.HardCount, hard, work.SideStories);
+                int target = StageSlotPlanner.GetOverallIndex(work.NormalCount, 1, work.SideStories) - 1;
+                if (!StageSlotPlanner.TryGetVisibleSlot(start, target, out var index)) break;
+                var slot = layout.Require($"stageSlot{index}", "关卡布局缺少普通关卡槽位");
+                await automation.TapAsync(serial, slot.CenterX, slot.CenterY, ct);
+                await stages.ConfirmBeforeHardAsync(serial, work, ct);
+                node = await stages.ReadRequestNodeAsync(serial, work, ct);
+                if (node?.Position?.OverallIndex != target) throw Unknown();
+                break;
+            }
+            var selected = await stages.SelectHardStageAsync(serial, layout, works, work.Id, hard - 1, ct);
+            if (!selected.Success) throw new InvalidOperationException(selected.Message);
+            node = await stages.ReadRequestNodeAsync(serial, work, ct);
+            if (node?.Kind != WorkStageKind.Hard || node.Number != hard - 1) throw Unknown();
+        }
+        if (done < needed && node is { HasPassed: true, Kind: WorkStageKind.Normal or WorkStageKind.Boss or WorkStageKind.SideStory })
+        {
+            var batch = await skip.SkipWithinBudgetAsync(serial, layout, _budget, needed - done, false, ct);
+            if (!batch.Success && !batch.IsUnavailable) throw new InvalidOperationException(batch.Message);
+            done += batch.ExecutedCount;
+        }
+        return done;
+    }
+
+    // 当前关卡次数用完或没有夺取奖励时才向左移动。两种难度共用同一预算和奖励计数。
+    private async Task<int> CaptureStagesAsync(string serial, HardStageEntry work, int needed,
+        CaptureRequestBudget capture, CancellationToken ct)
+    {
+        var node = await stages.ReadRequestNodeAsync(serial, work, ct);
+        using var numbers = new OnnxStageNumberRecognizer(ocr);
+        int units = 0;
+        while (units < needed && capture.RemainingAp > 0)
+        {
+            if (node?.Position is null) throw UnconfirmedNeighbor();
+            if (node.HasPassed)
+            {
+                var reward = await StableObservation.WaitAsync(async () =>
+                {
+                    var frame = await automation.CaptureScreenAsync(serial, ct);
+                    return _budget.OnStage(frame, ct) ? new StageReward(capture.OffersCapture(frame, ct)) : null;
+                }, (a, b) => a == b, GameTiming.RecognitionTimeoutMs, ct) ?? throw Unknown();
+                if (reward.HasCapture)
+                {
+                    var batch = await skip.SkipWithinBudgetAsync(serial, layout, _budget, needed - units,
+                        node.Kind == WorkStageKind.Hard, ct, capture);
+                    if (batch.Success)
+                    {
+                        var gained = batch.CapturedUnits ?? throw Unknown();
+                        units += gained;
+                        log.Info(L.Format($"本批略过 {batch.ExecutedCount} 次，奖励页确认夺取 {gained} 台。"));
+                        if (units >= needed || capture.RemainingAp == 0 || batch.RemainingAp == 0) break;
+                        // 结算转场后须确认仍选中同一个节点，才能继续消费或向左换关。
+                        node = await ConfirmNodeAsync(serial, work, node.Position.OverallIndex, ct);
+                        continue;
+                    }
+                    if (!batch.IsUnavailable) throw new InvalidOperationException(batch.Message);
+                }
+            }
+            if (node.Position.OverallIndex == 1) break;
+            node = await SelectPreviousAsync(serial, work, node, numbers, ct);
+        }
+        return units;
+    }
+
+    private async Task<StageNodeRecognition> SelectPreviousAsync(string serial, HardStageEntry work,
+        StageNodeRecognition current, OnnxStageNumberRecognizer numbers, CancellationToken ct)
+    {
+        int target = current.Position!.OverallIndex - 1;
+        // 轨道可以偏移。以双帧确认的光圈为锚点，只有实际读到左邻编号才点击。
+        if (current.CenterX < 220)
+        {
+            await automation.SwipeAsync(serial, 180, 540, 585, 540, 400, ct);
+            current = await ConfirmNodeAsync(serial, work, target + 1, ct, minCenterX: 210);
+        }
+        int x = current.CenterX - 190;
+        int left = Math.Max(0, x - 65);
+        int expected = target <= work.NormalCount ? target : target <= work.NormalCount + work.SideStories
+            ? target - work.NormalCount : target - work.NormalCount - work.SideStories;
+        var digits = await StableObservation.WaitAsync(async () =>
+        {
+            var frame = await automation.CaptureScreenAsync(serial, ct);
+            if (!_budget.OnStage(frame, ct)) return null;
+            var number = numbers.Recognize(frame, new(left, 620, x + 65 - left, 170), x, ct);
+            return number.Number == expected && number.Region.HasValue ? number : null;
+        }, (a, b) => Math.Abs(a.Region!.Value.CenterX - b.Region!.Value.CenterX) <= 8 &&
+            Math.Abs(a.Region.Value.CenterY - b.Region.Value.CenterY) <= 12, GameTiming.RecognitionTimeoutMs, ct)
+            ?? throw UnconfirmedNeighbor();
+        await automation.TapAsync(serial, digits.Region!.Value.CenterX, digits.Region.Value.CenterY, ct);
+        return await ConfirmNodeAsync(serial, work, target, ct);
+    }
+
+    private async Task<StageNodeRecognition> ConfirmNodeAsync(string serial, HardStageEntry work, int expected, CancellationToken ct, int minCenterX = 0)
+    {
+        var end = Environment.TickCount64 + GameTiming.RecognitionTimeoutMs;
+        do
+        {
+            var selected = await stages.ReadRequestNodeAsync(serial, work, ct);
+            if (selected?.Position?.OverallIndex == expected && selected.CenterX >= minCenterX) return selected;
+            await Task.Delay(GameTiming.ConfirmationIntervalMs, ct);
+        } while (Environment.TickCount64 < end);
+        throw UnconfirmedNeighbor();
+    }
+
+    private static InvalidOperationException UnconfirmedNeighbor() => new(L.Text("未能确认夺取委托的相邻关卡。"));
     private sealed record StageReward(bool HasCapture);
 
     // 选关页的 Logo 直接叠在动态作品插图上，只比对完全不透明的原图笔画。

@@ -25,6 +25,19 @@ public sealed class AppConfig
     /// <summary>用户主动下载软件更新后，校验成功即自动重启安装；旧配置缺失时默认开启。</summary>
     public bool AutoInstallUpdates { get; set; } = true;
 
+    public const int CaptureApStep = 30;
+    public const int DefaultCaptureApLimit = 90;
+    public const int MaxCaptureApLimit = 990;
+    private int _captureApLimit = DefaultCaptureApLimit;
+
+    /// <summary>每栏每轮的总 AP 上限，旧配置缺项和无效档位均采用默认值。</summary>
+    public int CaptureApLimit
+    {
+        get => _captureApLimit;
+        set => _captureApLimit = value is >= CaptureApStep and <= MaxCaptureApLimit && value % CaptureApStep == 0
+            ? value : DefaultCaptureApLimit;
+    }
+
     public bool ProtectDeliveryLimitBreak { get; set; } = true;
     public bool ProtectDeliveryHighLevel { get; set; } = true;
 

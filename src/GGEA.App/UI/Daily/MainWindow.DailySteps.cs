@@ -80,7 +80,7 @@ public partial class MainWindow
                         var result = await _personalBaseService!.RunCharacterRequestsAsync(serial, _mainLayout, GetTextOcr(), ct,
                             new(_config.ProtectDeliveryLimitBreak, _config.ProtectDeliveryHighLevel), CreateDevelopRequest(),
                             new SortieRequestService(_automation!, _stageService!, _stageSkipService!, _stageLayout, _hardStages,
-                                GetTextOcr(), _logger!), continueAtBase);
+                                GetTextOcr(), _logger!) { CaptureApLimit = _config.CaptureApLimit }, continueAtBase);
                         _logger!.Info(L.Format($"本轮承接 {result.Accepted} 个角色要求，已完成 {result.Reported} 个委托。"));
                         failedSubtasks.AddRange(result.FailedRoles);
                         taskSucceeded = result.FailedRoles.Count == 0;

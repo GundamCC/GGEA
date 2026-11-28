@@ -17,14 +17,16 @@ public sealed partial class StageSkipService
         if (string.IsNullOrWhiteSpace(_options.SkipResultTemplatePath))
             return StageSkipResult.Fail(L.Text("未配置略过结果识别素材，不能用固定等待确认执行结果。"));
         if (needed < 1) throw new ArgumentOutOfRangeException(nameof(needed));
-        if (hard && !await IsSkipEnabledAsync(serial, layout, ct))
+        if ((hard || capture is not null) && !await IsSkipEnabledAsync(serial, layout, ct))
             return StageSkipResult.Fail("略过不可用（次数上限）", isUnavailable: true);
         var before = await StableObservation.WaitAsync(async () => budget.ReadStage(
-            await _automation.CaptureScreenAsync(serial, ct), hard, ct), (a, b) => a == b,
+            await _automation.CaptureScreenAsync(serial, ct), hard, ct, checkNormalLimit: capture is not null), (a, b) => a == b,
             GameTiming.RecognitionTimeoutMs, ct);
         if (before is null) return StageSkipResult.Fail(L.Text("无法确认关卡体力、单次消耗或可用次数。"));
         int count = before.CountFor(needed);
         if (capture is not null) count = Math.Min(count, capture.RemainingAp / before.Cost);
+        // 普通关没有可读限次时只执行一回，并以弹窗与奖励数量复核，避免超出实际可用次数。
+        if (capture is not null && before.Remaining == int.MaxValue) count = Math.Min(count, 1);
         if (before.Remaining == 0) return StageSkipResult.Fail("略过不可用（次数上限）", isUnavailable: true);
         if (count == 0) return StageSkipResult.ApInsufficient(L.Text("剩余 AP 不足一次略过。"));
 
@@ -69,14 +71,19 @@ public sealed partial class StageSkipService
         int? remainingAp = null;
         bool Returned(ScreenImage f, CancellationToken token)
         {
-            var after = budget.ReadStage(f, hard, token);
+            var after = budget.ReadStage(f, hard, token, checkNormalLimit: capture is not null);
             if (after is not null)
             {
-                if (after.Cost != before.Cost || hard && after.Remaining != before.Remaining - count) return false;
-                remainingAp = after.Ap;
-                return true;
+                if (after.Cost != before.Cost) return false;
+                if (before.Remaining == int.MaxValue || after.Remaining == before.Remaining - count)
+                {
+                    remainingAp = after.Ap;
+                    return true;
+                }
+                // 有明确的余次读数时必须与本批扣减相符。
+                if (after.Remaining != int.MaxValue) return false;
             }
-            if (!hard || before.Remaining != count || !budget.OnStage(f, token) ||
+            if (before.Remaining != count || !budget.OnStage(f, token) ||
                 string.IsNullOrEmpty(_options.SkipCountLimitTemplatePath)) return false;
             return LoadPostSkipTemplate(_options.SkipCountLimitTemplatePath).Match(new TemplateMatcher(), f,
                 _options.SkipCountLimitThreshold, layout.Require("skipCountLimit", "关卡布局缺少 skipCountLimit").Roi, token) is not null;

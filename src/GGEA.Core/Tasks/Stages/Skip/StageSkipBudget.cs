@@ -16,7 +16,7 @@ internal sealed class StageSkipBudget(OnnxTextRecognizer ocr, ResourceResolver r
     internal bool OnStage(ScreenImage f, CancellationToken ct) =>
         f.Width == 1920 && f.Height == 1080 && _title.Recognize(f, ct);
 
-    internal Stage? ReadStage(ScreenImage f, bool hard, CancellationToken ct)
+    internal Stage? ReadStage(ScreenImage f, bool hard, CancellationToken ct, bool checkNormalLimit = false)
     {
         if (!OnStage(f, ct)) return null;
         var capacity = Read(f, new(1711, 31, 126, 32), false, ct)?.Split('/');
@@ -24,8 +24,13 @@ internal sealed class StageSkipBudget(OnnxTextRecognizer ocr, ResourceResolver r
         if (capacity is not { Length: 2 } || !Parse(capacity[0], out var ap) ||
             !Parse(capacity[1], out var max) || max <= 0 || cost is not > 0) return null;
         int remaining = int.MaxValue;
-        if (hard && (!UpgradeNumbers.TryReadPair(Read(f, new(1674, 631, 76, 42), false, ct), out remaining, out var limit)
-            || limit <= 0)) return null;
+        if (hard || checkNormalLimit)
+        {
+            var counter = Read(f, new(1674, 631, 76, 42), false, ct);
+            if (UpgradeNumbers.TryReadPair(counter, out int available, out int limit) && limit > 0)
+                remaining = available;
+            else if (hard) return null;
+        }
         return new(ap, cost.Value, remaining);
     }
 

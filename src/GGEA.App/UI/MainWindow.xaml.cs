@@ -20,8 +20,21 @@ public partial class MainWindow : Window
 
     private void RestoreDeliveryOptions()
     {
+        CaptureApLimitBox.SelectedItem = _config.CaptureApLimit;
         ProtectLimitBreak.IsChecked = _config.ProtectDeliveryLimitBreak;
         ProtectHighLevel.IsChecked = _config.ProtectDeliveryHighLevel;
+    }
+
+    private void CaptureApLimit_Changed(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (_logger is null || CaptureApLimitBox.SelectedItem is not int limit || limit == _config.CaptureApLimit) return;
+        try
+        {
+            _config = new ConfigService(_logger).Update(ConfigService.ResolvePath(DefaultConfigFile),
+                latest => latest.CaptureApLimit = limit);
+        }
+        catch (Exception ex) { _logger.Warn(L.Format($"夺取单位 AP 上限保存失败：{ex.Message}")); }
+        RestoreDeliveryOptions();
     }
 
     private void DeliveryOption_Click(object sender, RoutedEventArgs e)
@@ -42,6 +55,9 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        CaptureApLimitBox.ItemsSource = Enumerable.Range(1, AppConfig.MaxCaptureApLimit / AppConfig.CaptureApStep)
+            .Select(i => i * AppConfig.CaptureApStep).ToArray();
+        CaptureApLimitBox.SelectedItem = _config.CaptureApLimit;
         ConnectDailyView();
         ConnectScoutView();
         ConnectBallFactoryView();

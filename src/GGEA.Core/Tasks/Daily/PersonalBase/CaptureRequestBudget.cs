@@ -1,17 +1,18 @@
 using System.Globalization;
+using GGEA.App.Config;
 using GGEA.App.Localization;
 using GGEA.App.Vision;
 
 namespace GGEA.App.Tasks;
 
 /// <summary>一次夺取委托的消费上限和奖励读数。每张绿色「夺取」卡只计一台。</summary>
-internal sealed class CaptureRequestBudget(long refresh)
+internal sealed class CaptureRequestBudget(long refresh, int limit = AppConfig.DefaultCaptureApLimit)
 {
     private const string Root = "resources/templates/base/character_requests/";
     private readonly TemplateMatcher _matcher = new();
     private readonly TemplateImages _stageLabel = new(Root + "stage_capture_label.png");
     private readonly TemplateImages _rewardLabel = new(Root + "reward_capture_label.png");
-    internal int RemainingAp { get; private set; } = 90;
+    internal int RemainingAp { get; private set; } = limit;
 
     internal bool OffersCapture(ScreenImage frame, CancellationToken ct) =>
         _stageLabel.Match(_matcher, frame, .95, new(1040, 738, 550, 58), ct) is not null;

@@ -219,6 +219,13 @@
                                     <CheckBox x:Name="ProtectHighLevel" Content="{loc:Text Source='不交付高等级单位（LV60以上）'}"
                                               HorizontalContentAlignment="Left" Style="{StaticResource TaskCheckBox}" Foreground="{DynamicResource Brush.Text}"
                                               IsChecked="True" Click="DeliveryOption_Click"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                        <TextBlock Text="{loc:Text Source='夺取单位任务最大可消耗 AP'}" Style="{StaticResource HintText}"
+                                                   VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                        <ComboBox x:Name="CaptureApLimitBox" Width="96" MaxDropDownHeight="240"
+                                                  Style="{StaticResource ComboBoxDark}" SelectionChanged="CaptureApLimit_Changed"
+                                                  AutomationProperties.Name="{loc:Text Source='夺取单位任务最大可消耗 AP'}"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </TabItem>
                             <!-- 活动导航止于左侧入口选择，后续玩法由独立流程接入。 -->

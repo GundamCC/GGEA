@@ -1,6 +1,7 @@
 {
   "protectDeliveryLimitBreak": true,
   "protectDeliveryHighLevel": true,
+  "captureApLimit": 90,
   "autoInstallUpdates": true,
   "adbPath": "adb",
   "commandTimeoutMs": 15000,

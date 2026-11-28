@@ -8,6 +8,23 @@ namespace GGEA.Tests;
 /// </summary>
 public class ConfigServiceTests
 {
+    [Theory]
+    [InlineData("{}", 90)]
+    [InlineData("{\"captureApLimit\":45}", 90)]
+    [InlineData("{\"captureApLimit\":1020}", 90)]
+    [InlineData("{\"captureApLimit\":30}", 30)]
+    [InlineData("{\"captureApLimit\":990}", 990)]
+    public void CaptureApLimitLoadsAndPersistsSupportedSteps(string json, int expected)
+    {
+        using var temp = new TempDirectory();
+        var path = Path.Combine(temp.Path, "settings.json");
+        File.WriteAllText(path, json);
+        var service = new ConfigService(new TestLog());
+        Assert.Equal(expected, service.Load(path).CaptureApLimit);
+        service.Update(path, options => options.CaptureApLimit = 120);
+        Assert.Equal(120, service.Load(path).CaptureApLimit);
+    }
+
     [Fact]
     public void ConcurrentWindows_ReadOnlyCompleteSavedSettings()
     {

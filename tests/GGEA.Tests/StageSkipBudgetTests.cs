@@ -101,6 +101,49 @@ public sealed class StageSkipBudgetTests
     }
 
     [Fact]
+    public async Task ExhaustedHardContinuesLeftAcrossNormalStagesWithOneBudget()
+    {
+        byte[] Frame(string sample, string? rail = null)
+        {
+            var frame = new ScreenImage { Width = 1920, Height = 1080, Bgra = TestImageFactory.CreateBgra(1920, 1080, 0) };
+            Paste(frame, Path.Combine(AppContext.BaseDirectory, $"Fixtures/Base/capture_{sample}.png"), 0, 0);
+            if (rail is not null) Paste(frame, Path.Combine(AppContext.BaseDirectory, $"Fixtures/StageNodes/{rail}.png"), 0, 600);
+            return ImageCodec.EncodePng(frame.Bgra, frame.Width, frame.Height);
+        }
+        // 首帧及第二帧右侧均为次数上限；切换到第三个节点才有可用次数。
+        var frames = new[] { Frame("returned", "normal11-mumu5558"), Frame("returned", "normal10-mumu5556"),
+            Frame("hard3"), Frame("preview"), Frame("reward_two"), Frame("returned") };
+        var adb = new FakeAdbService(frames[0]);
+        adb.ScreenshotProvider = () => frames[Math.Min(adb.Taps.Count, frames.Length - 1)];
+        using var ocr = new OnnxTextRecognizer();
+        var log = new TestLog();
+        using var auto = new AutomationService(adb, new TemplateMatcher(), log, textOcr: ocr);
+        var nodes = new FakeStageNodeRecognizer();
+        StageNodeRecognition At(int x, WorkStageKind kind, int n, int index) =>
+            new(x, 840, kind, n, WorkStageNodeState.Completed, new(kind, n, index), "");
+        nodes.EnqueueResults(At(450, WorkStageKind.Hard, 1, 11), At(553, WorkStageKind.Boss, 10, 10),
+            At(360, WorkStageKind.Normal, 9, 9));
+        var nav = new StageService(auto, new FakeStageWorkRecognizer(), log, nodeRecognizer: nodes);
+        var skip = new StageSkipService(auto, log, new()
+        {
+            SkipResultTemplatePath = ConfigService.ResolvePath("resources/templates/stage/skip/skip_result.png"),
+            SkipCountLimitTemplatePath = ConfigService.ResolvePath("resources/templates/stage/skip/count_limit.png"),
+            SettleAfterOkMs = 0, SkipResultTimeoutMs = 3500, LateResultRecoveryTimeoutMs = 0
+        });
+        var layout = new UiLayoutService(log).Load(ConfigService.ResolvePath("resources/ui_layout/stage.json"));
+        var work = new HardStageEntry { Id = 4, NormalCount = 10, HardCount = 3, Screenshot = "logo_l_series_1100.webp" };
+        var task = new SortieRequestService(auto, nav, skip, layout, [work], ocr, log);
+        var budget = new CaptureRequestBudget(RequestProductionAttempt.RefreshPeriod, 120);
+        budget.Reserve(90);
+        Assert.Equal(2, await task.RunAsync("replay", new(new("1110000701", "夺取单位3", "1100", 3), 0), default, budget));
+        Assert.Equal(0, budget.RemainingAp);
+        Assert.Equal(6, adb.Taps.Count);
+        Assert.InRange(adb.Taps[0].X, 244, 278);
+        Assert.InRange(adb.Taps[1].X, 340, 382);
+        Assert.Equal((1674, 710), adb.Taps[2]);
+    }
+
+    [Fact]
     public void CaptureStopsBeforeSpendingPastLimitOrRefresh()
     {
         var budget = new CaptureRequestBudget(RequestProductionAttempt.RefreshPeriod);

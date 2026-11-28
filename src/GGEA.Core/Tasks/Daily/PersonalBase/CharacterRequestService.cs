@@ -185,7 +185,9 @@ public sealed class CharacterRequestService(AutomationService automation, IGgeaL
                         if (detail.Action == Control.Challenge && completed < order.Offer.Amount)
                         {
                             await TapAsync(serial, detail.Button, ct);
-                            var gained = await Sortie.RunAsync(serial, order, ct, capture ? new CaptureRequestBudget(refresh) : null);
+                            var gained = capture
+                                ? await Sortie.CaptureAsync(serial, order, refresh, ct)
+                                : await Sortie.RunAsync(serial, order, ct);
                             completed = capture ? Math.Min(order.Offer.Amount, completed + gained) : completed + gained;
                             screen = await WaitSortieAsync(serial, kind, ct);
                             if (screen.Order?.Offer != order.Offer || screen.Order.Progress != completed ||
